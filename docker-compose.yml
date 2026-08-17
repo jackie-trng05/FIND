@@ -1,0 +1,12 @@
+# Shared Docker Compose configuration placeholder
+# This file defines the full integrated application for the project team.
+# TODO: define all shared services, volumes, environment variables, and networking.
+services:
+  app:
+    image: placeholder-app:latest
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: development

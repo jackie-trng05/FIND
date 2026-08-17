@@ -1,0 +1,19 @@
+# CI workflow for Student 1 (frontend, backend, database)
+
+# GitHub Actions workflow placeholder
+# Add CI/CD automation for the integrated application here.
+# TODO: define build, test, and deployment jobs.
+name: student-1-ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder step
+        run: echo "Add workflow jobs for build, test, and deploy."
