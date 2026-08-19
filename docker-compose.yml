@@ -2,11 +2,47 @@
 # This file defines the full integrated application for the project team.
 # TODO: define all shared services, volumes, environment variables, and networking.
 services:
-  app:
-    image: placeholder-app:latest
+  shared-frontend:
     build:
-      context: .
+      context: ./shared/frontend
+    image: find-shared-frontend:latest
+    restart: unless-stopped
     ports:
-      - "8080:8080"
-    environment:
-      NODE_ENV: development
+      - "16001:3000"
+  # Shared Access API - build from repository implementation
+  shared-api:
+    build:
+      context: ./shared/backend
+    image: find-shared-api:latest
+    restart: unless-stopped
+    ports:
+      - "16002:5000"
+  # Shared database service (placeholder API implementation)
+  shared-db:
+    build:
+      context: ./shared/database
+    image: find-shared-db:latest
+    restart: unless-stopped
+    ports:
+      - "16003:6000"
+  student-1-frontend:
+    build:
+      context: ./student-1/frontend
+    image: find-student-1-frontend:latest
+    restart: unless-stopped
+    ports:
+      - "16004:3000"
+  student-1-backend:
+    build:
+      context: ./student-1/backend
+    image: find-student-1-backend:latest
+    restart: unless-stopped
+    ports:
+      - "16005:5001"
+  student-1-db:
+    build:
+      context: ./student-1/database
+    image: find-student-1-db:latest
+    restart: unless-stopped
+    ports:
+      - "16006:6001"
