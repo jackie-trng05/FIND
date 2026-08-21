@@ -1,7 +1,15 @@
 FROM node:18-alpine
-WORKDIR /usr/src/app
+
+WORKDIR /app
+
 COPY package*.json ./
 RUN npm install --production
-COPY . ./
+
+COPY . .
+
+ENV NODE_ENV=development
+ENV PORT=6000
+
 EXPOSE 6000
+
 CMD ["node", "index.js"]
