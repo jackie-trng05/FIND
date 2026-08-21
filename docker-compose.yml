@@ -8,9 +8,10 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+    depends_on:
+      - shared-api
     networks:
       - find-network
-    restart: unless-stopped
 
   shared-api:
     build:
@@ -21,6 +22,8 @@ services:
     environment:
       NODE_ENV: development
       PORT: 5000
+    depends_on:
+      - shared-db
     networks:
       - find-network
     restart: unless-stopped
@@ -47,6 +50,8 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+    depends_on:
+      - student-1-backend
     networks:
       - find-network
     restart: unless-stopped
