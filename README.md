@@ -1,78 +1,237 @@
 # FIND
 
-## Project overview
-At this stage, this repository contains the team-integrated FIND project boilerplate. It provides the shared frontend and student microservice scaffolding used for local development and integration testing.
+## Project Overview
 
-## Setup instructions
-- Install Docker Desktop (Windows/Mac) and ensure it is running before attempting to start the compose stack. Docker Desktop must be running so the Docker daemon is available for docker compose commands.
-- Recommended: use Docker Desktop stable release that supports the Compose V2 command `docker compose`.
+FIND is a job application management system with multi-service application organised into shared services and individual student modules.
 
-## Running the application locally
-1. From the repository root run:
-   - docker compose up --build
-   This builds and starts the defined containers. Ensure Docker Desktop is running first.
-2. To stop and remove containers, networks, and named volumes created by compose run:
-   - docker compose down
+The repository is structured so that shared functionality can be developed separately from each student's implementation.
 
-## Quick links to running containers
-Use the host ports below in the browser. Do not use the internal container ports such as 3000, 5000, or 5001 directly when browsing from the host machine.
 
-- Shared frontend: http://localhost:16001/
-- Shared API health: http://localhost:16002/health
-- Shared DB placeholder: http://localhost:16003/
-- Student 1 frontend: http://localhost:16004/
-- Student 1 backend health: http://localhost:16005/health
-- Student 1 DB placeholder: http://localhost:16006/
+### Shared Services
 
-If `localhost` does not resolve correctly in your Docker/Windows setup, use `127.0.0.1` instead of `localhost` for the same URLs.
+The `shared/` directory contains services that are shared across the application:
 
-## Canonical local ports (host -> container)
-This repository uses the high-number port scheme to avoid common low-port restrictions and browser unsafe-port issues. The canonical mapping is:
-- 16001 — shared frontend (landing page) → container port 3000
-- 16002 — shared API (health endpoint) → container port 5000
-- 16003 — shared DB (placeholder) → container port 6000
-- 16004 — student-1 frontend → container port 3000
-- 16005 — student-1 backend/API → container port 5001
-- 16006 — student-1 database → container port 6001
+```text
+shared/
+├── frontend/
+├── backend/
+└── database/
+```
 
-Adjust these mappings only with team agreement.
+### Student Services
 
-## Containers to be added by other students
-When other student services are implemented, add their host port mappings using consecutive high numbers (e.g., 16007, 16008...). Keep host ports non-overlapping.
+Each student has their own frontend, backend, and database service.
 
-Student 2
+For example:
 
-student-2-frontend: host 16007 -> container 3002
-student-2-backend: host 16008 -> container 5002
-student-2-database: host 16009 -> container 6002
+```text
+student-1/
+├── frontend/
+├── backend/
+└── database/
+```
 
-Student 3
+Additional students follow the same general structure:
 
-student-3-frontend: host 16010 -> container 3003
-student-3-backend: host 16011 -> container 5003
-student-3-database: host 16012 -> container 6003
+```text
+student-X/
+├── frontend/
+├── backend/
+└── database/
+```
 
-Student 4
+The port assignments for each student follow the canonical port allocation on this README file.
 
-student-4-frontend: host 16013 -> container 3004
-student-4-backend: host 16014 -> container 5004
-student-4-database: host 16015 -> container 6004
+---
 
-Student 5
+# Setup Instructions
 
-student-5-frontend: host 16016 -> container 3005
-student-5-backend: host 16017 -> container 5005
-student-5-database: host 16018 -> container 6005
+## Prerequisites
 
-## Notes and troubleshooting
-- The browser should always use the mapped host ports in this repo (for example, 16001, 16002, 16004). The container-internal ports such as 3000 are not the public URLs for the local browser.
-- If you see a warning about `version` in docker-compose.yml being obsolete, remove the top-level `version:` attribute from compose files and rely on Compose V2 features.
-- If a container fails to build due to missing paths (e.g., shared/ui not found), ensure the referenced build contexts exist in the repository and are correct.
-- If a host URL (e.g., http://localhost:16002) or other ports return "Cannot GET /", that usually means the container is running but the service has no route at root — check the container logs for details.
-- If your browser reports `ECONNREFUSED` or `connection refused` for localhost while `127.0.0.1` works, this is usually a local host resolution issue rather than a broken app. The canonical repo URLs remain the host-mapped ports above.
+FIND uses Docker and Docker Compose to build and run the application services.
 
-## Documentation and code style
-- Avoid using internal phase labels in committed files; instead use wording such as "set up", "boilerplate/student 1 set up", or similar team-facing terms.
+Before running FIND, verify that Docker and Docker Compose are installed.
 
-## Contact
-For repo-level infra changes, coordinate with the team owner before committing large-scale compose or port remaps.
+Open **PowerShell** and run:
+
+```powershell
+docker --version
+docker-compose --version
+```
+
+If both commands return version information, Docker is installed.
+
+### If Docker is Not Installed
+
+If Docker or Docker Compose is not found, install **Docker Desktop**.
+
+Run **PowerShell as Administrator** and enter:
+
+```powershell
+winget install -e --id Docker.DockerDesktop
+```
+
+> **Important:** Docker Desktop must be running before starting the FIND services.
+
+If the commands are still not recognised after installation, restart PowerShell again and verify that Docker Desktop is running.
+
+---
+
+## Navigate to the Repository
+
+Open PowerShell and navigate to the FIND repository:
+
+```powershell
+cd C:\git\FIND
+```
+
+> **Note:** Your individual Git repository path might be different. If so, replace `C:\git\FIND` with the path to your local FIND repository.
+
+---
+
+# How to Run
+
+## Start FIND
+
+Build the Docker images and start the services:
+
+```powershell
+docker-compose up --build
+```
+
+The first build may take some time because Docker needs to download the required base images and install service dependencies.
+
+---
+
+## Stop FIND
+
+To stop and remove the containers created by Docker Compose:
+
+```powershell
+docker-compose down
+```
+
+To remove stopped containers:
+
+```powershell
+docker-compose rm -f
+```
+
+
+> **Note:** `docker-compose down` normally removes the containers created by the FIND Compose project. Use `docker-compose rm -f` when you specifically want to remove stopped service containers.
+
+---
+
+## Rebuild Containers
+
+If you have changed a Dockerfile, dependencies, or Docker configuration, rebuild and recreate the containers with:
+
+```powershell
+docker-compose up --build --force-recreate
+```
+
+This will:
+
+* rebuild the Docker images;
+* recreate the containers;
+* start the services using the newly built images.
+
+---
+
+# Quick Links
+
+The following links provide quick access to the services for testing when the Docker containers are running.
+
+### Shared Services
+
+- **Shared Frontend:** http://localhost:16001
+- **Shared API:** http://localhost:16002
+- **Shared Database:** http://localhost:16003
+
+### Student 1
+
+- **Student 1 Frontend:** http://localhost:16004
+- **Student 1 Backend:** http://localhost:16005
+- **Student 1 Database:** http://localhost:16006
+
+### Student 2
+
+- **Student 2 Frontend:** http://localhost:16007
+- **Student 2 Backend:** http://localhost:16008
+- **Student 2 Database:** http://localhost:16009
+
+### Student 3
+
+- **Student 3 Frontend:** http://localhost:16010
+- **Student 3 Backend:** http://localhost:16011
+- **Student 3 Database:** http://localhost:16012
+
+### Student 4
+
+- **Student 4 Frontend:** http://localhost:16013
+- **Student 4 Backend:** http://localhost:16014
+- **Student 4 Database:** http://localhost:16015
+
+### Student 5
+
+- **Student 5 Frontend:** http://localhost:16016
+- **Student 5 Backend:** http://localhost:16017
+- **Student 5 Database:** http://localhost:16018
+
+> **Note:** Student 2–5 links will only be available once their corresponding Docker containers have been implemented and added to `docker-compose.yml`.
+
+---
+
+# Canonical Port Assignments
+
+The following table contains the canonical host and container port assignments for the shared services and all student modules.
+
+The port mappings follow the course-provided architecture and should not be changed until discussed as a group.
+
+| Module     | Service       | Host Port | Container Port | Container Implemented |
+| ---------- | ------------- | --------: | -------------: | :-------------------: |
+| Shared     | Frontend      |   `16001` |         `3000` |           Y           |
+| Shared     | Backend / API |   `16002` |         `5000` |           Y           |
+| Shared     | Database      |   `16003` |         `6000` |           Y           |
+| Student 1  | Frontend      |   `16004` |         `3000` |           Y           |
+| Student 1  | Backend       |   `16005` |         `5001` |           Y           |
+| Student 1  | Database      |   `16006` |         `6001` |           Y           |
+| Student 2  | Frontend      |   `16007` |         `3002` |           N           |
+| Student 2  | Backend       |   `16008` |         `5002` |           N           |
+| Student 2  | Database      |   `16009` |         `6002` |           N           |
+| Student 3  | Frontend      |   `16010` |         `3003` |           N           |
+| Student 3  | Backend       |   `16011` |         `5003` |           N           |
+| Student 3  | Database      |   `16012` |         `6003` |           N           |
+| Student 4  | Frontend      |   `16013` |         `3004` |           N           |
+| Student 4  | Backend       |   `16014` |         `5004` |           N           |
+| Student 4  | Database      |   `16015` |         `6004` |           N           |
+| Student 5  | Frontend      |   `16016` |         `3005` |           N           |
+| Student 5  | Backend       |   `16017` |         `5005` |           N           |
+| Student 5  | Database      |   `16018` |         `6005` |           N           |
+| Student 6  | Frontend      |   `16019` |         `3006` |           N           |
+| Student 6  | Backend       |   `16020` |         `5006` |           N           |
+| Student 6  | Database      |   `16021` |         `6006` |           N           |
+| Student 7  | Frontend      |   `16022` |         `3007` |           N           |
+| Student 7  | Backend       |   `16023` |         `5007` |           N           |
+| Student 7  | Database      |   `16024` |         `6007` |           N           |
+| Student 8  | Frontend      |   `16025` |         `3008` |           N           |
+| Student 8  | Backend       |   `16026` |         `5008` |           N           |
+| Student 8  | Database      |   `16027` |         `6008` |           N           |
+| Student 9  | Frontend      |   `16028` |         `3009` |           N           |
+| Student 9  | Backend       |   `16029` |         `5009` |           N           |
+| Student 9  | Database      |   `16030` |         `6009` |           N           |
+| Student 10 | Frontend      |   `16031` |         `3010` |           N           |
+| Student 10 | Backend       |   `16032` |         `5010` |           N           |
+| Student 10 | Database      |   `16033` |         `6010` |           N           |
+
+---
+
+## Docker Desktop Is Not Running
+
+If Docker commands work but Docker Compose cannot connect to Docker, check that Docker Desktop is running.
+
+Start Docker Desktop and wait until it has finished starting before running:
+
+```powershell
+docker-compose up --build
+```
