@@ -57,7 +57,10 @@ def get_my_profile():
         return err
 
     resp = requests.get(f"{DB_SERVICE_URL}/profiles/by-user/{user['user_id']}")
-    return jsonify(resp.json()), resp.status_code
+    # Attach role so the frontend can toggle role-specific UI (e.g. resume section) in one call
+    body = resp.json()
+    body["role"] = user["role"]
+    return jsonify(body), resp.status_code
 
 
 @app.get("/api/profiles/<int:profile_id>")
@@ -122,6 +125,8 @@ def upload_resume(profile_id):
     user, err = require_session()
     if err:
         return err
+    if user["role"] == "staff":
+        return jsonify({"error": "Forbidden"}), 403
 
     check = requests.get(f"{DB_SERVICE_URL}/profiles/{profile_id}")
     if check.status_code != 200:
@@ -162,6 +167,8 @@ def get_resumes(profile_id):
     user, err = require_session()
     if err:
         return err
+    if user["role"] == "staff":
+        return jsonify({"error": "Forbidden"}), 403
 
     check = requests.get(f"{DB_SERVICE_URL}/profiles/{profile_id}")
     if check.status_code != 200:
@@ -178,6 +185,8 @@ def download_resume(resume_id):
     user, err = require_session()
     if err:
         return err
+    if user["role"] == "staff":
+        return jsonify({"error": "Forbidden"}), 403
 
     meta_resp = requests.get(f"{DB_SERVICE_URL}/resumes/{resume_id}")
     if meta_resp.status_code != 200:
@@ -204,6 +213,8 @@ def delete_resume(resume_id):
     user, err = require_session()
     if err:
         return err
+    if user["role"] == "staff":
+        return jsonify({"error": "Forbidden"}), 403
 
     meta_resp = requests.get(f"{DB_SERVICE_URL}/resumes/{resume_id}")
     if meta_resp.status_code != 200:

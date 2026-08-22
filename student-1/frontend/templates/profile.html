@@ -15,7 +15,7 @@
           FIND
         </a>
         <div class="navbar-user">
-          <span class="user-badge">Applicant</span>
+          <span class="user-badge" id="user-role-badge"></span>
           <span id="user-name" style="font-size:0.9rem;font-weight:500;"></span>
           <button class="btn btn-ghost btn-sm" onclick="handleLogout()">Log Out</button>
         </div>
@@ -111,6 +111,12 @@
 
   <script>
     let currentProfile = null;
+    let currentRole = null;
+
+    function applyRoleUI() {
+      document.getElementById('user-role-badge').textContent = currentRole === 'staff' ? 'Staff' : 'Applicant';
+      document.getElementById('resume-section').style.display = (currentRole === 'staff') ? 'none' : '';
+    }
 
     function showAlert(msg, type) {
       const area = document.getElementById('alert-area');
@@ -127,11 +133,13 @@
     async function loadProfile() {
       const resp = await apiFetch('/api/profiles/me');
       if (resp.status === 404) {
+        const body = await resp.json().catch(() => ({}));
         currentProfile = null;
+        currentRole = body.role || currentRole;
         document.getElementById('profile-heading').textContent = 'Create Profile';
         document.getElementById('profile-submit-btn').textContent = 'Create Profile';
         document.getElementById('profile-delete-btn').style.display = 'none';
-        document.getElementById('resume-section').style.display = 'none';
+        applyRoleUI();
         return;
       }
       if (!resp.ok) {
@@ -139,6 +147,7 @@
         return;
       }
       currentProfile = await resp.json();
+      currentRole = currentProfile.role || currentRole;
       document.getElementById('profile-heading').textContent = 'Edit Profile';
       document.getElementById('profile-submit-btn').textContent = 'Update Profile';
       document.getElementById('profile-delete-btn').style.display = '';
@@ -149,8 +158,8 @@
       document.getElementById('professional_title').value = currentProfile.professional_title || '';
       document.getElementById('summary').value = currentProfile.summary || '';
       document.getElementById('interests').value = currentProfile.interests || '';
-      document.getElementById('resume-section').style.display = '';
-      await loadResumes();
+      applyRoleUI();
+      if (currentRole !== 'staff') await loadResumes();
     }
 
     async function handleProfileSubmit(e) {
@@ -311,13 +320,16 @@
       document.getElementById('page-wrapper').style.display = '';
       // Re-run loadProfile to populate the form
       if (resp.status === 404) {
+        const body = await resp.json().catch(() => ({}));
         currentProfile = null;
+        currentRole = body.role || currentRole;
         document.getElementById('profile-heading').textContent = 'Create Profile';
         document.getElementById('profile-submit-btn').textContent = 'Create Profile';
         document.getElementById('profile-delete-btn').style.display = 'none';
-        document.getElementById('resume-section').style.display = 'none';
+        applyRoleUI();
       } else if (resp.ok) {
         currentProfile = await resp.json();
+        currentRole = currentProfile.role || currentRole;
         document.getElementById('profile-heading').textContent = 'Edit Profile';
         document.getElementById('profile-submit-btn').textContent = 'Update Profile';
         document.getElementById('profile-delete-btn').style.display = '';
@@ -328,8 +340,8 @@
         document.getElementById('professional_title').value = currentProfile.professional_title || '';
         document.getElementById('summary').value = currentProfile.summary || '';
         document.getElementById('interests').value = currentProfile.interests || '';
-        document.getElementById('resume-section').style.display = '';
-        await loadResumes();
+        applyRoleUI();
+        if (currentRole !== 'staff') await loadResumes();
       }
 
       // Set user name from profile or fallback
