@@ -1,4 +1,6 @@
-# Tests placeholder
-# Add unit, integration, and validation tests for Student 1 here.
-# TODO: verify the assigned microservice before team integration.
+# Student 1 tests
+
+`test_placeholder.py` is currently the only test (`assert True`) — no real coverage yet.
+
+See [../README.md](../README.md) for known architectural deviations and AI feature status.
 
