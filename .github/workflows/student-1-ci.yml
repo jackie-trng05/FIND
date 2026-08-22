@@ -70,10 +70,10 @@ jobs:
           }
 
           echo "=== Student 1 Frontend ==="
-          check_url "http://localhost:16004/"
+          check_url "http://localhost:16004/health"
 
           echo "=== Student 1 Backend ==="
-          check_url "http://localhost:16005/"
+          check_url "http://localhost:16005/health"
 
           echo "=== Student 1 Database ==="
           check_url "http://localhost:16006/health"
