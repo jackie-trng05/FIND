@@ -53,13 +53,14 @@ def get_my_profile():
         return err
 
     resp = requests.get(f"{DB_SERVICE_URL}/profiles/by-user/{user['user_id']}")
-    # Attach identity fields (name lives only in the shared users table) so the frontend
-    # can render the User Details section and header regardless of profile existence
-    body = resp.json()
-    body["role"] = user["role"]
-    body["first_name"] = user["first_name"]
-    body["last_name"] = user["last_name"]
-    return jsonify(body), resp.status_code
+    # Not having a profile yet is a normal state (not an error), so always respond 200
+    profile = resp.json() if resp.status_code == 200 else None
+    return jsonify({
+        "profile": profile,
+        "role": user["role"],
+        "first_name": user["first_name"],
+        "last_name": user["last_name"],
+    }), 200
 
 
 @app.get("/api/profiles/<int:profile_id>")
