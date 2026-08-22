@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — FIND</title>
+  <link rel="stylesheet" href="/css/theme.css">
+  <style>
+    .greeting-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding: 1.5rem 2rem; background: linear-gradient(135deg, #1e3a5f 0%, #1a56db 100%); border-radius: var(--radius-xl); color: #fff; }
+    .greeting-bar h1 { color: #fff; font-size: 1.5rem; }
+    .greeting-bar p { color: rgba(255,255,255,0.75); font-size: 0.9rem; margin-top: 0.25rem; }
+
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
+    .feature-card { display: flex; flex-direction: column; gap: 0.75rem; padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); text-decoration: none; transition: all var(--transition); }
+    .feature-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+    .feature-card .feature-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    .feature-card .feature-icon svg { width: 24px; height: 24px; }
+    .feature-card h3 { font-size: 1rem; color: var(--text-primary); }
+    .feature-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <!-- Hidden until auth is verified -->
+  <div class="page-wrapper" id="page-wrapper" style="display:none;">
+    <nav class="navbar">
+      <div class="container" style="display:flex;align-items:center;justify-content:space-between;">
+        <a href="/dashboard" class="navbar-brand">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          FIND
+        </a>
+        <div class="navbar-user">
+          <span class="user-badge" id="user-role-badge"></span>
+          <span id="user-name" style="font-size:0.9rem;font-weight:500;"></span>
+          <button class="btn btn-ghost btn-sm" onclick="handleLogout()">Log Out</button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <div class="container">
+        <div class="greeting-bar">
+          <div>
+            <h1 id="greeting"></h1>
+            <p id="greeting-sub"></p>
+          </div>
+          <span class="user-badge" id="role-display" style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.85rem;padding:0.35rem 1rem;border-radius:6px;"></span>
+        </div>
+
+        <!-- STAFF DASHBOARD -->
+        <div id="staff-dashboard" style="display:none;">
+          <div class="grid grid-4 mb-4">
+            <div class="stat-card"><span class="stat-value" id="staff-postings">0</span><span class="stat-label">Job Postings</span></div>
+            <div class="stat-card"><span class="stat-value" id="staff-applications">0</span><span class="stat-label">Applications Received</span></div>
+            <div class="stat-card"><span class="stat-value" id="staff-interviews">0</span><span class="stat-label">Scheduled Interviews</span></div>
+            <div class="stat-card"><span class="stat-value" id="staff-evaluations">0</span><span class="stat-label">Evaluations to Review</span></div>
+          </div>
+
+          <div class="feature-grid">
+            <a href="http://localhost:16007/" class="feature-card">
+              <div class="feature-icon" style="background:#ccfbf1;color:#0d9488;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
+              </div>
+              <h3>Job Postings</h3>
+              <p>Create, edit, publish and close job positions for your organisation.</p>
+            </a>
+            <a href="http://localhost:16010/" class="feature-card">
+              <div class="feature-icon" style="background:#ede9fe;color:#7c3aed;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+              </div>
+              <h3>Applications</h3>
+              <p>Review submitted applications, shortlist and progress candidates.</p>
+            </a>
+            <a href="http://localhost:16013/" class="feature-card">
+              <div class="feature-icon" style="background:#fef3c7;color:#d97706;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+              </div>
+              <h3>Interviews</h3>
+              <p>Schedule interview time slots and manage candidate availability.</p>
+            </a>
+            <a href="http://localhost:16016/" class="feature-card">
+              <div class="feature-icon" style="background:#fce7f3;color:#db2777;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+              </div>
+              <h3>Evaluations</h3>
+              <p>Score candidates against criteria and make hiring recommendations.</p>
+            </a>
+          </div>
+        </div>
+
+        <!-- APPLICANT DASHBOARD -->
+        <div id="applicant-dashboard" style="display:none;">
+          <div class="grid grid-3 mb-4">
+            <div class="stat-card"><span class="stat-value" id="app-applications">0</span><span class="stat-label">My Applications</span></div>
+            <div class="stat-card"><span class="stat-value" id="app-interviews">0</span><span class="stat-label">Scheduled Interviews</span></div>
+            <div class="stat-card"><span class="stat-value" id="app-profile">0%</span><span class="stat-label">Profile Completion</span></div>
+          </div>
+
+          <div class="feature-grid">
+            <a href="http://localhost:16004/" class="feature-card">
+              <div class="feature-icon" style="background:var(--primary-light);color:var(--primary);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <h3>My Profile</h3>
+              <p>Update your personal details, resume and job preferences.</p>
+            </a>
+            <a href="http://localhost:16007/" class="feature-card">
+              <div class="feature-icon" style="background:#ccfbf1;color:#0d9488;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              </div>
+              <h3>Job Postings</h3>
+              <p>Browse open positions and apply directly to roles that match your skills.</p>
+            </a>
+            <a href="http://localhost:16010/" class="feature-card">
+              <div class="feature-icon" style="background:#ede9fe;color:#7c3aed;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+              </div>
+              <h3>My Applications</h3>
+              <p>Track the status of your submitted applications.</p>
+            </a>
+            <a href="http://localhost:16013/" class="feature-card">
+              <div class="feature-icon" style="background:#fef3c7;color:#d97706;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+              </div>
+              <h3>My Interviews</h3>
+              <p>View scheduled interviews and manage your availability.</p>
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <span>&copy; 2026 FIND — Advanced Software Development</span>
+        <span>UTS 41026</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:16002';
+
+    function clearAndRedirect() {
+      sessionStorage.removeItem('find_token');
+      sessionStorage.removeItem('find_user');
+      window.location.replace('/login');
+    }
+
+    // Re-validate when restored from bfcache (back button)
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) checkAuth();
+    });
+
+    async function checkAuth() {
+      const token = sessionStorage.getItem('find_token');
+      if (!token) { clearAndRedirect(); return false; }
+      try {
+        const resp = await fetch(`${API_URL}/api/auth/session`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) { clearAndRedirect(); return false; }
+      } catch {
+        clearAndRedirect(); return false;
+      }
+      return true;
+    }
+
+    async function init() {
+      const user = JSON.parse(sessionStorage.getItem('find_user') || 'null');
+      const token = sessionStorage.getItem('find_token');
+      if (!user || !token) { clearAndRedirect(); return; }
+
+      const valid = await checkAuth();
+      if (!valid) return;
+
+      document.getElementById('user-name').textContent = `${user.first_name} ${user.last_name}`;
+      const roleLabel = user.role === 'staff' ? 'Staff' : 'Applicant';
+      document.getElementById('user-role-badge').textContent = roleLabel;
+      document.getElementById('role-display').textContent = roleLabel;
+      document.getElementById('greeting').textContent = `Welcome back, ${user.first_name}`;
+      document.getElementById('greeting-sub').textContent = user.role === 'staff'
+        ? 'Manage your recruitment pipeline from here.'
+        : 'Track your job search progress from here.';
+
+      if (user.role === 'staff') {
+        document.getElementById('staff-dashboard').style.display = 'block';
+      } else {
+        document.getElementById('applicant-dashboard').style.display = 'block';
+      }
+
+      document.getElementById('page-wrapper').style.display = '';
+    }
+
+    async function handleLogout() {
+      const token = sessionStorage.getItem('find_token');
+      if (token) {
+        await fetch(`${API_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => {});
+      }
+      clearAndRedirect();
+    }
+
+    init();
+  </script>
+</body>
+</html>

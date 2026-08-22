@@ -5,13 +5,13 @@ services:
     container_name: find-shared-frontend
     ports:
       - "16001:3000"
-    environment:
-      NODE_ENV: development
-      PORT: 3000
+    volumes:
+      - ./shared/css:/app/shared-css:ro
     depends_on:
       - shared-api
     networks:
       - find-network
+    restart: unless-stopped
 
   shared-api:
     build:
@@ -19,9 +19,6 @@ services:
     container_name: find-shared-api
     ports:
       - "16002:5000"
-    environment:
-      NODE_ENV: development
-      PORT: 5000
     depends_on:
       - shared-db
     networks:
@@ -34,9 +31,6 @@ services:
     container_name: find-shared-db
     ports:
       - "16003:6000"
-    environment:
-      NODE_ENV: development
-      PORT: 6000
     networks:
       - find-network
     restart: unless-stopped
