@@ -96,7 +96,7 @@
           </div>
 
           <div class="feature-grid">
-            <a href="http://localhost:16004/" class="feature-card">
+            <a href="{{ student_1_url }}" class="feature-card">
               <div class="feature-icon" style="background:var(--primary-light);color:var(--primary);">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
@@ -159,6 +159,9 @@
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!resp.ok) { clearAndRedirect(); return false; }
+        const data = await resp.json();
+        // Refresh cached user data so name changes appear without re-login
+        sessionStorage.setItem('find_user', JSON.stringify(data.user));
       } catch {
         clearAndRedirect(); return false;
       }

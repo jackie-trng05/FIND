@@ -5,6 +5,8 @@ import os
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
 
+student_1_url = os.environ["STUDENT_1_FRONTEND_URL"]
+
 
 @app.after_request
 def add_no_cache_headers(response):
@@ -36,7 +38,7 @@ def register_page():
 
 @app.get("/dashboard")
 def dashboard_page():
-    return render_template("dashboard.html")
+    return render_template("dashboard.html", student_1_url=student_1_url)
 
 
 @app.get("/css/<path:filename>")

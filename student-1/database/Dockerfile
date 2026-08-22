@@ -1,15 +1,15 @@
-FROM node:18-alpine
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install --production
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY init_db.py .
+RUN python init_db.py
 
-ENV NODE_ENV=development
-ENV PORT=6001
+COPY app.py .
 
 EXPOSE 6001
 
-CMD ["node", "index.js"]
+CMD ["python", "app.py"]

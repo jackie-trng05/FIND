@@ -1,12 +1,16 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 import hashlib
+import os
 import secrets
 import requests
 from datetime import datetime, timedelta
 
+COOKIE_DOMAIN = os.environ["COOKIE_DOMAIN"]
+ALLOWED_ORIGINS = os.environ["ALLOWED_ORIGINS"].split(",")
+
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
 
 DB_SERVICE_URL = "http://find-shared-db:6000"
 
@@ -95,7 +99,7 @@ def login():
         "expires_at": expires_at,
     })
 
-    return jsonify({
+    resp = make_response(jsonify({
         "message": "Login successful",
         "token": token,
         "user": {
@@ -105,12 +109,17 @@ def login():
             "first_name": user["user_first_name"],
             "last_name": user["user_last_name"],
         },
-    }), 200
+    }), 200)
+    resp.set_cookie("session_token", token, domain=COOKIE_DOMAIN,
+                    httponly=True, samesite="Lax", max_age=86400)
+    return resp
 
 
 @app.get("/api/auth/session")
 def get_session():
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        token = request.cookies.get("session_token", "")
     if not token:
         return jsonify({"error": "No token provided"}), 401
 
@@ -134,12 +143,40 @@ def get_session():
     }), 200
 
 
+@app.put("/api/auth/user")
+def update_user():
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        token = request.cookies.get("session_token", "")
+    if not token:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    session_resp = requests.get(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token})
+    if session_resp.status_code != 200:
+        return jsonify({"error": "Invalid session"}), 401
+
+    user_id = session_resp.json()["user_id"]
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "JSON body required"}), 400
+
+    requests.put(f"{DB_SERVICE_URL}/users/{user_id}", json={
+        "user_first_name": data.get("first_name", ""),
+        "user_last_name": data.get("last_name", ""),
+    })
+    return jsonify({"message": "User updated"}), 200
+
+
 @app.post("/api/auth/logout")
 def logout():
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not token:
+        token = request.cookies.get("session_token", "")
     if token:
         requests.delete(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token})
-    return jsonify({"message": "Logged out"}), 200
+    resp = make_response(jsonify({"message": "Logged out"}), 200)
+    resp.delete_cookie("session_token", domain=COOKIE_DOMAIN)
+    return resp
 
 
 if __name__ == "__main__":
