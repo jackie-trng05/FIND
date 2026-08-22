@@ -59,7 +59,7 @@ def create_profile():
     if not data:
         return jsonify({"error": "JSON body required"}), 400
 
-    required = ["user_id"]
+    required = ["user_id", "phone"]
     for field in required:
         if not data.get(field):
             return jsonify({"error": f"{field} is required"}), 400
@@ -99,13 +99,18 @@ def update_profile(profile_id):
         conn.close()
         return jsonify({"error": "Profile not found"}), 404
 
+    phone = data.get("phone", existing["phone"])
+    if not phone:
+        conn.close()
+        return jsonify({"error": "phone is required"}), 400
+
     now = datetime.utcnow().isoformat()
     conn.execute("""
         UPDATE profiles SET phone=?, location=?,
         professional_title=?, summary=?, interests=?, updated_at=?
         WHERE profile_id=?
     """, (
-        data.get("phone", existing["phone"]),
+        phone,
         data.get("location", existing["location"]),
         data.get("professional_title", existing["professional_title"]),
         data.get("summary", existing["summary"]),

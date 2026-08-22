@@ -160,6 +160,9 @@ def update_user():
     if not data:
         return jsonify({"error": "JSON body required"}), 400
 
+    if not data.get("first_name") or not data.get("last_name"):
+        return jsonify({"error": "First name and last name are required"}), 400
+
     requests.put(f"{DB_SERVICE_URL}/users/{user_id}", json={
         "user_first_name": data.get("first_name", ""),
         "user_last_name": data.get("last_name", ""),

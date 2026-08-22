@@ -32,11 +32,11 @@
           <form id="user-details-form" onsubmit="handleUserDetailsSubmit(event)">
             <div class="grid grid-2">
               <div class="form-group">
-                <label class="form-label" for="ud_first_name">First Name</label>
+                <label class="form-label" for="ud_first_name">First Name <span class="required-marker">*</span></label>
                 <input class="form-input" type="text" id="ud_first_name" name="first_name" required>
               </div>
               <div class="form-group">
-                <label class="form-label" for="ud_last_name">Last Name</label>
+                <label class="form-label" for="ud_last_name">Last Name <span class="required-marker">*</span></label>
                 <input class="form-input" type="text" id="ud_last_name" name="last_name" required>
               </div>
             </div>
@@ -53,8 +53,8 @@
           <form id="profile-form" onsubmit="handleProfileSubmit(event)">
             <div class="grid grid-2">
               <div class="form-group">
-                <label class="form-label" for="phone">Phone</label>
-                <input class="form-input" type="tel" id="phone" name="phone">
+                <label class="form-label" for="phone">Phone <span class="required-marker">*</span></label>
+                <input class="form-input" type="tel" id="phone" name="phone" required>
               </div>
               <div class="form-group">
                 <label class="form-label" for="location">Location</label>
