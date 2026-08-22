@@ -1,3 +1,33 @@
-# Shared frontend entry point placeholder
-# Add the integrated home page, shared layout, and common UI assets here.
-# TODO: implement the shared application landing page and common components.
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FIND — Shared Frontend</title>
+  <!-- Minimal HTMX-ready index; student frontends will be linked here. -->
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 2rem; }
+    .service { margin: .5rem 0; }
+  </style>
+</head>
+<body>
+  <h1>FIND — Shared Frontend (landing page)</h1>
+  <p>This is the shared application entry point required by the spec. It provides links to student frontends and shared services.</p>
+
+  <h2>Student services</h2>
+  <div class="service"><a href="http://localhost:16004/" target="_blank">Student 1 frontend (http://localhost:16004/)</a></div>
+  <p><em>Other student services will be added soon.</em></p>
+
+  <h2>Shared services</h2>
+  <div class="service"><a href="http://localhost:16001/" target="_blank">Shared frontend landing page (http://localhost:16001/)</a></div>
+  <div class="service"><a href="http://localhost:16002/health" target="_blank">Shared access API health (http://localhost:16002/health)</a></div>
+  <div class="service"><a href="http://localhost:16003/" target="_blank">Shared database placeholder (http://localhost:16003/)</a></div>
+
+  <h2>Student 1 service endpoints</h2>
+  <div class="service"><a href="http://localhost:16005/health" target="_blank">Student 1 backend health (http://localhost:16005/health)</a></div>
+  <div class="service"><a href="http://localhost:16006/" target="_blank">Student 1 database placeholder (http://localhost:16006/)</a></div>
+
+  <footer style="margin-top:2rem;font-size:.9rem;color:#666;">Port canonicalisation: this repo uses ports 16001–16006 as the canonical local ports for shared and student-1 services (shared frontend=16001, shared-api=16002, shared-db=16003, student-1-frontend=16004, student-1-backend=16005, student-1-db=16006).</footer>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Ignore node modules and local envs
+node_modules/
+.vscode/
+.env
+.venv/
+__pycache__/
+*.pyc
+.git
+dist/
+build/
+.DS_Store
+npm-debug.log
+docker-compose.override.yml
