@@ -41,10 +41,6 @@ def create_profile():
 
     data = request.get_json() or {}
     data["user_id"] = user["user_id"]
-    if not data.get("first_name"):
-        data["first_name"] = user.get("first_name", "")
-    if not data.get("last_name"):
-        data["last_name"] = user.get("last_name", "")
 
     resp = requests.post(f"{DB_SERVICE_URL}/profiles", json=data)
     return jsonify(resp.json()), resp.status_code
@@ -57,9 +53,12 @@ def get_my_profile():
         return err
 
     resp = requests.get(f"{DB_SERVICE_URL}/profiles/by-user/{user['user_id']}")
-    # Attach role so the frontend can toggle role-specific UI (e.g. resume section) in one call
+    # Attach identity fields (name lives only in the shared users table) so the frontend
+    # can render the User Details section and header regardless of profile existence
     body = resp.json()
     body["role"] = user["role"]
+    body["first_name"] = user["first_name"]
+    body["last_name"] = user["last_name"]
     return jsonify(body), resp.status_code
 
 
@@ -93,14 +92,21 @@ def update_profile(profile_id):
 
     data = request.get_json() or {}
     resp = requests.put(f"{DB_SERVICE_URL}/profiles/{profile_id}", json=data)
+    return jsonify(resp.json()), resp.status_code
 
-    # Sync name back to the shared users table so login/session reflect the change
-    if resp.status_code == 200 and ("first_name" in data or "last_name" in data):
-        cookie = request.headers.get("Cookie", "")
-        requests.put(f"{SHARED_API_URL}/api/auth/user",
-                     json={"first_name": data.get("first_name", ""), "last_name": data.get("last_name", "")},
-                     headers={"Cookie": cookie})
 
+@app.put("/api/user")
+def update_user_identity():
+    user, err = require_session()
+    if err:
+        return err
+
+    data = request.get_json() or {}
+    cookie = request.headers.get("Cookie", "")
+    resp = requests.put(f"{SHARED_API_URL}/api/auth/user", json={
+        "first_name": data.get("first_name", ""),
+        "last_name": data.get("last_name", ""),
+    }, headers={"Cookie": cookie})
     return jsonify(resp.json()), resp.status_code
 
 

@@ -59,7 +59,7 @@ def create_profile():
     if not data:
         return jsonify({"error": "JSON body required"}), 400
 
-    required = ["user_id", "first_name", "last_name"]
+    required = ["user_id"]
     for field in required:
         if not data.get(field):
             return jsonify({"error": f"{field} is required"}), 400
@@ -72,10 +72,10 @@ def create_profile():
 
     now = datetime.utcnow().isoformat()
     cursor = conn.execute("""
-        INSERT INTO profiles (user_id, first_name, last_name, phone, location, professional_title, summary, interests, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO profiles (user_id, phone, location, professional_title, summary, interests, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        data["user_id"], data["first_name"], data["last_name"],
+        data["user_id"],
         data.get("phone", ""), data.get("location", ""),
         data.get("professional_title", ""), data.get("summary", ""),
         data.get("interests", ""), now, now,
@@ -101,12 +101,10 @@ def update_profile(profile_id):
 
     now = datetime.utcnow().isoformat()
     conn.execute("""
-        UPDATE profiles SET first_name=?, last_name=?, phone=?, location=?,
+        UPDATE profiles SET phone=?, location=?,
         professional_title=?, summary=?, interests=?, updated_at=?
         WHERE profile_id=?
     """, (
-        data.get("first_name", existing["first_name"]),
-        data.get("last_name", existing["last_name"]),
         data.get("phone", existing["phone"]),
         data.get("location", existing["location"]),
         data.get("professional_title", existing["professional_title"]),

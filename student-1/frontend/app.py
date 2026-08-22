@@ -81,6 +81,11 @@ def proxy_resumes(subpath):
     return _proxy(f"/api/resumes/{subpath}")
 
 
+@app.route("/api/user", methods=["PUT"])
+def proxy_user():
+    return _proxy("/api/user")
+
+
 @app.route("/api/auth/logout", methods=["POST"])
 def proxy_logout():
     cookie_header = request.headers.get("Cookie", "")

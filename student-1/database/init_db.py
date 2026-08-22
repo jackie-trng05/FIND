@@ -14,8 +14,6 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS profiles (
     profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL UNIQUE,
-    first_name TEXT NOT NULL,
-    last_name TEXT NOT NULL,
     phone TEXT,
     location TEXT,
     professional_title TEXT,
@@ -44,22 +42,25 @@ cursor.execute("DELETE FROM resumes")
 cursor.execute("DELETE FROM profiles")
 
 # Seeded user_ids 1-10 must stay in sync with shared/database/init_db.py seed data.
+# user_id -> name (for reference only; names now live solely in the shared users table):
+# 1 Alex Morgan, 2 Sarah Mitchell, 3 James Chen, 4 Laura Williams, 5 Robert Taylor,
+# 6 Emily Johnson, 7 Michael Brown, 8 Jessica Davis, 9 David Wilson, 10 Sophie Martinez
 seed_profiles = [
-    (1, "Alex", "Morgan", "+61400000001", "Sydney, Australia", "HR Manager", "Experienced HR professional with 10+ years in talent acquisition.", "Leadership, DEI initiatives"),
-    (2, "Sarah", "Mitchell", "+61400000002", "Melbourne, Australia", "Senior Recruiter", "Specialist in tech recruitment and employer branding.", "Employer branding, Tech hiring"),
-    (3, "James", "Chen", "+61400000003", "Brisbane, Australia", "Recruitment Coordinator", "Detail-oriented coordinator managing interview logistics.", "Process improvement, Scheduling"),
-    (4, "Laura", "Williams", "+61400000004", "Perth, Australia", "HR Director", "Strategic HR leader driving organisational change.", "Change management, Strategy"),
-    (5, "Robert", "Taylor", "+61400000005", "Adelaide, Australia", "Hiring Lead", "Results-driven hiring manager for engineering teams.", "Technical hiring, Team building"),
-    (6, "Emily", "Johnson", "+61400000006", "Sydney, Australia", "Software Engineer", "Full-stack developer seeking new opportunities.", "Python, React, Cloud computing"),
-    (7, "Michael", "Brown", "+61400000007", "Melbourne, Australia", "Data Analyst", "Analytics professional with expertise in SQL and Python.", "Machine learning, Data visualisation"),
-    (8, "Jessica", "Davis", "+61400000008", "Sydney, Australia", "UX Designer", "User-centred designer passionate about accessibility.", "Accessibility, Design systems"),
-    (9, "David", "Wilson", "+61400000009", "Canberra, Australia", "Project Manager", "Certified PMP with agile delivery experience.", "Agile, Stakeholder management"),
-    (10, "Sophie", "Martinez", "+61400000010", "Hobart, Australia", "Marketing Specialist", "Digital marketing expert focused on growth.", "SEO, Content strategy"),
+    (1, "+61400000001", "Sydney, Australia", "HR Manager", "Experienced HR professional with 10+ years in talent acquisition.", "Leadership, DEI initiatives"),
+    (2, "+61400000002", "Melbourne, Australia", "Senior Recruiter", "Specialist in tech recruitment and employer branding.", "Employer branding, Tech hiring"),
+    (3, "+61400000003", "Brisbane, Australia", "Recruitment Coordinator", "Detail-oriented coordinator managing interview logistics.", "Process improvement, Scheduling"),
+    (4, "+61400000004", "Perth, Australia", "HR Director", "Strategic HR leader driving organisational change.", "Change management, Strategy"),
+    (5, "+61400000005", "Adelaide, Australia", "Hiring Lead", "Results-driven hiring manager for engineering teams.", "Technical hiring, Team building"),
+    (6, "+61400000006", "Sydney, Australia", "Software Engineer", "Full-stack developer seeking new opportunities.", "Python, React, Cloud computing"),
+    (7, "+61400000007", "Melbourne, Australia", "Data Analyst", "Analytics professional with expertise in SQL and Python.", "Machine learning, Data visualisation"),
+    (8, "+61400000008", "Sydney, Australia", "UX Designer", "User-centred designer passionate about accessibility.", "Accessibility, Design systems"),
+    (9, "+61400000009", "Canberra, Australia", "Project Manager", "Certified PMP with agile delivery experience.", "Agile, Stakeholder management"),
+    (10, "+61400000010", "Hobart, Australia", "Marketing Specialist", "Digital marketing expert focused on growth.", "SEO, Content strategy"),
 ]
 
 cursor.executemany("""
-INSERT INTO profiles (user_id, first_name, last_name, phone, location, professional_title, summary, interests)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO profiles (user_id, phone, location, professional_title, summary, interests)
+VALUES (?, ?, ?, ?, ?, ?)
 """, seed_profiles)
 
 # Seed resumes with synthetic plain-text content

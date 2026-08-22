@@ -26,20 +26,28 @@
       <div class="container">
         <div id="alert-area"></div>
 
-        <!-- Profile Section -->
+        <!-- User Details Section (identity fields live on the shared users table, not the profile) -->
         <div class="card" style="margin-bottom:2rem;">
-          <h2 id="profile-heading" style="margin-bottom:1rem;">My Profile</h2>
-          <form id="profile-form" onsubmit="handleProfileSubmit(event)">
+          <h2 style="margin-bottom:1rem;">User Details</h2>
+          <form id="user-details-form" onsubmit="handleUserDetailsSubmit(event)">
             <div class="grid grid-2">
               <div class="form-group">
-                <label class="form-label" for="first_name">First Name</label>
-                <input class="form-input" type="text" id="first_name" name="first_name" required>
+                <label class="form-label" for="ud_first_name">First Name</label>
+                <input class="form-input" type="text" id="ud_first_name" name="first_name" required>
               </div>
               <div class="form-group">
-                <label class="form-label" for="last_name">Last Name</label>
-                <input class="form-input" type="text" id="last_name" name="last_name" required>
+                <label class="form-label" for="ud_last_name">Last Name</label>
+                <input class="form-input" type="text" id="ud_last_name" name="last_name" required>
               </div>
             </div>
+            <button type="submit" class="btn btn-primary">Save Details</button>
+          </form>
+        </div>
+
+        <!-- Profile Section -->
+        <div class="card" style="margin-bottom:2rem;">
+          <h2 id="profile-heading" style="margin-bottom:1rem;">User Profile</h2>
+          <form id="profile-form" onsubmit="handleProfileSubmit(event)">
             <div class="grid grid-2">
               <div class="form-group">
                 <label class="form-label" for="phone">Phone</label>
@@ -118,6 +126,13 @@
       document.getElementById('resume-section').style.display = (currentRole === 'staff') ? 'none' : '';
     }
 
+    // Identity (first/last name) lives on the shared users table, independent of profile existence
+    function applyIdentity(body) {
+      document.getElementById('ud_first_name').value = body.first_name || '';
+      document.getElementById('ud_last_name').value = body.last_name || '';
+      document.getElementById('user-name').textContent = `${body.first_name || ''} ${body.last_name || ''}`.trim();
+    }
+
     function showAlert(msg, type) {
       const area = document.getElementById('alert-area');
       area.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
@@ -132,11 +147,12 @@
 
     async function loadProfile() {
       const resp = await apiFetch('/api/profiles/me');
+      const body = await resp.json().catch(() => ({}));
+      currentRole = body.role || currentRole;
+      applyIdentity(body);
+
       if (resp.status === 404) {
-        const body = await resp.json().catch(() => ({}));
         currentProfile = null;
-        currentRole = body.role || currentRole;
-        document.getElementById('profile-heading').textContent = 'Create Profile';
         document.getElementById('profile-submit-btn').textContent = 'Create Profile';
         document.getElementById('profile-delete-btn').style.display = 'none';
         applyRoleUI();
@@ -146,13 +162,9 @@
         window.location.href = 'http://localhost:16001/login';
         return;
       }
-      currentProfile = await resp.json();
-      currentRole = currentProfile.role || currentRole;
-      document.getElementById('profile-heading').textContent = 'Edit Profile';
+      currentProfile = body;
       document.getElementById('profile-submit-btn').textContent = 'Update Profile';
       document.getElementById('profile-delete-btn').style.display = '';
-      document.getElementById('first_name').value = currentProfile.first_name || '';
-      document.getElementById('last_name').value = currentProfile.last_name || '';
       document.getElementById('phone').value = currentProfile.phone || '';
       document.getElementById('location').value = currentProfile.location || '';
       document.getElementById('professional_title').value = currentProfile.professional_title || '';
@@ -162,11 +174,29 @@
       if (currentRole !== 'staff') await loadResumes();
     }
 
+    async function handleUserDetailsSubmit(e) {
+      e.preventDefault();
+      const first_name = document.getElementById('ud_first_name').value;
+      const last_name = document.getElementById('ud_last_name').value;
+
+      const resp = await apiFetch('/api/user', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ first_name, last_name }),
+      });
+
+      if (resp.ok) {
+        document.getElementById('user-name').textContent = `${first_name} ${last_name}`.trim();
+        showAlert('Details updated.', 'success');
+      } else {
+        const data = await resp.json().catch(() => ({}));
+        showAlert(data.error || 'Failed to update details.', 'error');
+      }
+    }
+
     async function handleProfileSubmit(e) {
       e.preventDefault();
       const body = {
-        first_name: document.getElementById('first_name').value,
-        last_name: document.getElementById('last_name').value,
         phone: document.getElementById('phone').value,
         location: document.getElementById('location').value,
         professional_title: document.getElementById('professional_title').value,
@@ -318,23 +348,19 @@
         return;
       }
       document.getElementById('page-wrapper').style.display = '';
-      // Re-run loadProfile to populate the form
+      const body = await resp.json().catch(() => ({}));
+      currentRole = body.role || currentRole;
+      applyIdentity(body);
+
       if (resp.status === 404) {
-        const body = await resp.json().catch(() => ({}));
         currentProfile = null;
-        currentRole = body.role || currentRole;
-        document.getElementById('profile-heading').textContent = 'Create Profile';
         document.getElementById('profile-submit-btn').textContent = 'Create Profile';
         document.getElementById('profile-delete-btn').style.display = 'none';
         applyRoleUI();
       } else if (resp.ok) {
-        currentProfile = await resp.json();
-        currentRole = currentProfile.role || currentRole;
-        document.getElementById('profile-heading').textContent = 'Edit Profile';
+        currentProfile = body;
         document.getElementById('profile-submit-btn').textContent = 'Update Profile';
         document.getElementById('profile-delete-btn').style.display = '';
-        document.getElementById('first_name').value = currentProfile.first_name || '';
-        document.getElementById('last_name').value = currentProfile.last_name || '';
         document.getElementById('phone').value = currentProfile.phone || '';
         document.getElementById('location').value = currentProfile.location || '';
         document.getElementById('professional_title').value = currentProfile.professional_title || '';
@@ -342,11 +368,6 @@
         document.getElementById('interests').value = currentProfile.interests || '';
         applyRoleUI();
         if (currentRole !== 'staff') await loadResumes();
-      }
-
-      // Set user name from profile or fallback
-      if (currentProfile) {
-        document.getElementById('user-name').textContent = `${currentProfile.first_name} ${currentProfile.last_name}`;
       }
     }
 
