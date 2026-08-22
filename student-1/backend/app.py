@@ -111,6 +111,13 @@ def update_user_identity():
     return jsonify(resp.json()), resp.status_code
 
 
+@app.post("/api/auth/logout")
+def logout():
+    cookie = request.headers.get("Cookie", "")
+    resp = requests.post(f"{SHARED_API_URL}/api/auth/logout", headers={"Cookie": cookie})
+    return jsonify(resp.json()), resp.status_code
+
+
 @app.delete("/api/profiles/<int:profile_id>")
 def delete_profile(profile_id):
     user, err = require_session()

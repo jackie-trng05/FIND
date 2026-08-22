@@ -9,7 +9,6 @@ CORS(app, supports_credentials=True)
 
 STUDENT1_BACKEND_URL = os.environ["STUDENT1_BACKEND_URL"]
 COOKIE_DOMAIN = os.environ["COOKIE_DOMAIN"]
-SHARED_API_URL = os.environ.get("SHARED_API_URL", "http://find-shared-api:5000")
 
 
 @app.get("/health")
@@ -90,7 +89,7 @@ def proxy_user():
 def proxy_logout():
     cookie_header = request.headers.get("Cookie", "")
     http_requests.post(
-        f"{SHARED_API_URL}/api/auth/logout",
+        f"{STUDENT1_BACKEND_URL}/api/auth/logout",
         headers={"Cookie": cookie_header}
     )
     proxy_resp = make_response({"message": "Logged out"}, 200)
