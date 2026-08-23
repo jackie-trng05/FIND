@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Interviews · List — FIND</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/common.js"></script>
+</head>
+<body>
+<div id="app-chrome"></div>
+<main class="app-shell">
+    <div class="page-head">
+        <div>
+            <h1>All Interviews</h1>
+            <p id="list-sub">Filter and browse your interviews.</p>
+        </div>
+    </div>
+
+    <section class="card">
+        <div class="filters">
+            <div class="field">
+                <label for="f-status">Status</label>
+                <select id="f-status">
+                    <option value="">All</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="f-jobposting">Job posting</label>
+                <select id="f-jobposting">
+                    <option value="">All</option>
+                </select>
+            </div>
+            <div class="field">
+                <label for="f-from">From date</label>
+                <input id="f-from" type="date">
+            </div>
+            <div class="field">
+                <label for="f-to">To date</label>
+                <input id="f-to" type="date">
+            </div>
+            <div class="field" id="search-field">
+                <label for="f-search">Search applicant</label>
+                <input id="f-search" type="text" placeholder="Name or ID">
+            </div>
+            <div class="field">
+                <label>&nbsp;</label>
+                <button class="btn btn-secondary" id="f-reset" type="button">Reset</button>
+            </div>
+        </div>
+
+        <div id="list-body"><p class="loading">Loading…</p></div>
+    </section>
+</main>
+
+<script>
+let allInterviews = [];
+let currentUser = null;
+
+function applyFilters() {
+    const status = document.getElementById("f-status").value;
+    const jobPosting = document.getElementById("f-jobposting").value;
+    const from = document.getElementById("f-from").value;
+    const to = document.getElementById("f-to").value;
+    const searchEl = document.getElementById("f-search");
+    const search = searchEl ? searchEl.value.trim().toLowerCase() : "";
+
+    const fromDate = from ? new Date(from + "T00:00") : null;
+    const toDate = to ? new Date(to + "T23:59") : null;
+
+    const rows = allInterviews.filter((it) => {
+        if (status && String(it.interview_status).toLowerCase() !== status.toLowerCase()) return false;
+        if (jobPosting && String(it.job_posting_id || "") !== jobPosting) return false;
+        const dt = parseDateTime(it.interview_datetime);
+        if (fromDate && dt && dt < fromDate) return false;
+        if (toDate && dt && dt > toDate) return false;
+        if (search) {
+            const hay = `${it.applicant_name} ${it.applicant_id} ${it.application_id}`.toLowerCase();
+            if (!hay.includes(search)) return false;
+        }
+        return true;
+    });
+
+    renderRows(rows);
+}
+
+function renderRows(rows) {
+    const body = document.getElementById("list-body");
+    const isStaff = currentUser.role === "staff";
+    const personHead = isStaff ? "Applicant" : "Interviewer";
+    const th = (key, label) =>
+        `<th class="sortable ${SORT.key === key ? "sort-" + SORT.dir : ""}" onclick="sortBy('${key}')">${label}</th>`;
+    const head = `
+        <thead>
+            <tr>
+                ${th("person", personHead)}
+                ${th("posting", "Job Posting")}
+                ${th("datetime", "Date &amp; Time")}
+                ${th("status", "Status")}
+                <th></th>
+            </tr>
+        </thead>`;
+
+    if (!rows.length) {
+        body.innerHTML = `<table class="data-table">${head}<tbody>
+            <tr><td colspan="5" class="empty-state">No interviews match your filters.</td></tr>
+        </tbody></table>`;
+        return;
+    }
+
+    const sorted = sortRows(rows, isStaff);
+    const rowsHtml = sorted
+        .map((it) => {
+            const person = isStaff ? it.applicant_name : it.staff_name;
+            const link = `details.html?id=${it.interview_id}&from=list`;
+            const statusCell = isStaff
+                ? statusSelectHtml(it)
+                : statusBadge(it.interview_status);
+            return `
+                <tr class="clickable" onclick="window.location='${link}'">
+                    <td>${escapeHtml(person || "—")}<div class="meta">Application #${escapeHtml(it.application_id)}</div></td>
+                    <td>${escapeHtml(it.job_posting_title || "—")}</td>
+                    <td>${formatDateTime(it.interview_datetime)}</td>
+                    <td class="cell-status" onclick="event.stopPropagation()">${statusCell}</td>
+                    <td class="cell-action"><a class="btn btn-secondary btn-sm" href="${link}" onclick="event.stopPropagation()">View</a></td>
+                </tr>`;
+        })
+        .join("");
+    body.innerHTML = `<table class="data-table">${head}<tbody>${rowsHtml}</tbody></table>`;
+    if (isStaff) wireStatusSelects();
+}
+
+// Click a header to sort; click again to flip direction.
+const SORT = { key: "datetime", dir: "asc" };
+
+function sortBy(key) {
+    if (SORT.key === key) {
+        SORT.dir = SORT.dir === "asc" ? "desc" : "asc";
+    } else {
+        SORT.key = key;
+        SORT.dir = "asc";
+    }
+    applyFilters();
+}
+
+function sortRows(rows, isStaff) {
+    const dir = SORT.dir === "asc" ? 1 : -1;
+    const val = (it) => {
+        switch (SORT.key) {
+            case "person": return (isStaff ? it.applicant_name : it.staff_name) || "";
+            case "posting": return it.job_posting_title || "";
+            case "status": return it.interview_status || "";
+            case "datetime": {
+                const d = parseDateTime(it.interview_datetime);
+                return d ? d.getTime() : 0;
+            }
+            default: return "";
+        }
+    };
+    return [...rows].sort((a, b) => {
+        const va = val(a);
+        const vb = val(b);
+        if (va < vb) return -1 * dir;
+        if (va > vb) return 1 * dir;
+        return 0;
+    });
+}
+
+// Wire the staff per-row status dropdown (only "Interview Completed" is manual).
+function wireStatusSelects() {
+    document.querySelectorAll(".status-select").forEach((sel) => {
+        sel.addEventListener("change", async () => {
+            const id = sel.dataset.id;
+            const current = sel.dataset.current;
+            if (sel.value !== "Interview Completed") { sel.value = current; return; }
+            const confirmed = await confirmDialog({
+                title: "Mark interview complete?",
+                message: "This sets the application status to “Interview Completed”.",
+                confirmText: "Mark Complete",
+            });
+            if (!confirmed) { sel.value = current; return; }
+            if (await setInterviewComplete(id)) {
+                showToast("Interview marked complete.", "success");
+                allInterviews = await fetchInterviews(currentUser);
+                applyFilters();
+            } else {
+                showToast("Could not update status.", "error");
+                sel.value = current;
+            }
+        });
+    });
+}
+
+(async function () {
+    currentUser = await initChrome("list");
+    if (!currentUser) return;
+
+    document.getElementById("list-sub").textContent =
+        currentUser.role === "staff"
+            ? "Every interview across the team."
+            : "Interviews you have been requested for.";
+
+    const statusSelect = document.getElementById("f-status");
+    STATUS_OPTIONS.forEach((s) => {
+        const opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s;
+        statusSelect.appendChild(opt);
+    });
+
+    // Applicants only ever see their own interviews, so a name/ID search adds nothing.
+    if (currentUser.role !== "staff") {
+        const searchField = document.getElementById("search-field");
+        if (searchField) searchField.style.display = "none";
+    }
+
+    ["f-status", "f-jobposting", "f-from", "f-to", "f-search"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", applyFilters);
+    });
+    document.getElementById("f-reset").addEventListener("click", () => {
+        document.getElementById("f-status").value = "";
+        document.getElementById("f-jobposting").value = "";
+        document.getElementById("f-from").value = "";
+        document.getElementById("f-to").value = "";
+        const searchEl = document.getElementById("f-search");
+        if (searchEl) searchEl.value = "";
+        applyFilters();
+    });
+
+    try {
+        // "All Interviews" shows every interview for staff; applicants see their own.
+        allInterviews = currentUser.role === "staff"
+            ? await fetchAllInterviews()
+            : await fetchInterviews(currentUser);
+    } catch (err) {
+        document.getElementById("list-body").innerHTML =
+            `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+        return;
+    }
+
+    // Build the job posting filter from the postings present in these interviews.
+    const jpSelect = document.getElementById("f-jobposting");
+    const seen = new Map();
+    allInterviews.forEach((it) => {
+        const id = it.job_posting_id;
+        if (id && !seen.has(String(id))) {
+            seen.set(String(id), it.job_posting_title || `Posting #${id}`);
+        }
+    });
+    seen.forEach((title, id) => {
+        const opt = document.createElement("option");
+        opt.value = id;
+        opt.textContent = title;
+        jpSelect.appendChild(opt);
+    });
+
+    applyFilters();
+})();
+</script>
+</body>
+</html>
