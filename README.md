@@ -208,21 +208,6 @@ The port mappings follow the course-provided architecture and should not be chan
 | Student 5  | Frontend      |   `16016` |         `3005` |           N           |
 | Student 5  | Backend       |   `16017` |         `5005` |           N           |
 | Student 5  | Database      |   `16018` |         `6005` |           N           |
-| Student 6  | Frontend      |   `16019` |         `3006` |           N           |
-| Student 6  | Backend       |   `16020` |         `5006` |           N           |
-| Student 6  | Database      |   `16021` |         `6006` |           N           |
-| Student 7  | Frontend      |   `16022` |         `3007` |           N           |
-| Student 7  | Backend       |   `16023` |         `5007` |           N           |
-| Student 7  | Database      |   `16024` |         `6007` |           N           |
-| Student 8  | Frontend      |   `16025` |         `3008` |           N           |
-| Student 8  | Backend       |   `16026` |         `5008` |           N           |
-| Student 8  | Database      |   `16027` |         `6008` |           N           |
-| Student 9  | Frontend      |   `16028` |         `3009` |           N           |
-| Student 9  | Backend       |   `16029` |         `5009` |           N           |
-| Student 9  | Database      |   `16030` |         `6009` |           N           |
-| Student 10 | Frontend      |   `16031` |         `3010` |           N           |
-| Student 10 | Backend       |   `16032` |         `5010` |           N           |
-| Student 10 | Database      |   `16033` |         `6010` |           N           |
 
 ---
 

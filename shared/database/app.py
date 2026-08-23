@@ -100,6 +100,27 @@ def create_user():
     return jsonify({"user_id": user_id, "message": "User created"}), 201
 
 
+@app.put("/users/<int:user_id>")
+def update_user(user_id):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "JSON body required"}), 400
+
+    conn = get_db_connection()
+    user = conn.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,)).fetchone()
+    if not user:
+        conn.close()
+        return jsonify({"error": "User not found"}), 404
+
+    conn.execute(
+        "UPDATE users SET user_first_name=?, user_last_name=? WHERE user_id=?",
+        (data.get("user_first_name", ""), data.get("user_last_name", ""), user_id),
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "User updated"}), 200
+
+
 @app.post("/sessions")
 def create_session():
     data = request.get_json()
