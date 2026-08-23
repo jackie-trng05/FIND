@@ -20,7 +20,9 @@ VALID_STATUSES = (
     "Draft",
     "Submitted",
     "Shortlisted",
+    "Interview Requested",
     "Interview Scheduled",
+    "Reschedule Requested",
     "Interview Completed",
     "Evaluation Completed",
     "Hired",
@@ -34,7 +36,9 @@ VALID_STATUSES = (
 WITHDRAWABLE_STATUSES = (
     "Submitted",
     "Shortlisted",
+    "Interview Requested",
     "Interview Scheduled",
+    "Reschedule Requested",
     "Interview Completed",
     "Evaluation Completed",
 )
@@ -71,7 +75,9 @@ def _status_badge(status: str) -> str:
         "Draft": "badge-warning",
         "Submitted": "badge-info",
         "Shortlisted": "badge-accent",
+        "Interview Requested": "badge-warning",
         "Interview Scheduled": "badge-info",
+        "Reschedule Requested": "badge-warning",
         "Interview Completed": "badge-accent",
         "Evaluation Completed": "badge-accent",
         "Hired": "badge-success",
@@ -510,11 +516,12 @@ def render_staff_applications_table(
         status_select = _render_status_select(aid, a["Application_Status"])
 
         interview_btn = ""
-        if a["Application_Status"] in INTERVIEW_ACTION_STATUSES:
-            label = "Reschedule" if a["Application_Status"] == "Interview Scheduled" else "Interview"
+        # Staff can only kick off scheduling for a shortlisted candidate; they
+        # do not reschedule a booked interview (applicants request that).
+        if a["Application_Status"] == "Shortlisted":
             interview_btn = (
                 f'<a class="btn btn-accent btn-sm" target="_blank" rel="noopener"'
-                f' href="{INTERVIEWS_URL}/?application={aid}">{label}</a>'
+                f' href="{INTERVIEWS_URL}/?application={aid}">Interview</a>'
             )
         evaluate_btn = ""
         if a["Application_Status"] == "Interview Completed":
@@ -549,6 +556,12 @@ def _render_status_select(application_id: int, current: str) -> str:
     """
     selectable = {"Shortlisted", "Rejected"}
     opts = []
+    # Always reflect the true current status. If it won't be rendered as a
+    # selected option below (Draft is skipped, or an unexpected status), show it
+    # up front as a disabled selected option so the control never falls back to
+    # displaying the first enabled option (e.g. "Shortlisted").
+    if current == "Draft" or current not in VALID_STATUSES:
+        opts.append(f'<option value="{_e(current)}" selected disabled>{_e(current)}</option>')
     for status in VALID_STATUSES:
         if status == "Draft":
             continue

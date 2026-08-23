@@ -39,7 +39,9 @@ VALID_STATUSES = (
     "Draft",
     "Submitted",
     "Shortlisted",
+    "Interview Requested",
     "Interview Scheduled",
+    "Reschedule Requested",
     "Interview Completed",
     "Evaluation Completed",
     "Hired",
@@ -304,8 +306,9 @@ def submit_application(application_id: int):
 @app.put("/applications/<int:application_id>/withdraw")
 def withdraw_application(application_id: int):
     withdrawable = (
-        "Draft", "Submitted", "Shortlisted",
-        "Interview Scheduled", "Interview Completed", "Evaluation Completed",
+        "Draft", "Submitted", "Shortlisted", "Interview Requested",
+        "Interview Scheduled", "Reschedule Requested",
+        "Interview Completed", "Evaluation Completed",
     )
     conn = get_db_connection()
     existing = conn.execute(
