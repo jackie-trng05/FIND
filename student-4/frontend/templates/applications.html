@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Applications to Schedule — FIND</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/common.js"></script>
+</head>
+<body>
+<div id="app-chrome"></div>
+<main class="app-shell">
+    <div class="page-head">
+        <div>
+            <h1>Applications to Schedule</h1>
+            <p>Shortlisted applicants for your job postings who still need an interview.</p>
+        </div>
+    </div>
+
+    <div id="app-alert"></div>
+    <section class="card">
+        <div class="filters">
+            <div class="field" id="app-search-field">
+                <label for="f-app-search">Search applicant</label>
+                <input id="f-app-search" type="text" placeholder="Name or application ID">
+            </div>
+        </div>
+        <div id="app-body"><p class="loading">Loading…</p></div>
+    </section>
+</main>
+
+<script>
+let currentUser = null;
+let applications = [];
+
+function renderRows(rows) {
+    const body = document.getElementById("app-body");
+    if (!rows.length) {
+        body.innerHTML = `<div class="empty-state">No shortlisted applications are waiting to be scheduled.</div>`;
+        return;
+    }
+    body.innerHTML = `<div class="interview-list">${rows
+        .map((app) => `
+            <div class="interview-row">
+                <div>
+                    <div class="who">${escapeHtml(app.applicant_name)} · Application #${escapeHtml(app.application_id)}</div>
+                    <div class="meta">${escapeHtml(app.job_posting_title)} (#${escapeHtml(app.job_posting_id)})</div>
+                </div>
+                <div class="btn-row">
+                    ${statusBadge(app.application_status)}
+                    <a class="btn btn-primary btn-sm" href="schedule.html?application_id=${app.application_id}">Schedule interview</a>
+                </div>
+            </div>`)
+        .join("")}</div>`;
+}
+
+function applyFilter() {
+    const searchEl = document.getElementById("f-app-search");
+    const search = searchEl ? searchEl.value.trim().toLowerCase() : "";
+    const rows = applications.filter((app) => {
+        if (!search) return true;
+        const hay = `${app.applicant_name} ${app.application_id} ${app.applicant_id}`.toLowerCase();
+        return hay.includes(search);
+    });
+    renderRows(rows);
+}
+
+(async function () {
+    currentUser = await initChrome("applications", { staffOnly: true });
+    if (!currentUser) return;
+
+    document.getElementById("f-app-search").addEventListener("input", applyFilter);
+
+    try {
+        applications = await fetchSchedulableApplications(currentUser);
+    } catch (err) {
+        document.getElementById("app-body").innerHTML =
+            `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+        return;
+    }
+
+    applyFilter();
+})();
+</script>
+</body>
+</html>
