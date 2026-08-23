@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Applications — FIND{% endblock %}
+
+{% block content %}
+<!-- ================================================================== -->
+<!-- APPLICANT VIEW — My Applications                                    -->
+<!-- ================================================================== -->
+<div class="applicant-only">
+    <div class="page-head">
+        <h1 class="page-title">My Applications</h1>
+        <a class="btn btn-primary" href="{{ job_postings_url }}">Browse job postings</a>
+    </div>
+    <div class="card">
+        <div class="table-wrapper">
+            <table class="applications-table">
+                <thead>
+                    <tr>
+                        <th>Application ID</th>
+                        <th>Job title</th>
+                        <th>Status</th>
+                        <th class="col-actions"></th>
+                    </tr>
+                </thead>
+                <tbody id="my-applications-body"
+                       hx-get="{{ backend_url }}/api/my-applications"
+                       hx-trigger="authReady from:body, applicationWithdrawn from:body, applicationDeleted from:body"
+                       hx-swap="innerHTML"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================== -->
+<!-- STAFF VIEW — All Applications                                       -->
+<!-- ================================================================== -->
+<div class="staff-only">
+    <div class="page-head">
+        <h1 class="page-title">All Applications</h1>
+    </div>
+
+    <div id="pending-bar-slot"
+         hx-get="{{ backend_url }}/api/pending-summary"
+         hx-trigger="authReady from:body, statusChanged from:body"
+         hx-swap="innerHTML"></div>
+
+    <div class="card">
+        <form id="filter-form" class="filters"
+              hx-get="{{ backend_url }}/api/all-applications"
+              hx-target="#applications-body"
+              hx-swap="innerHTML"
+              hx-trigger="submit, change, keyup changed delay:300ms from:input[name='q']">
+            <input class="form-input" name="q"
+                   placeholder="Search by candidate name or job title">
+            <select class="form-select" name="status">
+                <option value="">All statuses</option>
+                <option>Submitted</option>
+                <option>Shortlisted</option>
+                <option>Interview Scheduled</option>
+                <option>Interview Completed</option>
+                <option>Evaluation Completed</option>
+                <option>Hired</option>
+                <option>Rejected</option>
+            </select>
+            <input type="hidden" name="sort" id="filter-sort">
+            <input type="hidden" name="order" id="filter-order" value="desc">
+        </form>
+
+        <div class="table-wrapper">
+            <table class="applications-table">
+                <thead>
+                    <tr>
+                        <th data-sort="id">Application ID</th>
+                        <th data-sort="title">Job title</th>
+                        <th data-sort="candidate">Candidate name</th>
+                        <th data-sort="status">Status</th>
+                        <th class="col-actions"></th>
+                    </tr>
+                </thead>
+                <tbody id="applications-body"
+                       hx-get="{{ backend_url }}/api/all-applications"
+                       hx-trigger="authReady from:body, statusChanged from:body"
+                       hx-swap="innerHTML"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    /* ---- Sortable table headers (staff view) --------------------------- */
+    document.body.addEventListener('click', (e) => {
+        const th = e.target.closest('th[data-sort]');
+        if (!th) return;
+        const form = document.getElementById('filter-form');
+        if (!form) return;
+        const sortInput = document.getElementById('filter-sort');
+        const orderInput = document.getElementById('filter-order');
+        if (sortInput.value === th.dataset.sort) {
+            orderInput.value = orderInput.value === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortInput.value = th.dataset.sort;
+            orderInput.value = 'asc';
+        }
+        form.parentElement.querySelectorAll('th[data-sort]').forEach((h) => {
+            h.classList.remove('sort-asc', 'sort-desc');
+        });
+        th.classList.add(orderInput.value === 'asc' ? 'sort-asc' : 'sort-desc');
+        htmx.trigger(form, 'submit');
+    });
+
+    /* ---- Apply query-string filters into the form on load -------------- */
+    document.body.addEventListener('authReady', function () {
+        const form = document.getElementById('filter-form');
+        if (!form) return;
+        const p = new URLSearchParams(window.location.search);
+        Array.from(form.elements).forEach((el) => {
+            if (el.name && p.has(el.name)) el.value = p.get(el.name);
+        });
+    }, { once: true });
+
+    /* ---- Rejection follow-up when status changed to Rejected ----------- */
+    document.body.addEventListener('change', (e) => {
+        const sel = e.target.closest('.status-select');
+        if (!sel) return;
+        const chosen = sel.value;
+        const current = sel.getAttribute('data-current');
+        if (chosen === current) return;
+        if (chosen === 'Rejected') {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            window.confirmRejection(() => {
+                const appId = sel.getAttribute('data-application-id');
+                fetch('{{ backend_url }}/api/applications/' + appId + '/status', {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ Application_Status: 'Rejected' })
+                }).then((r) => {
+                    if (r.ok) {
+                        window.showToast('Candidate rejected and removed from recruitment.', 'success');
+                        document.body.dispatchEvent(new Event('statusChanged'));
+                    } else {
+                        window.showToast('Failed to reject candidate.', 'error');
+                        sel.value = current;
+                    }
+                }).catch(() => { window.showToast('Network error.', 'error'); sel.value = current; });
+            });
+            sel.value = current;
+        } else {
+            setTimeout(() => document.body.dispatchEvent(new Event('statusChanged')), 300);
+        }
+    }, true);
+})();
+</script>
+{% endblock %}
