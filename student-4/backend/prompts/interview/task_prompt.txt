@@ -1,0 +1,10 @@
+Suggest up to three optimal interview time slots based on the staff availability
+and applicant preferences provided below.
+
+For each suggested slot, include:
+- The proposed date and time, written exactly in the format YYYY-MM-DD HH:MM
+  (24-hour clock) at the start of the line.
+- A one-line reason it is a good fit.
+
+All suggested times must be in the future. Avoid clashing with the currently
+scheduled interviews. Respond as a short, readable list.
