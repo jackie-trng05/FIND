@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Job Postings — FIND{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <h1 class="page-title">Job Postings</h1>
+    <a class="btn btn-primary staff-only" href="/new" title="Create a new job posting">
+        <span class="plus">+</span> New posting
+    </a>
+</div>
+<div class="card">
+    <form class="filters"
+          hx-get="{{ backend_url }}/job-postings"
+          hx-target="#postings-body"
+          hx-swap="innerHTML"
+          hx-trigger="submit, change, keyup delay:400ms from:input[name='q']">
+        <input class="form-input" name="q" placeholder="Search title or description">
+        <select class="form-select staff-only" name="status">
+            <option value="Published" selected>Published</option>
+            <option value="Draft">Draft</option>
+            <option value="">All statuses</option>
+        </select>
+        <select class="form-select" name="job_type">
+            <option value="">All types</option>
+            <option>Full time</option>
+            <option>Part time</option>
+            <option>Casual</option>
+            <option>Contract</option>
+        </select>
+        <input class="form-input" name="location" placeholder="Location">
+    </form>
+
+    <div class="table-wrapper">
+        <table class="postings-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th class="staff-only">Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="postings-body"
+                   hx-get="{{ backend_url }}/job-postings?status=Published"
+                   hx-trigger="authReady from:body"
+                   hx-swap="innerHTML">
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
