@@ -63,13 +63,23 @@ INSERT INTO profiles (user_id, phone, location, professional_title, summary, int
 VALUES (?, ?, ?, ?, ?, ?)
 """, seed_profiles)
 
-# Seed resumes with synthetic plain-text content
+# Seed resumes from real PDF/DOCX files committed under seed_data/resumes (see seed_data/README.md);
+# odd profile ids are PDF, even are DOCX, alternating to cover both supported file types.
+SEED_RESUME_DIR = os.path.join(os.path.dirname(__file__), "seed_data", "resumes")
+MIME_TYPES = {
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
 for i in range(1, 11):
-    content = f"This is a synthetic resume for profile {i}. It contains placeholder text representing professional experience, education, and skills relevant to the candidate's field.".encode("utf-8")
+    extension = ".pdf" if i % 2 == 1 else ".docx"
+    file_name = f"resume_profile_{i}{extension}"
+    with open(os.path.join(SEED_RESUME_DIR, file_name), "rb") as f:
+        content = f.read()
     cursor.execute("""
     INSERT INTO resumes (profile_id, file_name, file_type, file_data)
     VALUES (?, ?, ?, ?)
-    """, (i, f"resume_profile_{i}.pdf", "application/pdf", content))
+    """, (i, file_name, MIME_TYPES[extension], content))
 
 conn.commit()
 conn.close()

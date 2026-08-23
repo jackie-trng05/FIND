@@ -33,8 +33,8 @@ localhost services. The frontend proxies API calls server-side, forwarding the c
 
 ## Database seeding
 
-`init_db.py` seeds 10 profiles (mapped to shared-db user IDs 1–10) and 10 resumes
-with synthetic plain-text content.
+`init_db.py` seeds 10 profiles (mapped to shared-db user IDs 1–10) and 10 realistic
+resumes (5 PDF, 5 DOCX) from files committed under `database/seed_data/resumes/`.
 
 ## Known deviations from the registration form
 
