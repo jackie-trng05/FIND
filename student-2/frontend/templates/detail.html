@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Job Posting — FIND{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <a class="btn btn-secondary btn-sm" href="/">&#8592; Back to list</a>
+</div>
+<div class="card">
+    <div id="posting-panel"
+         hx-get="{{ backend_url }}/job-postings/{{ posting_id }}"
+         hx-trigger="authReady from:body"
+         hx-swap="innerHTML"></div>
+</div>
+{% endblock %}

@@ -48,13 +48,6 @@
 
         <!-- STAFF DASHBOARD -->
         <div id="staff-dashboard" style="display:none;">
-          <div class="grid grid-4 mb-4">
-            <div class="stat-card"><span class="stat-value" id="staff-postings">0</span><span class="stat-label">Job Postings</span></div>
-            <div class="stat-card"><span class="stat-value" id="staff-applications">0</span><span class="stat-label">Applications Received</span></div>
-            <div class="stat-card"><span class="stat-value" id="staff-interviews">0</span><span class="stat-label">Scheduled Interviews</span></div>
-            <div class="stat-card"><span class="stat-value" id="staff-evaluations">0</span><span class="stat-label">Evaluations to Review</span></div>
-          </div>
-
           <div class="feature-grid">
             <a href="{{ student_1_url }}" class="feature-card">
               <div class="feature-icon" style="background:var(--primary-light);color:var(--primary);">
@@ -96,12 +89,6 @@
 
         <!-- APPLICANT DASHBOARD -->
         <div id="applicant-dashboard" style="display:none;">
-          <div class="grid grid-3 mb-4">
-            <div class="stat-card"><span class="stat-value" id="app-applications">0</span><span class="stat-label">My Applications</span></div>
-            <div class="stat-card"><span class="stat-value" id="app-interviews">0</span><span class="stat-label">Scheduled Interviews</span></div>
-            <div class="stat-card"><span class="stat-value" id="app-profile">0%</span><span class="stat-label">Profile Completion</span></div>
-          </div>
-
           <div class="feature-grid">
             <a href="{{ student_1_url }}" class="feature-card">
               <div class="feature-icon" style="background:var(--primary-light);color:var(--primary);">
@@ -147,41 +134,31 @@
   <script>
     const API_URL = 'http://localhost:16002';
 
-    function clearAndRedirect() {
-      sessionStorage.removeItem('find_token');
-      sessionStorage.removeItem('find_user');
+    function redirectToLogin() {
       window.location.replace('/login');
     }
 
     // Re-validate when restored from bfcache (back button)
     window.addEventListener('pageshow', (e) => {
-      if (e.persisted) checkAuth();
+      if (e.persisted) init();
     });
 
-    async function checkAuth() {
-      const token = sessionStorage.getItem('find_token');
-      if (!token) { clearAndRedirect(); return false; }
+    async function fetchSession() {
       try {
         const resp = await fetch(`${API_URL}/api/auth/session`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          credentials: 'include'
         });
-        if (!resp.ok) { clearAndRedirect(); return false; }
+        if (!resp.ok) return null;
         const data = await resp.json();
-        // Refresh cached user data so name changes appear without re-login
-        sessionStorage.setItem('find_user', JSON.stringify(data.user));
+        return data.user;
       } catch {
-        clearAndRedirect(); return false;
+        return null;
       }
-      return true;
     }
 
     async function init() {
-      const user = JSON.parse(sessionStorage.getItem('find_user') || 'null');
-      const token = sessionStorage.getItem('find_token');
-      if (!user || !token) { clearAndRedirect(); return; }
-
-      const valid = await checkAuth();
-      if (!valid) return;
+      const user = await fetchSession();
+      if (!user) { redirectToLogin(); return; }
 
       document.getElementById('user-name').textContent = `${user.first_name} ${user.last_name}`;
       const roleLabel = user.role === 'staff' ? 'Staff' : 'Applicant';
@@ -202,14 +179,11 @@
     }
 
     async function handleLogout() {
-      const token = sessionStorage.getItem('find_token');
-      if (token) {
-        await fetch(`${API_URL}/api/auth/logout`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        }).catch(() => {});
-      }
-      clearAndRedirect();
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      }).catch(() => {});
+      redirectToLogin();
     }
 
     init();
