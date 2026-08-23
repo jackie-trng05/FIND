@@ -1,0 +1,12 @@
+Review the Student 5 feature architecture: candidate evaluation.
+This feature owns its own frontend, backend, and database tiers and reuses the shared
+auth service for identity (users and sessions).
+Use the evidence below to identify:
+- responsibilities and ownership boundaries for this feature's services
+- how the feature depends on the shared auth service without duplicating user data
+- dependencies, coupling, or overlapping responsibilities with shared or other services
+Distinguish observed evidence from assumptions.
+Provide a concise review and at most one or two practical recommendations.
+Reply in at most 40 words.
+
+# Student 5: replace or extend this prompt with your own architecture review focus.
