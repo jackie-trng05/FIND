@@ -82,6 +82,56 @@ services:
       - find-network
     restart: unless-stopped
 
+  student-2-frontend:
+    build:
+      context: ./student-2/frontend
+    container_name: find-student-2-frontend
+    ports:
+      - "16007:3002"
+    environment:
+      PORT: 3002
+      BACKEND_PUBLIC_URL: http://localhost:16008
+    depends_on:
+      - student-2-backend
+    networks:
+      - find-network
+    restart: unless-stopped
+
+  student-2-backend:
+    build:
+      context: ./student-2/backend
+    container_name: find-student-2-backend
+    ports:
+      - "16008:5002"
+    environment:
+      PORT: 5002
+      DATABASE_SERVICE_URL: http://student-2-db:6002
+      BACKEND_PUBLIC_URL: http://localhost:16008
+      FRONTEND_PUBLIC_URL: http://localhost:16007
+      SHARED_API_URL: http://find-shared-api:5000
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
+      OLLAMA_MODEL: qwen2.5:0.5b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - student-2-db
+      - shared-api
+    networks:
+      - find-network
+    restart: unless-stopped
+
+  student-2-db:
+    build:
+      context: ./student-2/database
+    container_name: find-student-2-db
+    ports:
+      - "16009:6002"
+    environment:
+      PORT: 6002
+    networks:
+      - find-network
+    restart: unless-stopped
+
 networks:
   find-network:
     driver: bridge
