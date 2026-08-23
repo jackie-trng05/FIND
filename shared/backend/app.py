@@ -6,11 +6,15 @@ import secrets
 import requests
 from datetime import datetime, timedelta
 
+from ai_mode import ai_mode_bp
+
 COOKIE_DOMAIN = os.environ["COOKIE_DOMAIN"]
 ALLOWED_ORIGINS = os.environ["ALLOWED_ORIGINS"].split(",")
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
+
+app.register_blueprint(ai_mode_bp)
 
 DB_SERVICE_URL = "http://find-shared-db:6000"
 

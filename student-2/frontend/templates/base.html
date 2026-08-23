@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Job Postings — FIND{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+<nav class="navbar">
+    <div class="container">
+        <a href="{{ home_url }}" class="navbar-brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            FIND
+        </a>
+        <div class="navbar-user">
+            <a class="btn btn-ghost btn-sm" href="{{ home_url }}">&#8592; Home</a>
+            <span class="user-badge" id="nav-role-badge"></span>
+            <span id="nav-user-name" style="font-size:0.9rem;font-weight:500;"></span>
+            <button class="btn btn-ghost btn-sm" id="nav-logout-btn" onclick="handleLogout()" style="display:none;">Log Out</button>
+        </div>
+    </div>
+</nav>
+
+<main class="main-content">
+    <div class="container">
+        <!-- Toast notification area -->
+        <div id="toast-area"></div>
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<!-- Themed confirmation dialog (replaces the browser's native confirm) -->
+<div id="confirm-modal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <h3 class="modal-title" id="confirm-title">Please confirm</h3>
+        <p class="modal-message" id="confirm-message"></p>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="confirm-cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirm-ok">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    /* ---- Themed confirmation modal ---- */
+    var overlay = document.getElementById('confirm-modal');
+    var message = document.getElementById('confirm-message');
+    var okBtn = document.getElementById('confirm-ok');
+    var cancelBtn = document.getElementById('confirm-cancel');
+    var pending = null;
+
+    function close() { overlay.hidden = true; pending = null; }
+
+    cancelBtn.addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !overlay.hidden) close(); });
+    okBtn.addEventListener('click', function () {
+        var run = pending;
+        close();
+        if (run) run();
+    });
+
+    // Intercept HTMX confirm prompts and show the themed modal instead.
+    document.body.addEventListener('htmx:confirm', function (e) {
+        if (!e.detail.question) return;
+        e.preventDefault();
+        message.textContent = e.detail.question;
+        // Adapt button style based on action type.
+        var isDelete = e.detail.question.toLowerCase().indexOf('delete') !== -1;
+        okBtn.className = isDelete ? 'btn btn-danger' : 'btn btn-primary';
+        okBtn.textContent = isDelete ? 'Delete' : 'Confirm';
+        pending = function () { e.detail.issueRequest(true); };
+        overlay.hidden = false;
+    });
+
+    /* ---- Toast notifications ---- */
+    function showToast(text, kind) {
+        var area = document.getElementById('toast-area');
+        if (!area) return;
+        var cls = kind === 'error' ? 'alert alert-error toast' : 'alert alert-success toast';
+        var div = document.createElement('div');
+        div.className = cls;
+        div.textContent = text;
+        area.appendChild(div);
+        setTimeout(function () {
+            div.classList.add('toast-hide');
+            setTimeout(function () { div.remove(); }, 400);
+        }, 4000);
+    }
+
+    // Show toast from ?toast= query param (used after create/delete redirects).
+    var params = new URLSearchParams(window.location.search);
+    var toastMsg = params.get('toast');
+    if (toastMsg) {
+        showToast(toastMsg, 'success');
+        // Clean the URL without reloading.
+        var clean = window.location.pathname;
+        window.history.replaceState({}, '', clean);
+    }
+
+    // Expose for other scripts if needed.
+    window.showToast = showToast;
+
+    // Listen for HTMX-triggered toast events (e.g. after edit save).
+    document.body.addEventListener('showToast', function (e) {
+        showToast(e.detail.value || 'Done', 'success');
+    });
+
+    /* ---- Navbar user info (via shared-api session cookie) ---- */
+    var SHARED_API_URL = 'http://localhost:16002';
+    var LOGIN_URL = 'http://localhost:16001/login';
+
+    function applyUser(user) {
+        var nameEl = document.getElementById('nav-user-name');
+        var badgeEl = document.getElementById('nav-role-badge');
+        var logoutBtn = document.getElementById('nav-logout-btn');
+        if (nameEl) nameEl.textContent = user.first_name + ' ' + user.last_name;
+        if (badgeEl) badgeEl.textContent = user.role === 'staff' ? 'Staff' : 'Applicant';
+        if (logoutBtn) logoutBtn.style.display = '';
+        document.body.classList.remove('role-staff', 'role-applicant');
+        document.body.classList.add('role-' + (user.role === 'applicant' ? 'applicant' : 'staff'));
+    }
+
+    // Ensure every HTMX cross-origin request sends the session cookie.
+    if (window.htmx) {
+        window.htmx.config.withCredentials = true;
+    }
+
+    // If any HTMX request comes back unauthenticated, bounce to login.
+    document.body.addEventListener('htmx:responseError', function (e) {
+        if (e.detail && e.detail.xhr && e.detail.xhr.status === 401) {
+            window.location.href = LOGIN_URL;
+        }
+    });
+
+    // Fetch the current user from shared-api using the session cookie, then
+    // fire authReady so the page's initial HTMX requests can proceed.
+    fetch(SHARED_API_URL + '/api/auth/session', { credentials: 'include' })
+        .then(function (resp) {
+            if (!resp.ok) {
+                window.location.href = LOGIN_URL;
+                return null;
+            }
+            return resp.json();
+        })
+        .then(function (data) {
+            if (!data || !data.user) return;
+            applyUser(data.user);
+            document.body.dispatchEvent(new Event('authReady'));
+        })
+        .catch(function () {
+            window.location.href = LOGIN_URL;
+        });
+})();
+
+function handleLogout() {
+    fetch('http://localhost:16002/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+    }).catch(function () {}).then(function () {
+        window.location.href = 'http://localhost:16001/login';
+    });
+}
+
+// Sync AI-suggested requirements: add checked items, remove unchecked items.
+function syncAiSelections(btn) {
+    var container = btn.closest('.ai-result');
+    var textarea = document.querySelector('textarea[name="Requirements"]');
+    if (!container || !textarea) return;
+
+    var allBoxes = container.querySelectorAll('.ai-check-input');
+    if (!allBoxes.length) return;
+
+    var lines = textarea.value.split('\n').filter(function (l) { return l.trim(); });
+    var lineMap = {};
+    lines.forEach(function (line) {
+        var key = line.trim().replace(/^[-•*]\s*/, '').toLowerCase();
+        if (key) lineMap[key] = line;
+    });
+
+    allBoxes.forEach(function (cb) {
+        var value = cb.value.trim();
+        var key = value.toLowerCase();
+        if (cb.checked) {
+            if (!lineMap[key]) lineMap[key] = '- ' + value;
+        } else {
+            delete lineMap[key];
+        }
+    });
+
+    var result = [];
+    var aiKeys = {};
+    allBoxes.forEach(function (cb) { aiKeys[cb.value.trim().toLowerCase()] = true; });
+    lines.forEach(function (line) {
+        var key = line.trim().replace(/^[-•*]\s*/, '').toLowerCase();
+        if (!aiKeys[key]) result.push(line);
+    });
+    allBoxes.forEach(function (cb) {
+        var key = cb.value.trim().toLowerCase();
+        if (lineMap[key]) result.push(lineMap[key]);
+    });
+
+    textarea.value = result.join('\n');
+    textarea.focus();
+}
+</script>
+</body>
+</html>

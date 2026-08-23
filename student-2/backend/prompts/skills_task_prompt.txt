@@ -1,0 +1,8 @@
+Suggest suitable skills and qualifications for the following position.
+
+Job title: {job_title}
+Job type: {job_type}
+Job description: {job_description}
+
+Respond with a "Skills" list and a "Qualifications" list as instructed.
+Do not repeat any item across either list.

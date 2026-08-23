@@ -17,6 +17,30 @@
     .feature-card .feature-icon svg { width: 24px; height: 24px; }
     .feature-card h3 { font-size: 1rem; color: var(--text-primary); }
     .feature-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.4; }
+
+    /* AI Assistant section */
+    .ai-section { margin-top: 2.5rem; }
+    .ai-section > h2 { font-size: 1.15rem; color: var(--text-primary); margin-bottom: 0.25rem; }
+    .ai-section > p.ai-sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; }
+    .ai-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .ai-tab-nav { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--border); background: var(--primary-light); padding: 0.5rem 0.5rem 0; }
+    .ai-tab-btn { border: none; background: transparent; padding: 0.6rem 1rem; font-size: 0.9rem; font-weight: 500; color: var(--text-muted); cursor: pointer; border-radius: 8px 8px 0 0; }
+    .ai-tab-btn:hover { color: var(--primary); }
+    .ai-tab-btn.is-active { background: var(--surface); color: var(--primary); border: 1px solid var(--border); border-bottom-color: var(--surface); margin-bottom: -1px; }
+    .ai-tab-panel { display: none; padding: 1.5rem; }
+    .ai-tab-panel.is-active { display: block; }
+    .ai-tab-panel label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.35rem; color: var(--text-primary); }
+    .ai-tab-panel textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0.65rem 0.75rem; font-family: inherit; font-size: 0.9rem; resize: vertical; }
+    .ai-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    .ai-ask-btn { transition: transform 0.08s ease, filter 0.08s ease; }
+    .ai-ask-btn:active { transform: translateY(1px) scale(0.98); }
+    .ai-ask-btn.is-pressed { transform: translateY(1px) scale(0.98); filter: brightness(0.9); box-shadow: inset 0 2px 4px rgba(0,0,0,0.25); }
+    .ai-ask-btn:disabled { opacity: 0.75; cursor: progress; }
+    .ai-result { margin-top: 1rem; padding: 1rem; background: var(--primary-light); border-radius: var(--radius-lg); font-size: 0.9rem; line-height: 1.5; color: var(--text-primary); min-height: 1rem; white-space: pre-wrap; }
+    .ai-result:empty { display: none; }
+    .ai-result pre { white-space: pre-wrap; word-break: break-word; }
+    .ai-placeholder { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+    .ai-placeholder .badge-soon { display: inline-block; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: #d97706; background: #fef3c7; padding: 0.15rem 0.5rem; border-radius: 999px; margin-bottom: 0.75rem; }
   </style>
 </head>
 <body>
@@ -48,13 +72,6 @@
 
         <!-- STAFF DASHBOARD -->
         <div id="staff-dashboard" style="display:none;">
-          <div class="grid grid-4 mb-4">
-            <div class="stat-card"><span class="stat-value" id="staff-postings">0</span><span class="stat-label">Job Postings</span></div>
-            <div class="stat-card"><span class="stat-value" id="staff-applications">0</span><span class="stat-label">Applications Received</span></div>
-            <div class="stat-card"><span class="stat-value" id="staff-interviews">0</span><span class="stat-label">Scheduled Interviews</span></div>
-            <div class="stat-card"><span class="stat-value" id="staff-evaluations">0</span><span class="stat-label">Evaluations to Review</span></div>
-          </div>
-
           <div class="feature-grid">
             <a href="{{ student_1_url }}" class="feature-card">
               <div class="feature-icon" style="background:var(--primary-light);color:var(--primary);">
@@ -96,12 +113,6 @@
 
         <!-- APPLICANT DASHBOARD -->
         <div id="applicant-dashboard" style="display:none;">
-          <div class="grid grid-3 mb-4">
-            <div class="stat-card"><span class="stat-value" id="app-applications">0</span><span class="stat-label">My Applications</span></div>
-            <div class="stat-card"><span class="stat-value" id="app-interviews">0</span><span class="stat-label">Scheduled Interviews</span></div>
-            <div class="stat-card"><span class="stat-value" id="app-profile">0%</span><span class="stat-label">Profile Completion</span></div>
-          </div>
-
           <div class="feature-grid">
             <a href="{{ student_1_url }}" class="feature-card">
               <div class="feature-icon" style="background:var(--primary-light);color:var(--primary);">
@@ -133,6 +144,56 @@
             </a>
           </div>
         </div>
+
+        <!-- AI ASSISTANT (available to every role) -->
+        <section class="ai-section">
+          <h2>AI Assistant</h2>
+          <p class="ai-sub">Ask questions about using FIND. AI Mode runs on a local model; the other tools are coming soon.</p>
+
+          <div class="ai-panel">
+            <nav class="ai-tab-nav" aria-label="AI assistant tabs">
+              <button class="ai-tab-btn is-active" data-ai-tab="ai-mode" type="button">AI Mode</button>
+              <button class="ai-tab-btn" data-ai-tab="mcp" type="button">MCP Server</button>
+              <button class="ai-tab-btn" data-ai-tab="rag" type="button">RAG Server</button>
+              <button class="ai-tab-btn" data-ai-tab="multi-agent" type="button">Multi-Agent Server</button>
+            </nav>
+
+            <!-- AI Mode -->
+            <div class="ai-tab-panel is-active" data-ai-panel="ai-mode">
+              <label for="ai-question">Ask the FIND assistant</label>
+              <textarea id="ai-question" rows="4">How do I apply to a job posting on FIND?</textarea>
+              <div class="ai-actions">
+                <button class="btn btn-primary btn-sm ai-ask-btn" id="ai-ask-btn" type="button">Ask</button>
+                <button class="btn btn-primary btn-sm ai-ask-btn" id="ai-ask-context-btn" type="button">Ask with FIND context</button>
+              </div>
+              <div class="ai-result" id="ai-result"></div>
+            </div>
+
+            <!-- MCP Server placeholder -->
+            <div class="ai-tab-panel" data-ai-panel="mcp">
+              <div class="ai-placeholder">
+                <span class="badge-soon">Coming soon</span>
+                <p><strong>MCP Server</strong> will expose FIND data and actions to AI tools through the Model Context Protocol, letting assistants securely read job postings and applications on your behalf.</p>
+              </div>
+            </div>
+
+            <!-- RAG Server placeholder -->
+            <div class="ai-tab-panel" data-ai-panel="rag">
+              <div class="ai-placeholder">
+                <span class="badge-soon">Coming soon</span>
+                <p><strong>RAG Server</strong> will answer questions grounded in FIND documents and candidate data using retrieval-augmented generation for more accurate, source-backed responses.</p>
+              </div>
+            </div>
+
+            <!-- Multi-Agent Server placeholder -->
+            <div class="ai-tab-panel" data-ai-panel="multi-agent">
+              <div class="ai-placeholder">
+                <span class="badge-soon">Coming soon</span>
+                <p><strong>Multi-Agent Server</strong> will coordinate specialised agents (screening, scheduling, evaluation) to automate multi-step recruitment workflows across FIND.</p>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
 
@@ -147,41 +208,74 @@
   <script>
     const API_URL = 'http://localhost:16002';
 
-    function clearAndRedirect() {
-      sessionStorage.removeItem('find_token');
-      sessionStorage.removeItem('find_user');
+    // AI Assistant tab switching
+    document.querySelectorAll('.ai-tab-btn').forEach((button) => {
+      button.addEventListener('click', () => {
+        const target = button.dataset.aiTab;
+        document.querySelectorAll('.ai-tab-btn').forEach((b) => {
+          b.classList.toggle('is-active', b === button);
+        });
+        document.querySelectorAll('.ai-tab-panel').forEach((panel) => {
+          panel.classList.toggle('is-active', panel.dataset.aiPanel === target);
+        });
+      });
+    });
+
+    async function askAgent(endpoint, btn) {
+      const question = document.getElementById('ai-question').value.trim();
+      const resultEl = document.getElementById('ai-result');
+      const buttons = document.querySelectorAll('.ai-ask-btn');
+      if (!question) {
+        resultEl.innerHTML = '<p>Please enter a question.</p>';
+        return;
+      }
+      btn.classList.add('is-pressed');
+      buttons.forEach((b) => { b.disabled = true; });
+      resultEl.innerHTML = '<p>Thinking…</p>';
+      try {
+        const body = new URLSearchParams({ question });
+        const resp = await fetch(`${API_URL}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        });
+        resultEl.innerHTML = await resp.text();
+      } catch (error) {
+        resultEl.innerHTML = `<p>AI Mode is unavailable. Ensure the ai-mode service and Ollama are running.</p><pre>${error}</pre>`;
+      } finally {
+        btn.classList.remove('is-pressed');
+        buttons.forEach((b) => { b.disabled = false; });
+      }
+    }
+
+    document.getElementById('ai-ask-btn').addEventListener('click', (e) => askAgent('/ask', e.currentTarget));
+    document.getElementById('ai-ask-context-btn').addEventListener('click', (e) => askAgent('/ask-with-context', e.currentTarget));
+
+    function redirectToLogin() {
       window.location.replace('/login');
     }
 
     // Re-validate when restored from bfcache (back button)
     window.addEventListener('pageshow', (e) => {
-      if (e.persisted) checkAuth();
+      if (e.persisted) init();
     });
 
-    async function checkAuth() {
-      const token = sessionStorage.getItem('find_token');
-      if (!token) { clearAndRedirect(); return false; }
+    async function fetchSession() {
       try {
         const resp = await fetch(`${API_URL}/api/auth/session`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          credentials: 'include'
         });
-        if (!resp.ok) { clearAndRedirect(); return false; }
+        if (!resp.ok) return null;
         const data = await resp.json();
-        // Refresh cached user data so name changes appear without re-login
-        sessionStorage.setItem('find_user', JSON.stringify(data.user));
+        return data.user;
       } catch {
-        clearAndRedirect(); return false;
+        return null;
       }
-      return true;
     }
 
     async function init() {
-      const user = JSON.parse(sessionStorage.getItem('find_user') || 'null');
-      const token = sessionStorage.getItem('find_token');
-      if (!user || !token) { clearAndRedirect(); return; }
-
-      const valid = await checkAuth();
-      if (!valid) return;
+      const user = await fetchSession();
+      if (!user) { redirectToLogin(); return; }
 
       document.getElementById('user-name').textContent = `${user.first_name} ${user.last_name}`;
       const roleLabel = user.role === 'staff' ? 'Staff' : 'Applicant';
@@ -202,14 +296,11 @@
     }
 
     async function handleLogout() {
-      const token = sessionStorage.getItem('find_token');
-      if (token) {
-        await fetch(`${API_URL}/api/auth/logout`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        }).catch(() => {});
-      }
-      clearAndRedirect();
+      await fetch(`${API_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      }).catch(() => {});
+      redirectToLogin();
     }
 
     init();
