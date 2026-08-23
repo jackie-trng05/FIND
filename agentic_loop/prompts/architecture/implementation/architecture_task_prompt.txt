@@ -1,0 +1,11 @@
+Review the FIND platform architecture: shared-frontend, shared-api, and shared-db,
+plus the per-student feature services that integrate with the shared auth service.
+Use the evidence below to identify:
+- responsibilities per service
+- ownership boundaries (which service owns users and sessions)
+- dependencies and coupling between shared and student services
+- missing or overlapping responsibilities
+Distinguish clearly between observed evidence and assumptions.
+Provide a concise review and at most one or two practical recommendations.
+If something cannot be assessed from the evidence, mention that limitation explicitly.
+Reply in at most 40 words.

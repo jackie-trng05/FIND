@@ -1,0 +1,40 @@
+Application Name:
+FIND Recruitment Platform (Flask microservices)
+
+Shared Auth Service:
+- shared-api owns REST auth/business logic; shared-db owns persistence.
+- Every student feature reuses this shared service for identity.
+
+Shared Database Schema:
+- users: user_id (integer, primary key), user_email (text, unique, required),
+  user_password_hash (text, required), user_role (text, 'applicant' or 'staff'),
+  user_first_name (text), user_last_name (text), created_at (text)
+- sessions: session_id (integer, primary key), user_id (integer, FK -> users),
+  session_token (text, unique), created_at (text), expires_at (text)
+
+Shared API Endpoints (ONLY these exist):
+- GET /health
+- GET /
+- POST /api/auth/register
+- POST /api/auth/login
+- GET /api/auth/session
+- PUT /api/auth/user
+- POST /api/auth/logout
+- POST /ask
+- POST /ask-with-context
+
+Shared Database Endpoints (ONLY these exist):
+- GET /health
+- GET /users
+- GET /users/{user_id}
+- GET /users/by-email
+- POST /users
+- PUT /users/{user_id}
+- POST /sessions
+- GET /sessions/by-token
+- DELETE /sessions/by-token
+
+Domain Rules:
+- user_role must be 'applicant' or 'staff'.
+- user_email is unique.
+- Do not recommend schema changes or new endpoints for the shared service.
