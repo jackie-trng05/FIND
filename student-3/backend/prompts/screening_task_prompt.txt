@@ -1,0 +1,31 @@
+Decide whether the following candidate should be shortlisted for this
+job posting. Follow the rules from the system prompt strictly.
+
+=== JOB POSTING ===
+Title: {job_title}
+Type: {job_type}
+Description: {job_description}
+Core requirements:
+{job_requirements}
+
+=== CANDIDATE ===
+Name: {candidate_name}
+
+Resume text (extracted from PDF, may be partial):
+"""
+{resume_text}
+"""
+
+=== INSTRUCTIONS ===
+Step 1 (internal): Identify the 3-5 most important technical requirements
+from the job posting above.
+Step 2 (internal): Check whether the candidate's resume text explicitly
+demonstrates each of those requirements. Do NOT count skills that are only
+"adjacent" as satisfied.
+Step 3 (output): Based on the comparison, respond with the Recommendation
+and Reasoning lines exactly as instructed. Do NOT output the internal
+analysis, only the final Recommendation and Reasoning lines.
+
+If the candidate's professional domain is fundamentally different from the
+job (e.g. retail vs. software, marketing vs. DevOps, frontend vs. cloud
+infrastructure), the recommendation MUST be "No".

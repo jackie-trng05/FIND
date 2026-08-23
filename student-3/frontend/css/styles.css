@@ -1,0 +1,436 @@
+/* Application Management — page-specific styles.
+   Builds on the shared theme.css (same tokens as the FIND login page). */
+
+/* ==================================================================== */
+/*   Role-based visibility                                                */
+/* ==================================================================== */
+body.role-applicant .staff-only     { display: none !important; }
+body.role-staff     .applicant-only { display: none !important; }
+
+/* Anchors styled as buttons keep their text color on hover. */
+a.btn:hover { text-decoration: none; }
+a.btn-primary:hover, a.btn-primary:focus,
+a.btn-accent:hover, a.btn-accent:focus,
+a.btn-danger:hover, a.btn-danger:focus { color: #fff; }
+a.btn-secondary:hover, a.btn-secondary:focus { color: var(--text-primary); }
+
+/* ==================================================================== */
+/*   Page head                                                            */
+/* ==================================================================== */
+.page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+.page-title { margin: 0; font-size: 1.5rem; }
+
+.user-badge {
+    font-size: 0.75rem; font-weight: 600;
+    padding: 0.2rem 0.6rem; border-radius: var(--radius-sm);
+    background: var(--primary-light); color: var(--primary);
+}
+
+/* ==================================================================== */
+/*   Filters (staff view)                                                */
+/* ==================================================================== */
+.filters {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+@media (max-width: 640px) { .filters { grid-template-columns: 1fr; } }
+
+/* ==================================================================== */
+/*   Pending interviews banner                                            */
+/* ==================================================================== */
+.pending-bar {
+    display: flex; gap: 1.5rem; flex-wrap: wrap;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    background: var(--primary-light);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--primary);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+.pending-item strong { color: var(--primary); font-size: 1.05rem; }
+.pending-empty { color: var(--text-secondary); }
+
+/* ==================================================================== */
+/*   Applications table                                                  */
+/* ==================================================================== */
+.applications-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+.applications-table th, .applications-table td { padding: 0.75rem 0.5rem; }
+.applications-table .application-row {
+    cursor: pointer; transition: background var(--transition);
+}
+.applications-table .application-row:hover { background: var(--primary-light); }
+.applications-table .cell-title { font-weight: 600; color: var(--text-primary); }
+.applications-table .cell-id { color: var(--text-secondary); font-family: 'Inter', monospace; white-space: nowrap; width: 90px; }
+.applications-table .cell-action { text-align: right; white-space: nowrap; display: flex; gap: 0.4rem; justify-content: flex-end; }
+.applications-table .cell-action-center {
+    text-align: center;
+    white-space: nowrap;
+    width: 150px;
+    vertical-align: middle;
+}
+.applications-table .cell-action-center a {
+    display: inline-block;
+    margin: 0;
+    vertical-align: middle;
+}
+.applications-table th.col-actions { width: 150px; }
+.applications-table .status-select.form-select-sm {
+    padding: 0.3rem 0.5rem; font-size: 0.85rem;
+    min-width: 150px;
+    width: 100%;
+}
+/* Header-inline dropdown (candidate profile). Stays compact so it sits on the
+   same line as the name + badge. */
+.status-select.form-select-sm.header-status-select {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    min-width: 150px;
+    width: auto;
+    max-width: 220px;
+}
+.applications-table th[data-sort] { cursor: pointer; user-select: none; }
+.applications-table th[data-sort]:hover { color: var(--primary); }
+.applications-table th.sort-asc::after  { content: " ▲"; font-size: 0.75em; }
+.applications-table th.sort-desc::after { content: " ▼"; font-size: 0.75em; }
+
+.empty-state {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 2rem 1rem !important;
+}
+
+/* ==================================================================== */
+/*   Badges                                                              */
+/* ==================================================================== */
+.badge {
+    display: inline-block;
+    font-size: 0.75rem; font-weight: 600;
+    padding: 0.2rem 0.55rem; border-radius: var(--radius-sm);
+    line-height: 1.4; white-space: nowrap;
+}
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-danger  { background: var(--error-bg);   color: var(--error); }
+.badge-info    { background: #eff6ff;           color: #1d4ed8; }
+.badge-accent  { background: #ccfbf1;           color: var(--accent-dark); }
+.badge-muted   { background: #f1f5f9;           color: var(--text-secondary); }
+
+/* ==================================================================== */
+/*   Applicant apply form                                                */
+/* ==================================================================== */
+.apply-page { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.posting-summary {
+    padding: 1.25rem 1.5rem;
+    border-left: 4px solid var(--primary);
+}
+.posting-summary-head {
+    display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+.posting-summary-head h1 { margin: 0; font-size: 1.4rem; }
+.posting-summary-desc { color: var(--text-primary); margin: 0.25rem 0 1rem; }
+.posting-summary-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem; margin-bottom: 1rem;
+}
+.posting-summary-grid > div { display: flex; flex-direction: column; }
+.posting-summary-grid .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.posting-summary-reqs h4 { font-size: 0.9rem; margin: 0.5rem 0; color: var(--text-secondary); }
+.requirements-list { margin: 0; padding-left: 1.25rem; list-style-type: disc; }
+.requirements-list li { padding: 0.15rem 0; color: var(--text-primary); }
+
+.apply-form fieldset.form-section {
+    border: none; padding: 0; margin: 0 0 1.25rem;
+}
+.apply-form fieldset legend {
+    font-weight: 600; font-size: 1rem; color: var(--text-primary);
+    padding-bottom: 0.5rem; margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border); width: 100%;
+}
+.form-help { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
+.grid { display: grid; gap: 1rem; }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+.form-checkbox {
+    display: flex; align-items: flex-start; gap: 0.5rem;
+    cursor: pointer; padding: 0.5rem 0.75rem;
+    background: var(--background); border-radius: var(--radius-sm);
+}
+.form-checkbox input[type="checkbox"] { margin-top: 0.2rem; accent-color: var(--primary); }
+.form-checkbox span { color: var(--text-primary); font-size: 0.9rem; }
+
+.form-actions {
+    display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem;
+}
+.form-alert:not(:empty) { margin-bottom: 1rem; }
+
+.resume-current {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.6rem 0.8rem; margin-bottom: 0.75rem;
+    background: var(--primary-light); border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+}
+.resume-current-label { font-weight: 600; color: var(--primary); }
+.resume-current-name  { color: var(--text-primary); font-family: 'Inter', monospace; }
+.resume-current-meta  { color: var(--text-muted); font-size: 0.8rem; }
+.resume-current-source {
+    color: var(--accent-dark);
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+/* Submitted-application detail top bar: shows Status / Date submitted /
+   Application ID prominently before the read-only apply form. */
+.detail-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius-md);
+}
+.detail-status-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.detail-status-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+.detail-status-value {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+.detail-status-bar .panel-actions {
+    margin-left: auto;
+}
+
+.req { color: var(--error); font-weight: 600; margin-left: 0.15rem; }
+
+/* ==================================================================== */
+/*   Detail / profile pages                                              */
+/* ==================================================================== */
+.panel-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem;
+}
+.panel-heading { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.panel-heading h2 { margin: 0; }
+.header-status-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-left: 0.5rem;
+}
+.header-status-select { min-width: 140px; }
+.panel-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* Detail grid — the candidate profile uses a single wide column now that
+   Application Details is nested inside Candidate Information. */
+.detail-grid.detail-grid-single { grid-template-columns: 1fr; }
+
+.posting-desc { color: var(--text-primary); margin: 0.5rem 0 1.25rem; }
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+.detail-grid section h3 {
+    font-size: 1rem; margin-bottom: 0.5rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--border);
+}
+.detail-grid section h4.section-subhead {
+    margin: 1rem 0 0.5rem; font-size: 0.9rem; color: var(--text-secondary);
+}
+
+.detail-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.detail-table th {
+    text-align: left; color: var(--text-secondary); font-weight: 500;
+    padding: 0.5rem 1rem 0.5rem 0; vertical-align: top; width: 140px;
+    border-bottom: 1px solid var(--border);
+}
+.detail-table td {
+    padding: 0.5rem 0; color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+}
+.detail-table tr:last-child th,
+.detail-table tr:last-child td { border-bottom: none; }
+
+.resume-meta { color: var(--text-muted); font-size: 0.8rem; margin-left: 0.5rem; }
+
+.status-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; padding: 0.5rem 0;
+}
+.status-current { font-size: 0.95rem; color: var(--text-primary); }
+.status-edit { display: flex; flex-direction: column; gap: 0.25rem; }
+
+/* ==================================================================== */
+/*   AI screening panel                                                   */
+/* ==================================================================== */
+.ai-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+.ai-section > h3 {
+    font-size: 1rem; margin-bottom: 0.75rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.ai-empty {
+    padding: 1.25rem; background: var(--background);
+    border: 1px dashed var(--border); border-radius: var(--radius-md);
+    text-align: center;
+}
+.ai-empty p { color: var(--text-secondary); margin-bottom: 0.75rem; }
+.ai-actions-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.75rem; flex-wrap: wrap;
+}
+
+.ai-result-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+}
+.ai-result-card.rec-yes   { border-left-color: var(--success); }
+.ai-result-card.rec-no    { border-left-color: var(--error); }
+.ai-result-card.rec-maybe { border-left-color: var(--warning); }
+
+.ai-recommendation {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.5rem 0.75rem;
+    background: var(--background);
+    border-radius: var(--radius-md);
+}
+.ai-recommendation-label {
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+.ai-recommendation-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.15rem 0.6rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+.rec-yes   .ai-recommendation-value { color: var(--success); border-color: var(--success); }
+.rec-no    .ai-recommendation-value { color: var(--error);   border-color: var(--error); }
+.rec-maybe .ai-recommendation-value { color: var(--warning); border-color: var(--warning); }
+.ai-recommendation-caption {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-left: auto;
+}
+
+.ai-reasoning h4 {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.35rem;
+}
+.ai-reasoning p {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    margin: 0;
+    line-height: 1.55;
+}
+
+.ai-result-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+
+.ai-spinner {
+    display: none; align-items: center; gap: 0.5rem;
+    color: var(--text-secondary); font-size: 0.85rem; margin-left: 0.5rem;
+}
+.htmx-request .ai-spinner, .htmx-request.ai-spinner { display: inline-flex; }
+.spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%; display: inline-block;
+    animation: spin 700ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.status-select option[disabled] { color: var(--text-muted); }
+
+/* ==================================================================== */
+/*   Themed confirmation modal                                           */
+/* ==================================================================== */
+.modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem; z-index: 1000;
+}
+.modal-overlay[hidden] { display: none; }
+
+.modal-card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg); padding: 1.5rem;
+    max-width: 420px; width: 100%; animation: modal-in 150ms ease;
+}
+@keyframes modal-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.modal-title { margin-bottom: 0.5rem; font-size: 1.15rem; }
+.modal-message { color: var(--text-secondary); margin-bottom: 1.25rem; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
+
+/* ==================================================================== */
+/*   Toast notifications                                                 */
+/* ==================================================================== */
+.toast { margin-bottom: 1rem; animation: toast-in 300ms ease; }
+.toast-hide { opacity: 0; transform: translateY(-8px); transition: all 400ms ease; }
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

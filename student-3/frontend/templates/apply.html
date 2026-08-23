@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Apply — FIND{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <a class="btn btn-secondary btn-sm" href="/">&#8592; My Applications</a>
+</div>
+
+<div id="apply-slot"
+     hx-get="{{ backend_url }}/api/apply/{{ job_posting_id }}"
+     hx-trigger="authReady from:body"
+     hx-swap="innerHTML"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const BACKEND_URL = '{{ backend_url }}';
+
+    /* ---- Save Draft / Submit / Delete handler ------------------------- */
+    document.body.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const endpoint = btn.dataset.endpoint;
+        const form = document.getElementById('apply-form');
+        if (!form || !endpoint) return;
+
+        const resumeInput = form.querySelector('input[name="Resume_File"]');
+        const declaration = form.querySelector('input[name="Declaration_Accepted"]');
+        const msg = document.getElementById('form-msg');
+
+        function showError(text) {
+            if (!msg) { window.showToast(text, 'error'); return; }
+            msg.innerHTML = '<div class="alert alert-error">' + text + '</div>';
+        }
+        function clearError() { if (msg) msg.innerHTML = ''; }
+
+        if (action === 'submit') {
+            const hasExistingResume = !!document.querySelector('.resume-current');
+            const hasNewFile = resumeInput && resumeInput.files && resumeInput.files.length > 0;
+            if (!hasExistingResume && !hasNewFile) {
+                showError('Please upload your resume before submitting.'); return;
+            }
+            if (hasNewFile) {
+                const f = resumeInput.files[0];
+                if (!/\.(pdf|docx)$/i.test(f.name)) { showError('Resume must be a PDF or DOCX file.'); return; }
+                if (f.size > 5 * 1024 * 1024) { showError('Resume must be 5 MB or smaller.'); return; }
+            }
+            if (declaration && !declaration.checked) {
+                showError('Please confirm the declaration before submitting.'); return;
+            }
+        } else if (action === 'save' && resumeInput && resumeInput.files && resumeInput.files.length > 0) {
+            const f = resumeInput.files[0];
+            if (!/\.(pdf|docx)$/i.test(f.name)) { showError('Resume must be a PDF or DOCX file.'); return; }
+            if (f.size > 5 * 1024 * 1024) { showError('Resume must be 5 MB or smaller.'); return; }
+        }
+        clearError();
+
+        // Endpoints ending in "/save" or "/submit" attached to an existing
+        // application id use PUT; the "create-new" versions use POST.
+        const isCreate = (endpoint === '/api/applications/save' || endpoint === '/api/applications/submit');
+        const method = isCreate ? 'POST' : 'PUT';
+
+        btn.disabled = true;
+        try {
+            const resp = await fetch(BACKEND_URL + endpoint, {
+                method: method,
+                credentials: 'include',
+                body: new FormData(form),
+            });
+            const redirect = resp.headers.get('HX-Redirect');
+            if (redirect) { window.location.href = redirect; return; }
+            const text = await resp.text();
+            if (msg) msg.innerHTML = text;
+            if (!resp.ok) window.showToast('Please fix the errors above.', 'error');
+        } catch (err) {
+            showError('Network error. Please try again.');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+})();
+</script>
+{% endblock %}

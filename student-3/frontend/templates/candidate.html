@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Candidate Profile — FIND{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <a class="btn btn-secondary btn-sm" href="/">&#8592; All Applications</a>
+</div>
+<div class="card">
+    <div id="candidate-profile"
+         hx-get="{{ backend_url }}/api/staff/applications/{{ application_id }}/profile"
+         hx-trigger="authReady from:body, statusChanged from:body"
+         hx-swap="innerHTML"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    /* ---- Shortlist button on the AI recommendation panel --------------- */
+    window.shortlistCandidate = function (applicationId) {
+        fetch('{{ backend_url }}/api/applications/' + applicationId + '/status', {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ Application_Status: 'Shortlisted' })
+        }).then((r) => {
+            if (r.ok) {
+                window.showToast('Candidate shortlisted.', 'success');
+                document.body.dispatchEvent(new Event('statusChanged'));
+            } else {
+                window.showToast('Failed to shortlist candidate.', 'error');
+            }
+        }).catch(() => { window.showToast('Network error.', 'error'); });
+    };
+
+    /* ---- Rejection follow-up on the profile status <select> ------------ */
+    document.body.addEventListener('change', (e) => {
+        const sel = e.target.closest('.status-select');
+        if (!sel) return;
+        const chosen = sel.value;
+        const current = sel.getAttribute('data-current');
+        if (chosen === current) return;
+        if (chosen === 'Rejected') {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            const appId = sel.getAttribute('data-application-id');
+            window.confirmRejection(() => {
+                fetch('{{ backend_url }}/api/applications/' + appId + '/status', {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ Application_Status: 'Rejected' })
+                }).then((r) => {
+                    if (r.ok) {
+                        window.showToast('Candidate rejected and removed from recruitment.', 'success');
+                        document.body.dispatchEvent(new Event('statusChanged'));
+                    } else {
+                        window.showToast('Failed to reject candidate.', 'error');
+                        sel.value = current;
+                    }
+                }).catch(() => { window.showToast('Network error.', 'error'); sel.value = current; });
+            });
+            sel.value = current;
+        } else {
+            setTimeout(() => document.body.dispatchEvent(new Event('statusChanged')), 300);
+        }
+    }, true);
+})();
+</script>
+{% endblock %}
