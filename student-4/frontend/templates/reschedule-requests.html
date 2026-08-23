@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Reschedule Requests — FIND</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/common.js"></script>
+</head>
+<body>
+<div id="app-chrome"></div>
+<main class="app-shell">
+    <div class="page-head">
+        <div>
+            <h1>Reschedule Requests</h1>
+            <p>Applicants who have proposed a new time. Accept to confirm, or decline to reschedule from scratch.</p>
+        </div>
+    </div>
+
+    <div id="req-alert"></div>
+    <section id="req-body"><p class="loading">Loading…</p></section>
+</main>
+
+<script>
+let currentUser = null;
+
+function card(it) {
+    return `
+    <section class="card" style="margin-bottom:1rem;" data-id="${it.interview_id}">
+        <div class="interview-row" style="border:0;padding:0;">
+            <div>
+                <div class="who">${escapeHtml(it.applicant_name || "—")} · Application #${escapeHtml(it.application_id)}</div>
+                <div class="meta">Proposed: ${formatDateTime(it.interview_datetime)}</div>
+                ${it.job_posting_title ? `<div class="meta">${escapeHtml(it.job_posting_title)}</div>` : ""}
+                ${it.interview_notes ? `<div class="meta">Reason: ${escapeHtml(it.interview_notes)}</div>` : ""}
+            </div>
+            <div class="btn-row">
+                ${statusBadge(it.interview_status)}
+                <a class="btn btn-secondary btn-sm" href="details.html?id=${it.interview_id}&from=reschedule">View</a>
+            </div>
+        </div>
+        <div class="btn-row" style="margin-top:1rem;">
+            <button class="btn btn-primary btn-sm" data-act="accept">Accept New Time</button>
+            <button class="btn btn-danger btn-sm" data-act="decline">Decline</button>
+        </div>
+    </section>`;
+}
+
+async function refresh() {
+    const body = document.getElementById("req-body");
+    let interviews;
+    try {
+        interviews = await fetchInterviews(currentUser, { status: "Reschedule Requested" });
+    } catch (err) {
+        body.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+        return;
+    }
+    if (!interviews.length) {
+        body.innerHTML = `<div class="card"><div class="empty-state">No reschedule requests right now.</div></div>`;
+        return;
+    }
+    body.innerHTML = interviews.map(card).join("");
+    wireCards();
+}
+
+function wireCards() {
+    document.querySelectorAll("section.card[data-id]").forEach((section) => {
+        const id = section.dataset.id;
+        section.querySelectorAll("[data-act]").forEach((btn) => {
+            btn.addEventListener("click", () => handleAction(id, btn.dataset.act));
+        });
+    });
+}
+
+async function handleAction(id, act) {
+    if (act === "accept") {
+        const confirmed = await confirmDialog({
+            title: "Accept the new time?",
+            message: "The interview will move to “Interview Scheduled”.",
+            confirmText: "Accept New Time",
+        });
+        if (!confirmed) return;
+        const resp = await fetch(`${BACKEND_URL}/interviews/${id}/accept-reschedule`, { method: "POST" });
+        if (resp.ok) { showToast("Reschedule accepted. Interview scheduled.", "success"); refresh(); }
+        else { showToast("Could not accept the reschedule.", "error"); }
+        return;
+    }
+    if (act === "decline") {
+        const confirmed = await confirmDialog({
+            title: "Decline the new time?",
+            message: "The interview is cancelled and the application returns to “Shortlisted”, ready to schedule again.",
+            confirmText: "Decline",
+            danger: true,
+        });
+        if (!confirmed) return;
+        const resp = await fetch(`${BACKEND_URL}/interviews/${id}/decline-reschedule`, { method: "POST" });
+        if (resp.ok) { showToast("Reschedule declined. Application returned to “To Schedule”.", "success"); refresh(); }
+        else { showToast("Could not decline the reschedule.", "error"); }
+    }
+}
+
+(async function () {
+    currentUser = await initChrome("reschedule", { staffOnly: true });
+    if (!currentUser) return;
+    refresh();
+})();
+</script>
+</body>
+</html>
