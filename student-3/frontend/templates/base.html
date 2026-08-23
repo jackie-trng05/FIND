@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Applications — FIND{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+<nav class="navbar">
+    <div class="container">
+        <a href="{{ home_url }}" class="navbar-brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            FIND
+        </a>
+        <div class="navbar-user">
+            <a class="btn btn-ghost btn-sm" href="{{ home_url }}">&#8592; Home</a>
+            <a class="btn btn-ghost btn-sm" href="{{ job_postings_url }}">Job Postings</a>
+            <span class="user-badge" id="nav-role-badge"></span>
+            <span id="nav-user-name" style="font-size:0.9rem;font-weight:500;"></span>
+            <button class="btn btn-ghost btn-sm" id="nav-logout-btn" onclick="handleLogout()" style="display:none;">Log Out</button>
+        </div>
+    </div>
+</nav>
+
+<main class="main-content">
+    <div class="container">
+        <div id="toast-area"></div>
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<!-- Themed confirmation dialog (replaces the browser's native confirm) -->
+<div id="confirm-modal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <h3 class="modal-title" id="confirm-title">Please confirm</h3>
+        <p class="modal-message" id="confirm-message"></p>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="confirm-cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirm-ok">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Rejection-follow-up dialog (staff-only) -->
+<div id="reject-modal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="reject-title">
+        <h3 class="modal-title" id="reject-title">Remove from recruitment?</h3>
+        <p class="modal-message">Would you like to remove candidate from the recruitment process now?</p>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="reject-cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="reject-yes">Yes</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const SHARED_API_URL = 'http://localhost:16002';
+    const LOGIN_URL = 'http://localhost:16001/login';
+
+    /* ---- Themed confirmation modal ------------------------------------- */
+    const overlay = document.getElementById('confirm-modal');
+    const message = document.getElementById('confirm-message');
+    const okBtn = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    let pending = null;
+
+    function closeConfirm() { overlay.hidden = true; pending = null; }
+
+    cancelBtn.addEventListener('click', closeConfirm);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeConfirm(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) closeConfirm(); });
+    okBtn.addEventListener('click', () => {
+        const run = pending;
+        closeConfirm();
+        if (run) run();
+    });
+
+    document.body.addEventListener('htmx:confirm', (e) => {
+        if (!e.detail.question) return;
+        e.preventDefault();
+        message.textContent = e.detail.question;
+        const q = e.detail.question.toLowerCase();
+        const isDelete = q.indexOf('delete') !== -1;
+        const isWithdraw = q.indexOf('withdraw') !== -1;
+        okBtn.className = (isDelete || isWithdraw) ? 'btn btn-danger' : 'btn btn-primary';
+        okBtn.textContent = isDelete ? 'Delete' : (isWithdraw ? 'Withdraw' : 'Confirm');
+        pending = () => e.detail.issueRequest(true);
+        overlay.hidden = false;
+    });
+
+    /* ---- Toast notifications ------------------------------------------- */
+    function showToast(text, kind) {
+        const area = document.getElementById('toast-area');
+        if (!area) return;
+        const div = document.createElement('div');
+        div.className = kind === 'error' ? 'alert alert-error toast' : 'alert alert-success toast';
+        div.textContent = text;
+        area.appendChild(div);
+        setTimeout(() => {
+            div.classList.add('toast-hide');
+            setTimeout(() => div.remove(), 400);
+        }, 4000);
+    }
+    window.showToast = showToast;
+
+    // Show toast from ?toast= query param (used after redirect after create/delete).
+    const params = new URLSearchParams(window.location.search);
+    const toastMsg = params.get('toast');
+    if (toastMsg) {
+        showToast(toastMsg, 'success');
+        params.delete('toast');
+        const clean = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState({}, '', clean);
+    }
+
+    document.body.addEventListener('showToast', (e) => {
+        showToast(e.detail.value || 'Done', 'success');
+    });
+    document.body.addEventListener('showErrorToast', (e) => {
+        showToast(e.detail.value || 'Something went wrong.', 'error');
+    });
+
+    /* ---- Rejection follow-up dialog (staff-only) ----------------------- */
+    // Fired by the status <select> when the new status is "Rejected".
+    const rejectModal = document.getElementById('reject-modal');
+    const rejectCancel = document.getElementById('reject-cancel');
+    const rejectYes = document.getElementById('reject-yes');
+    let rejectContext = null;
+    rejectCancel.addEventListener('click', () => { rejectModal.hidden = true; rejectContext = null; });
+    rejectModal.addEventListener('click', (e) => { if (e.target === rejectModal) rejectModal.hidden = true; });
+    rejectYes.addEventListener('click', () => {
+        if (rejectContext) rejectContext();
+        rejectModal.hidden = true;
+        rejectContext = null;
+    });
+    window.confirmRejection = function (onYes) {
+        rejectContext = onYes;
+        rejectModal.hidden = false;
+    };
+
+    /* ---- Global HTMX config -------------------------------------------- */
+    if (window.htmx) {
+        window.htmx.config.withCredentials = true;
+    }
+    document.body.addEventListener('htmx:responseError', (e) => {
+        if (e.detail && e.detail.xhr && e.detail.xhr.status === 401) {
+            window.location.href = LOGIN_URL;
+        }
+    });
+
+    /* ---- Delegated row-click handler for tables -----------------------
+       Any <tr class="application-row" data-href="..."> becomes clickable.
+       We skip clicks that landed on an interactive element (button, link,
+       select, input, textarea) or on a cell marked ``cell-interactive``
+       so the dropdown / action buttons keep working as expected. -------- */
+    document.body.addEventListener('click', (e) => {
+        const row = e.target.closest('.application-row');
+        if (!row || !row.dataset.href) return;
+        if (e.target.closest('button, a, select, input, textarea, .cell-interactive')) return;
+        window.location.href = row.dataset.href;
+    });
+    // HX-Redirect handler (HTMX handles this natively, but we normalise the
+    // toast-in-URL pattern here in case redirect targets are cross-origin).
+    document.body.addEventListener('htmx:beforeOnLoad', (e) => {
+        const xhr = e.detail && e.detail.xhr;
+        if (xhr && xhr.getResponseHeader) {
+            const redirect = xhr.getResponseHeader('HX-Redirect');
+            if (redirect) window.location.href = redirect;
+        }
+    });
+
+    /* ---- Navbar user + role class -------------------------------------- */
+    function applyUser(user) {
+        const nameEl = document.getElementById('nav-user-name');
+        const badgeEl = document.getElementById('nav-role-badge');
+        const logoutBtn = document.getElementById('nav-logout-btn');
+        if (nameEl) nameEl.textContent = user.first_name + ' ' + user.last_name;
+        if (badgeEl) badgeEl.textContent = user.role === 'staff' ? 'Staff' : 'Applicant';
+        if (logoutBtn) logoutBtn.style.display = '';
+        document.body.classList.remove('role-staff', 'role-applicant');
+        document.body.classList.add('role-' + (user.role === 'staff' ? 'staff' : 'applicant'));
+    }
+
+    fetch(SHARED_API_URL + '/api/auth/session', { credentials: 'include' })
+        .then((resp) => {
+            if (!resp.ok) { window.location.href = LOGIN_URL; return null; }
+            return resp.json();
+        })
+        .then((data) => {
+            if (!data || !data.user) return;
+            applyUser(data.user);
+            window.__findUser = data.user;
+            document.body.dispatchEvent(new Event('authReady'));
+        })
+        .catch(() => { window.location.href = LOGIN_URL; });
+})();
+
+function handleLogout() {
+    fetch('http://localhost:16002/api/auth/logout', {
+        method: 'POST', credentials: 'include'
+    }).catch(() => {}).then(() => { window.location.href = 'http://localhost:16001/login'; });
+}
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

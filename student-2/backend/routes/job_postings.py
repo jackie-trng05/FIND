@@ -37,6 +37,13 @@ FRONTEND_PUBLIC_URL = os.getenv("FRONTEND_PUBLIC_URL", "http://localhost:16007")
 # Internal URL for the shared-api service used to validate the session cookie.
 SHARED_API_URL = os.getenv("SHARED_API_URL", "http://find-shared-api:5000")
 
+# Internal URL for the student-3 (applications) database service. Used to
+# check whether the current applicant already has an application for a posting
+# so the Apply button on the applicant panel can be disabled.
+APPLICATIONS_DB_URL = os.getenv(
+    "APPLICATIONS_DB_URL", "http://student-3-db:6003"
+)
+
 # Staff ID is assigned automatically (no auth layer in this service).
 DEFAULT_STAFF_ID = os.getenv("DEFAULT_STAFF_ID", "101")
 
@@ -74,16 +81,19 @@ def _missing_required(payload: dict) -> str | None:
 
 
 def _get_role() -> str:
-    """Return 'staff' or 'applicant' based on the session cookie.
+    """Return 'staff' or 'applicant' based on the session cookie."""
+    user = _get_session_user()
+    if user is None:
+        return "applicant"
+    role = (user.get("role") or "").strip().lower()
+    return "staff" if role == "staff" else "applicant"
 
-    Forwards the request's Cookie header to the shared-api /api/auth/session
-    endpoint. Same pattern used by student-1's require_session(). Unauthenticated
-    requests default to 'applicant' (most restrictive) so they can only view
-    published postings; the frontend also enforces a login redirect.
-    """
+
+def _get_session_user() -> dict | None:
+    """Return the currently logged-in user dict, or None if unauthenticated."""
     cookie = request.headers.get("Cookie", "")
     if not cookie:
-        return "applicant"
+        return None
     try:
         resp = requests.get(
             f"{SHARED_API_URL}/api/auth/session",
@@ -91,11 +101,31 @@ def _get_role() -> str:
             timeout=5,
         )
     except requests.RequestException:
-        return "applicant"
+        return None
     if resp.status_code != 200:
-        return "applicant"
-    role = (resp.json().get("user", {}).get("role") or "").strip().lower()
-    return "staff" if role == "staff" else "applicant"
+        return None
+    return resp.json().get("user")
+
+
+def _get_existing_application_status(user_id: int, posting_id: int) -> str | None:
+    """Return the status of the applicant's existing application for this
+    posting, or None if there isn't one. Withdrawn/Rejected applications are
+    treated as "no application" so the candidate can apply again.
+    """
+    try:
+        resp = requests.get(
+            f"{APPLICATIONS_DB_URL}/applications",
+            params={"user_id": user_id, "job_posting_id": posting_id},
+            timeout=5,
+        )
+        resp.raise_for_status()
+    except requests.RequestException:
+        return None
+    for row in resp.json() or []:
+        status = row.get("Application_Status")
+        if status not in ("Withdrawn", "Rejected"):
+            return status
+    return None
 
 
 def _forbidden_for_applicants():
@@ -174,14 +204,21 @@ def get_posting(posting_id: int):
     posting, error = _load_posting(posting_id)
     if error:
         return error
-    role = _get_role()
+    user = _get_session_user()
+    role = "staff" if (user and (user.get("role") or "").lower() == "staff") else "applicant"
     # Applicants may only view Published postings.
     if role == "applicant" and posting.get("JobPosting_Status") != "Published":
         return render_message("Job posting not found.", "error"), 200
+
+    existing_status = None
+    if role == "applicant" and user:
+        existing_status = _get_existing_application_status(
+            user.get("user_id"), posting_id
+        )
     return (
         render_posting_panel(
             posting, backend_url=BACKEND_PUBLIC_URL, frontend_url=FRONTEND_PUBLIC_URL,
-            role=role,
+            role=role, existing_application_status=existing_status,
         ),
         200,
     )

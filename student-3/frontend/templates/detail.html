@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Application — FIND{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <a class="btn btn-secondary btn-sm" href="/">&#8592; My Applications</a>
+</div>
+<div class="card">
+    <div id="application-detail"
+         hx-get="{{ backend_url }}/api/applications/{{ application_id }}/detail"
+         hx-trigger="authReady from:body, applicationWithdrawn from:body"
+         hx-swap="innerHTML"></div>
+</div>
+{% endblock %}
