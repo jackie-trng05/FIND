@@ -22,7 +22,6 @@ VALID_STATUSES = (
     "Shortlisted",
     "Interview Requested",
     "Interview Scheduled",
-    "Reschedule Requested",
     "Interview Completed",
     "Evaluation Completed",
     "Hired",
@@ -38,7 +37,6 @@ WITHDRAWABLE_STATUSES = (
     "Shortlisted",
     "Interview Requested",
     "Interview Scheduled",
-    "Reschedule Requested",
     "Interview Completed",
     "Evaluation Completed",
 )
@@ -47,7 +45,7 @@ WITHDRAWABLE_STATUSES = (
 DELETABLE_STATUSES = ("Draft",)
 
 # Statuses at which staff should see an "Interview" action on the row.
-INTERVIEW_ACTION_STATUSES = ("Shortlisted", "Interview Scheduled")
+INTERVIEW_ACTION_STATUSES = ("Shortlisted",)
 
 # Interview / Evaluations feature URLs (owned by student-4 & student-5).
 INTERVIEWS_URL = "http://localhost:16013"
@@ -77,7 +75,6 @@ def _status_badge(status: str) -> str:
         "Shortlisted": "badge-accent",
         "Interview Requested": "badge-warning",
         "Interview Scheduled": "badge-info",
-        "Reschedule Requested": "badge-warning",
         "Interview Completed": "badge-accent",
         "Evaluation Completed": "badge-accent",
         "Hired": "badge-success",
@@ -372,10 +369,9 @@ def render_application_detail(
             f'Withdraw Application</button>'
         )
     if status in INTERVIEW_ACTION_STATUSES:
-        label = "Reschedule Interview" if status == "Interview Scheduled" else "Schedule Interview"
         actions.append(
             f'<a class="btn btn-secondary" target="_blank" rel="noopener"'
-            f' href="{INTERVIEWS_URL}/?application={aid}">{label}</a>'
+            f' href="{INTERVIEWS_URL}/?application={aid}">Schedule Interview</a>'
         )
     actions_html = (
         f'<div class="panel-actions">{"".join(actions)}</div>' if actions else ""
@@ -556,12 +552,6 @@ def _render_status_select(application_id: int, current: str) -> str:
     """
     selectable = {"Shortlisted", "Rejected"}
     opts = []
-    # Always reflect the true current status. If it won't be rendered as a
-    # selected option below (Draft is skipped, or an unexpected status), show it
-    # up front as a disabled selected option so the control never falls back to
-    # displaying the first enabled option (e.g. "Shortlisted").
-    if current == "Draft" or current not in VALID_STATUSES:
-        opts.append(f'<option value="{_e(current)}" selected disabled>{_e(current)}</option>')
     for status in VALID_STATUSES:
         if status == "Draft":
             continue

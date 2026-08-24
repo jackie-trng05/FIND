@@ -41,7 +41,6 @@ VALID_STATUSES = (
     "Shortlisted",
     "Interview Requested",
     "Interview Scheduled",
-    "Reschedule Requested",
     "Interview Completed",
     "Evaluation Completed",
     "Hired",
@@ -307,7 +306,7 @@ def submit_application(application_id: int):
 def withdraw_application(application_id: int):
     withdrawable = (
         "Draft", "Submitted", "Shortlisted", "Interview Requested",
-        "Interview Scheduled", "Reschedule Requested",
+        "Interview Scheduled",
         "Interview Completed", "Evaluation Completed",
     )
     conn = get_db_connection()
