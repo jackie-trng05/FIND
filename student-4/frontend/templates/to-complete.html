@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Interviews To Complete — FIND</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/common.js"></script>
+</head>
+<body>
+<div id="app-chrome"></div>
+<main class="app-shell">
+    <div class="page-head">
+        <div>
+            <h1>Interviews To Complete</h1>
+            <p>Scheduled interviews whose time has passed. Open one to write up the notes and mark it complete.</p>
+        </div>
+    </div>
+
+    <div id="tc-alert"></div>
+    <section class="card">
+        <div class="filters">
+            <div class="field" id="tc-search-field">
+                <label for="f-tc-search">Search applicant</label>
+                <input id="f-tc-search" type="text" placeholder="Name or application ID">
+            </div>
+        </div>
+        <div id="tc-body"><p class="loading">Loading…</p></div>
+    </section>
+</main>
+
+<script>
+let currentUser = null;
+let interviews = [];
+
+function renderRows(rows) {
+    const body = document.getElementById("tc-body");
+    if (!rows.length) {
+        body.innerHTML = `<div class="empty-state">No interviews are waiting to be completed.</div>`;
+        return;
+    }
+    body.innerHTML = `<div class="interview-list">${rows
+        .map((it) => `
+            <div class="interview-row">
+                <div>
+                    <div class="who">${escapeHtml(it.applicant_name || "—")} · Application #${escapeHtml(it.application_id)}</div>
+                    <div class="meta">${it.job_posting_title ? `${escapeHtml(it.job_posting_title)} · ` : ""}Interviewed ${formatDateTime(it.interview_datetime)}</div>
+                </div>
+                <div class="btn-row">
+                    ${statusBadge(it.interview_status)}
+                    <a class="btn btn-primary btn-sm" href="details.html?id=${it.interview_id}&from=to-complete">Complete Interview</a>
+                </div>
+            </div>`)
+        .join("")}</div>`;
+}
+
+function applyFilter() {
+    const searchEl = document.getElementById("f-tc-search");
+    const search = searchEl ? searchEl.value.trim().toLowerCase() : "";
+    const rows = interviews.filter((it) => {
+        if (!search) return true;
+        const hay = `${it.applicant_name} ${it.application_id} ${it.applicant_id}`.toLowerCase();
+        return hay.includes(search);
+    });
+    renderRows(rows);
+}
+
+(async function () {
+    currentUser = await initChrome("to-complete", { staffOnly: true });
+    if (!currentUser) return;
+
+    document.getElementById("f-tc-search").addEventListener("input", applyFilter);
+
+    try {
+        const params = new URLSearchParams({ staff_id: currentUser.user_id });
+        const resp = await fetch(`${BACKEND_URL}/interviews/to-complete?${params.toString()}`);
+        if (!resp.ok) throw new Error("Failed to load interviews to complete.");
+        interviews = await resp.json();
+    } catch (err) {
+        document.getElementById("tc-body").innerHTML =
+            `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+        return;
+    }
+
+    applyFilter();
+})();
+</script>
+</body>
+</html>

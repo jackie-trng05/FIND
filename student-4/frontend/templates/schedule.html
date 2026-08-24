@@ -51,10 +51,6 @@
                         <input id="interview_link" name="interview_link" type="url" placeholder="https://meet.find.app/int-x">
                         <div class="field-error" data-for="interview_link"></div>
                     </div>
-                    <div class="full">
-                        <label for="interview_notes">Notes</label>
-                        <input id="interview_notes" name="interview_notes" type="text" placeholder="Optional notes">
-                    </div>
                 </div>
                 <input type="hidden" id="applicant_id" name="applicant_id">
                 <input type="hidden" id="staff_id" name="staff_id">
@@ -177,7 +173,6 @@ function validateClientSide(values) {
             job_posting_title: document.getElementById("job_posting_title").value.trim(),
             interview_datetime: toBackendDateTime(document.getElementById("interview_datetime").value),
             interview_link: document.getElementById("interview_link").value.trim(),
-            interview_notes: document.getElementById("interview_notes").value.trim(),
         };
 
         const clientErrors = validateClientSide(values);

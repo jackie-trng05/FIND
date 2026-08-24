@@ -9,9 +9,17 @@ const STATUS_OPTIONS = [
   "Shortlisted",
   "Interview Requested",
   "Interview Scheduled",
-  "Reschedule Requested",
   "Interview Completed",
   "Withdrawn",
+];
+
+// Skill areas assessed in the interview notes (must match the backend).
+const NOTE_SECTIONS = [
+  "Technical",
+  "Education",
+  "Communication",
+  "Problem Solving",
+  "Professionalism",
 ];
 
 // Interview status -> badge colour (light backgrounds, matching Applications).
@@ -19,7 +27,6 @@ const STATUS_BADGE_CLASS = {
   "shortlisted": "badge-warning",           // light orange
   "interview requested": "badge-warning",   // light orange
   "interview scheduled": "badge-info",      // light blue
-  "reschedule requested": "badge-warning",  // light orange
   "interview completed": "badge-success",   // light green
   "withdrawn": "badge-danger",              // light red
 };
@@ -62,30 +69,90 @@ function statusBadge(status) {
 }
 
 /*
- * Staff status dropdown (matches the Applications service). "Interview
- * Completed" is the only manually selectable option, and only once the
- * applicant has accepted (Interview Scheduled). Every other status reflects the
- * automatic lifecycle and is shown disabled.
+ * Interview assessment notes are stored as JSON with the five skill areas.
+ * parseNotes accepts either a JSON string or an object and returns a plain
+ * object, or null for legacy/empty free-text notes.
  */
-function statusSelectHtml(interview, extraClass = "") {
-  const current = interview.interview_status;
-  const canComplete = current === "Interview Scheduled";
-  const opts = STATUS_OPTIONS.map((s) => {
-    const selected = s === current ? " selected" : "";
-    const selectable = s === "Interview Completed" && canComplete;
-    const disabled = s === current || !selectable ? " disabled" : "";
-    return `<option value="${s}"${selected}${disabled}>${s}</option>`;
-  }).join("");
+function parseNotes(raw) {
+  if (!raw) return null;
+  if (typeof raw === "object") return raw;
+  try {
+    const obj = JSON.parse(raw);
+    return obj && typeof obj === "object" ? obj : null;
+  } catch {
+    return null;
+  }
+}
+
+/* Read-only display of the five note sections (or a hint when empty). */
+function notesView(raw) {
+  const notes = parseNotes(raw);
+  if (!notes) {
+    const text = String(raw || "").trim();
+    return text
+      ? `<p class="meta">${escapeHtml(text)}</p>`
+      : `<p class="form-hint">No interview notes yet.</p>`;
+  }
   return (
-    `<select class="form-select-sm status-select ${extraClass}" ` +
-    `data-id="${interview.interview_id}" data-current="${escapeHtml(current)}">${opts}</select>`
+    `<dl class="detail-grid notes-grid">` +
+    NOTE_SECTIONS.map(
+      (s) =>
+        `<dt>${escapeHtml(s)}</dt><dd>${
+          escapeHtml(notes[s] || "") || "&mdash;"
+        }</dd>`
+    ).join("") +
+    `</dl>`
   );
 }
 
-/* Mark an interview complete (staff). Resolves true on success. */
-async function setInterviewComplete(id) {
-  const resp = await fetch(`${BACKEND_URL}/interviews/${id}/complete`, { method: "POST" });
-  return resp.ok;
+/* Editable five-section notes form. `idPrefix` keeps ids unique per card. */
+function notesForm(raw, idPrefix = "note") {
+  const notes = parseNotes(raw) || {};
+  return (
+    `<div class="notes-form">` +
+    NOTE_SECTIONS.map((s) => {
+      const id = `${idPrefix}-${s}`;
+      return `
+        <div class="full">
+          <label for="${id}">${escapeHtml(s)}</label>
+          <textarea id="${id}" data-note="${s}" rows="2" placeholder="Notes on ${escapeHtml(
+        s
+      )}">${escapeHtml(notes[s] || "")}</textarea>
+          <div class="field-error" data-note-error="${s}"></div>
+        </div>`;
+    }).join("") +
+    `</div>`
+  );
+}
+
+/* Collect notes from a container; returns { notes, missing[] }. */
+function collectNotes(container) {
+  const notes = {};
+  const missing = [];
+  NOTE_SECTIONS.forEach((s) => {
+    const el = container.querySelector(`[data-note="${s}"]`);
+    const value = el ? el.value.trim() : "";
+    notes[s] = value;
+    if (!value) missing.push(s);
+  });
+  return { notes, missing };
+}
+
+/* Complete an interview by saving its five-section notes. */
+async function completeInterviewWithNotes(id, notes) {
+  const resp = await fetch(`${BACKEND_URL}/interviews/${id}/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ interview_notes: notes }),
+  });
+  const data = await resp.json().catch(() => ({}));
+  return { ok: resp.ok, data };
+}
+
+/* Whether an interview's scheduled time has already passed. */
+function isInterviewPast(value) {
+  const dt = parseDateTime(value);
+  return Boolean(dt) && dt <= new Date();
 }
 
 /* Inline "Thinking…" indicator, consistent with the Job Posting service. */
@@ -170,7 +237,7 @@ function renderChrome(user, activePage) {
   ];
   if (isStaff) {
     tabs.push({ key: "applications", label: "To Schedule", href: "applications.html" });
-    tabs.push({ key: "reschedule", label: "Reschedule Requests", href: "reschedule-requests.html" });
+    tabs.push({ key: "to-complete", label: "Interviews To Complete", href: "to-complete.html" });
     tabs.push({ key: "schedule", label: "Schedule Interview", href: "schedule.html" });
   } else {
     tabs.push({ key: "requests", label: "My Requests", href: "requests.html" });

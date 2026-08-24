@@ -25,9 +25,8 @@
 let currentUser = null;
 
 function actionable(status) {
-    // Which cards offer buttons: pending invites (accept/decline/reschedule)
-    // and booked interviews (reschedule only).
-    return status === "Interview Requested" || status === "Interview Scheduled";
+    // Only pending invites need an applicant response (accept / decline).
+    return status === "Interview Requested";
 }
 
 // Only a pending invite actually needs the applicant to respond.
@@ -57,7 +56,6 @@ function card(it) {
         <div class="btn-row" style="margin-top:1rem;">
             ${pending ? `<button class="btn btn-primary btn-sm" data-act="accept">Accept</button>
             <button class="btn btn-danger btn-sm" data-act="toggle-decline">Decline</button>` : ""}
-            <button class="btn btn-secondary btn-sm" data-act="toggle-reschedule">Request Reschedule</button>
         </div>
         ${pending ? `
         <div class="decline-box" style="display:none;margin-top:0.75rem;">
@@ -67,25 +65,6 @@ function card(it) {
                 <button class="btn btn-danger btn-sm" data-act="submit-decline">Decline Interview</button>
             </div>
         </div>` : ""}
-        <div class="reschedule-box" style="display:none;margin-top:0.75rem;">
-            <div class="form-grid">
-                <div>
-                    <label>Proposed Date &amp; Time</label>
-                    <input class="resch-datetime" type="datetime-local" min="${nowLocalInput()}">
-                    <div class="form-hint">Must be in the future.</div>
-                    <div class="field-error resch-dt-error"></div>
-                </div>
-                <div class="full">
-                    <label>Reason (optional)</label>
-                    <textarea class="resch-reason" rows="2" placeholder="Add a note about the change"></textarea>
-                </div>
-            </div>
-            <div class="btn-row">
-                <button class="btn btn-primary btn-sm" data-act="submit-reschedule">Submit Reschedule Request</button>
-                <button class="btn btn-accent btn-sm" data-act="ai-suggest">AI: Suggest A Time</button>
-            </div>
-            <div class="ai-panel panel" style="display:none;margin-top:0.5rem;">Suggestions will appear here.</div>
-        </div>
         ` : `<p class="meta" style="margin-top:0.75rem;">No action needed — this request is ${escapeHtml(status)}.</p>`}
     </section>`;
 }
@@ -135,68 +114,10 @@ async function handleAction(section, id, act) {
     const alert = document.getElementById("req-alert");
     alert.innerHTML = "";
 
-    // Decline and Reschedule boxes are mutually exclusive.
+    // Decline box toggle.
     if (act === "toggle-decline") {
         const d = section.querySelector(".decline-box");
-        const r = section.querySelector(".reschedule-box");
-        if (r) r.style.display = "none";
         if (d) d.style.display = d.style.display === "none" ? "block" : "none";
-        return;
-    }
-
-    if (act === "toggle-reschedule") {
-        const d = section.querySelector(".decline-box");
-        const box = section.querySelector(".reschedule-box");
-        if (d) d.style.display = "none";
-        box.style.display = box.style.display === "none" ? "block" : "none";
-        return;
-    }
-
-    if (act === "ai-suggest") {
-        const panel = section.querySelector(".ai-panel");
-        const target = section.querySelector(".resch-datetime");
-        panel.style.display = "block";
-        panel.innerHTML = thinkingHtml();
-        const reason = section.querySelector(".resch-reason").value.trim();
-        const preferences =
-            `The applicant needs to reschedule. Reason: ${reason || "not specified"}. ` +
-            `Suggest one or two alternative future interview slots.`;
-        try {
-            const body = new URLSearchParams({ preferences });
-            const resp = await fetch(`${BACKEND_URL}/suggest-times`, {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body,
-            });
-            renderSuggestions(panel, await resp.text(), target);
-        } catch {
-            panel.innerHTML = `<p class="form-hint">Request failed. Is the local AI agent running?</p>`;
-        }
-        return;
-    }
-
-    if (act === "submit-reschedule") {
-        const dtEl = section.querySelector(".resch-datetime");
-        const reasonEl = section.querySelector(".resch-reason");
-        const dtErr = section.querySelector(".resch-dt-error");
-        const dt = toBackendDateTime(dtEl.value);
-        const reason = reasonEl.value.trim();
-        dtErr.textContent = "";
-        dtEl.classList.remove("invalid");
-        if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(dt) || !isFutureLocal(dt)) {
-            dtErr.textContent = "Please choose a future date and time.";
-            dtEl.classList.add("invalid");
-            return;
-        }
-        const confirmed = await confirmDialog({
-            title: "Request this reschedule?",
-            message: `Propose ${dt} as your preferred time? The recruiter will review your request.`,
-            confirmText: "Request Reschedule",
-        });
-        if (!confirmed) return;
-        const { ok } = await post(`${BACKEND_URL}/interviews/${id}/reschedule`, { interview_datetime: dt, reason });
-        if (ok) { showToast("Reschedule request submitted.", "success"); refresh(); }
-        else { showToast("Could not submit reschedule request.", "error"); }
         return;
     }
 

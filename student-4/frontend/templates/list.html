@@ -113,9 +113,7 @@ function renderRows(rows) {
         .map((it) => {
             const person = isStaff ? it.applicant_name : it.staff_name;
             const link = `details.html?id=${it.interview_id}&from=list`;
-            const statusCell = isStaff
-                ? statusSelectHtml(it)
-                : statusBadge(it.interview_status);
+            const statusCell = statusBadge(it.interview_status);
             return `
                 <tr class="clickable" onclick="window.location='${link}'">
                     <td>${escapeHtml(person || "—")}<div class="meta">Application #${escapeHtml(it.application_id)}</div></td>
@@ -127,7 +125,6 @@ function renderRows(rows) {
         })
         .join("");
     body.innerHTML = `<table class="data-table">${head}<tbody>${rowsHtml}</tbody></table>`;
-    if (isStaff) wireStatusSelects();
 }
 
 // Click a header to sort; click again to flip direction.
@@ -163,31 +160,6 @@ function sortRows(rows, isStaff) {
         if (va < vb) return -1 * dir;
         if (va > vb) return 1 * dir;
         return 0;
-    });
-}
-
-// Wire the staff per-row status dropdown (only "Interview Completed" is manual).
-function wireStatusSelects() {
-    document.querySelectorAll(".status-select").forEach((sel) => {
-        sel.addEventListener("change", async () => {
-            const id = sel.dataset.id;
-            const current = sel.dataset.current;
-            if (sel.value !== "Interview Completed") { sel.value = current; return; }
-            const confirmed = await confirmDialog({
-                title: "Mark interview complete?",
-                message: "This sets the application status to “Interview Completed”.",
-                confirmText: "Mark Complete",
-            });
-            if (!confirmed) { sel.value = current; return; }
-            if (await setInterviewComplete(id)) {
-                showToast("Interview marked complete.", "success");
-                allInterviews = await fetchInterviews(currentUser);
-                applyFilters();
-            } else {
-                showToast("Could not update status.", "error");
-                sel.value = current;
-            }
-        });
     });
 }
 

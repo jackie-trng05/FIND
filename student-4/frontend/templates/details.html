@@ -44,53 +44,12 @@ function detailRows() {
         ["Meeting Link", interview.interview_link
             ? `<a href="${escapeHtml(interview.interview_link)}" target="_blank" rel="noopener">${escapeHtml(interview.interview_link)}</a>`
             : "No link provided"],
-        ["Notes", escapeHtml(interview.interview_notes) || "—"],
     ];
     return rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
 }
 
-// Status header: badge + (staff only) a "Change status" dropdown next to it,
-// matching the Applications service. Only "Interview Completed" is manual.
 function statusHeader() {
-    const staff = currentUser.role === "staff";
-    if (!staff) {
-        return `<div class="status-header">${statusBadge(interview.interview_status)}</div>`;
-    }
-    return `
-        <div class="status-header">
-            ${statusBadge(interview.interview_status)}
-            <label class="header-status-label">Change status:</label>
-            ${statusSelectHtml(interview, "header-status-select")}
-        </div>`;
-}
-
-function canReschedule(status) {
-    return status === "Interview Requested" || status === "Interview Scheduled";
-}
-
-function rescheduleArea() {
-    return `
-        <div id="reschedule-area" style="display:none;margin-top:1.25rem;">
-            <h2>Propose a new date &amp; time</h2>
-            <p class="form-hint">Your proposed time is sent to the recruiter to review — the interview moves to “Reschedule Requested” until they accept or decline it.</p>
-            <div class="form-grid">
-                <div>
-                    <label for="new_datetime">Proposed Date &amp; Time</label>
-                    <input id="new_datetime" type="datetime-local" min="${nowLocalInput()}">
-                    <div class="form-hint">Must be in the future.</div>
-                    <div class="field-error" data-for="new_datetime"></div>
-                </div>
-                <div class="full">
-                    <label for="reschedule_reason">Reason (optional)</label>
-                    <textarea id="reschedule_reason" rows="2" placeholder="Add a note about the change"></textarea>
-                </div>
-            </div>
-            <div class="btn-row">
-                <button class="btn btn-primary" id="submit-reschedule" type="button">Submit Reschedule Request</button>
-                <button class="btn btn-accent" id="ai-suggest" type="button">AI: Suggest A Time</button>
-            </div>
-            <div id="ai-panel" class="panel" style="display:none;">Suggestions will appear here.</div>
-        </div>`;
+    return `<div class="status-header">${statusBadge(interview.interview_status)}</div>`;
 }
 
 function declineArea() {
@@ -104,170 +63,83 @@ function declineArea() {
         </div>`;
 }
 
+// Staff-only interview notes section: read-only once completed, an editable
+// five-section form once the scheduled time has passed, or a hint otherwise.
+function notesSection() {
+    const status = interview.interview_status;
+    if (status === "Interview Completed") {
+        return `
+            <div style="margin-top:1.5rem;">
+                <h2>Interview notes</h2>
+                ${notesView(interview.interview_notes)}
+            </div>`;
+    }
+    if (status === "Interview Scheduled" && isInterviewPast(interview.interview_datetime)) {
+        return `
+            <div id="complete-area" style="margin-top:1.5rem;">
+                <h2>Complete Interview</h2>
+                <p class="form-hint">Write up all five skill areas to mark this interview complete.</p>
+                ${notesForm(interview.interview_notes, "note")}
+                <div class="btn-row" style="margin-top:0.75rem;">
+                    <button class="btn btn-primary" id="complete-btn" type="button">Complete Interview</button>
+                </div>
+            </div>`;
+    }
+    if (status === "Interview Scheduled") {
+        return `
+            <div style="margin-top:1.5rem;">
+                <h2>Interview notes</h2>
+                <p class="form-hint">You can write up and complete this interview once its scheduled time has passed.</p>
+            </div>`;
+    }
+    return "";
+}
+
 function render() {
     const staff = currentUser.role === "staff";
     const status = interview.interview_status;
     document.getElementById("detail-sub").textContent = `Interview #${interview.interview_id}`;
 
     let actions = "";
+    let extra = "";
     if (staff) {
-        const rescheduleReview = status === "Reschedule Requested" ? `
-                <button class="btn btn-primary" id="accept-reschedule-btn" type="button">Accept New Time</button>
-                <button class="btn btn-danger" id="decline-reschedule-btn" type="button">Decline Reschedule</button>` : "";
-        actions = `
+        const cancellable = status !== "Interview Completed" && status !== "Withdrawn";
+        actions = cancellable ? `
             <div class="btn-row" style="margin-top:1.25rem;">
-                ${rescheduleReview}
                 <button class="btn btn-danger" id="cancel-btn" type="button">Cancel Interview</button>
-            </div>`;
+            </div>` : "";
+        extra = notesSection();
     } else if (status === "Interview Requested") {
         actions = `
             <div class="btn-row" style="margin-top:1.25rem;">
                 <button class="btn btn-primary" id="accept-btn" type="button">Accept Interview</button>
                 <button class="btn btn-danger" id="decline-btn" type="button">Decline Interview</button>
-                <button class="btn btn-secondary" id="reschedule-btn" type="button">Request Reschedule</button>
             </div>
-            ${declineArea()}
-            ${rescheduleArea()}`;
-    } else if (status === "Interview Scheduled") {
-        actions = `
-            <div class="btn-row" style="margin-top:1.25rem;">
-                <button class="btn btn-secondary" id="reschedule-btn" type="button">Request Reschedule</button>
-            </div>
-            ${rescheduleArea()}`;
-    } else if (status === "Reschedule Requested") {
-        actions = `<p class="form-hint" style="margin-top:1.25rem;">Your reschedule request is awaiting the recruiter’s review.</p>`;
+            ${declineArea()}`;
     }
 
     document.getElementById("detail-card").innerHTML = `
         ${statusHeader()}
         <dl class="detail-grid">${detailRows()}</dl>
         ${actions}
+        ${extra}
     `;
 
     const cancelBtn = document.getElementById("cancel-btn");
     if (cancelBtn) cancelBtn.addEventListener("click", cancelInterview);
-    const statusSelect = document.querySelector(".status-select");
-    if (statusSelect) statusSelect.addEventListener("change", onStatusChange);
     const acceptBtn = document.getElementById("accept-btn");
     if (acceptBtn) acceptBtn.addEventListener("click", acceptInterview);
     const declineBtn = document.getElementById("decline-btn");
     if (declineBtn) declineBtn.addEventListener("click", toggleDecline);
     const submitDeclineBtn = document.getElementById("submit-decline");
     if (submitDeclineBtn) submitDeclineBtn.addEventListener("click", submitDeclineAction);
-    const reBtn = document.getElementById("reschedule-btn");
-    if (reBtn) reBtn.addEventListener("click", toggleReschedule);
-    const submitRe = document.getElementById("submit-reschedule");
-    if (submitRe) submitRe.addEventListener("click", submitReschedule);
-    const aiBtn = document.getElementById("ai-suggest");
-    if (aiBtn) aiBtn.addEventListener("click", suggestTime);
-    const acceptResBtn = document.getElementById("accept-reschedule-btn");
-    if (acceptResBtn) acceptResBtn.addEventListener("click", acceptRescheduleAction);
-    const declineResBtn = document.getElementById("decline-reschedule-btn");
-    if (declineResBtn) declineResBtn.addEventListener("click", declineRescheduleAction);
+    const completeBtn = document.getElementById("complete-btn");
+    if (completeBtn) completeBtn.addEventListener("click", submitComplete);
 }
 
-// Staff review of an applicant's reschedule request.
-async function acceptRescheduleAction() {
-    const confirmed = await confirmDialog({
-        title: "Accept the new time?",
-        message: "The interview will move to “Interview Scheduled”.",
-        confirmText: "Accept New Time",
-    });
-    if (!confirmed) return;
-    try {
-        const resp = await fetch(`${BACKEND_URL}/interviews/${interview.interview_id}/accept-reschedule`, { method: "POST" });
-        if (!resp.ok) throw new Error();
-        showToast("Reschedule accepted. Interview scheduled.", "success");
-        await reload();
-    } catch {
-        showToast("Could not accept the reschedule.", "error");
-    }
-}
-
-async function declineRescheduleAction() {
-    const confirmed = await confirmDialog({
-        title: "Decline the new time?",
-        message: "The interview is cancelled and the application returns to “Shortlisted”, ready to schedule again.",
-        confirmText: "Decline",
-        danger: true,
-    });
-    if (!confirmed) return;
-    try {
-        const resp = await fetch(`${BACKEND_URL}/interviews/${interview.interview_id}/decline-reschedule`, { method: "POST" });
-        if (!resp.ok) throw new Error();
-        setPendingToast("Reschedule declined. Application returned to “To Schedule”.", "success");
-        window.location.href = "reschedule-requests.html";
-    } catch {
-        showToast("Could not decline the reschedule.", "error");
-    }
-}
-
-// Decline and Reschedule boxes are mutually exclusive — opening one closes the other.
 function toggleDecline() {
     const d = document.getElementById("decline-area");
-    const r = document.getElementById("reschedule-area");
-    if (r) r.style.display = "none";
     if (d) d.style.display = d.style.display === "none" ? "block" : "none";
-}
-
-function toggleReschedule() {
-    const d = document.getElementById("decline-area");
-    const r = document.getElementById("reschedule-area");
-    if (d) d.style.display = "none";
-    if (r) r.style.display = r.style.display === "none" ? "block" : "none";
-}
-
-async function submitReschedule() {
-    const dtInput = document.getElementById("new_datetime");
-    const errEl = document.querySelector('.field-error[data-for="new_datetime"]');
-    const dt = toBackendDateTime(dtInput.value);
-    const reason = document.getElementById("reschedule_reason").value.trim();
-    errEl.textContent = "";
-    dtInput.classList.remove("invalid");
-    if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(dt) || !isFutureLocal(dt)) {
-        errEl.textContent = "Please choose a future date and time.";
-        dtInput.classList.add("invalid");
-        return;
-    }
-    const confirmed = await confirmDialog({
-        title: "Request this reschedule?",
-        message: `Propose ${dt} as the new time? The recruiter will review your request.`,
-        confirmText: "Request Reschedule",
-    });
-    if (!confirmed) return;
-    try {
-        const resp = await fetch(`${BACKEND_URL}/interviews/${interview.interview_id}/reschedule`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ interview_datetime: dt, reason }),
-        });
-        if (!resp.ok) throw new Error();
-        showToast("Reschedule requested.", "success");
-        await reload();
-    } catch {
-        showToast("Could not submit reschedule request.", "error");
-    }
-}
-
-async function suggestTime() {
-    const panel = document.getElementById("ai-panel");
-    panel.style.display = "block";
-    panel.innerHTML = thinkingHtml();
-    const preferences =
-        `Existing interview is currently ${interview.interview_datetime}. ` +
-        `Reason for change: ${document.getElementById("reschedule_reason").value.trim() || "not specified"}. ` +
-        `Suggest one or two alternative future slots.`;
-    try {
-        const body = new URLSearchParams({ preferences });
-        const resp = await fetch(`${BACKEND_URL}/suggest-times`, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body,
-        });
-        renderSuggestions(panel, await resp.text(), "new_datetime");
-    } catch {
-        panel.innerHTML = `<p>Request failed. Is the local AI agent running?</p>`;
-    }
 }
 
 async function reload() {
@@ -275,27 +147,45 @@ async function reload() {
     render();
 }
 
-async function onStatusChange(e) {
-    if (e.target.value !== "Interview Completed") {
-        e.target.value = interview.interview_status;
+function clearNoteErrors(container) {
+    container.querySelectorAll("[data-note-error]").forEach((e) => (e.textContent = ""));
+    container.querySelectorAll("textarea").forEach((t) => t.classList.remove("invalid"));
+}
+
+async function submitComplete() {
+    const area = document.getElementById("complete-area");
+    clearNoteErrors(area);
+    const { notes, missing } = collectNotes(area);
+    if (missing.length) {
+        missing.forEach((s) => {
+            const err = area.querySelector(`[data-note-error="${s}"]`);
+            const field = area.querySelector(`[data-note="${s}"]`);
+            if (err) err.textContent = "This section is required.";
+            if (field) field.classList.add("invalid");
+        });
+        showToast("Please complete all five note sections.", "error");
         return;
     }
     const confirmed = await confirmDialog({
-        title: "Mark interview complete?",
-        message: "This sets the application status to “Interview Completed”.",
-        confirmText: "Mark Complete",
+        title: "Complete this interview?",
+        message: "The notes will be saved and the interview marked “Interview Completed”. This cannot be undone.",
+        confirmText: "Complete Interview",
     });
-    if (!confirmed) { e.target.value = interview.interview_status; return; }
-    const alert = document.getElementById("detail-alert");
-    try {
-        const resp = await fetch(`${BACKEND_URL}/interviews/${interview.interview_id}/complete`, { method: "POST" });
-        if (!resp.ok) throw new Error();
-        showToast("Interview marked complete.", "success");
+    if (!confirmed) return;
+    const { ok, data } = await completeInterviewWithNotes(interview.interview_id, notes);
+    if (ok) {
+        showToast("Interview completed.", "success");
         await reload();
-    } catch {
-        alert.innerHTML = `<div class="alert alert-error">Could not update status.</div>`;
-        showToast("Could not update status.", "error");
-        e.target.value = interview.interview_status;
+        return;
+    }
+    if (data && data.errors) {
+        Object.entries(data.errors).forEach(([s, m]) => {
+            const err = area.querySelector(`[data-note-error="${s}"]`);
+            if (err) err.textContent = m;
+        });
+        showToast("Please complete all five note sections.", "error");
+    } else {
+        showToast((data && data.error) || "Could not complete the interview.", "error");
     }
 }
 
@@ -378,6 +268,7 @@ async function cancelInterview() {
         list: "list.html",
         requests: "requests.html",
         schedule: "schedule.html",
+        "to-complete": "to-complete.html",
     };
     const from = new URLSearchParams(window.location.search).get("from");
     document.getElementById("back-link").href = BACK_TARGETS[from] || "list.html";

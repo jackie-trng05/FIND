@@ -264,20 +264,86 @@ def test_accept_interview_sets_scheduled(client, monkeypatch):
     assert seen["synced"] == (4, "Interview Scheduled")
 
 
-def test_complete_interview_sets_completed(client, monkeypatch):
+def _full_notes():
+    return {
+        "Technical": "Solid.",
+        "Education": "Relevant degree.",
+        "Communication": "Clear.",
+        "Problem Solving": "Methodical.",
+        "Professionalism": "Punctual.",
+    }
+
+
+def test_complete_interview_saves_notes_and_completes(client, monkeypatch):
     seen = {}
     monkeypatch.setattr(
-        normal_ui, "update_interview",
-        lambda i, payload: _FakeResponse({"interview_id": i, "application_id": 4, **payload}),
+        normal_ui, "get_interview_response",
+        lambda i: _FakeResponse({
+            "interview_id": i, "application_id": 4,
+            "interview_status": "Interview Scheduled",
+            "interview_datetime": _past_dt(),
+        }),
     )
+
+    def _update(i, payload):
+        seen["payload"] = payload
+        return _FakeResponse({"interview_id": i, "application_id": 4, **payload})
+
+    monkeypatch.setattr(normal_ui, "update_interview", _update)
     monkeypatch.setattr(
         integration_api, "set_application_status",
         lambda app_id, status: seen.setdefault("synced", (app_id, status)),
     )
 
-    resp = client.post("/interviews/1/complete")
+    resp = client.post("/interviews/1/complete", json={"interview_notes": _full_notes()})
     assert resp.status_code == 200
     assert seen["synced"] == (4, "Interview Completed")
+    assert seen["payload"]["interview_status"] == "Interview Completed"
+    # Notes are persisted as a JSON string containing all five sections.
+    assert '"Technical"' in seen["payload"]["interview_notes"]
+
+
+def test_complete_requires_all_note_sections(client):
+    resp = client.post("/interviews/1/complete", json={
+        "interview_notes": {"Technical": "ok"},
+    })
+    assert resp.status_code == 400
+    errors = resp.get_json()["errors"]
+    assert "Education" in errors
+
+
+def test_complete_requires_notes_object(client):
+    resp = client.post("/interviews/1/complete", json={})
+    assert resp.status_code == 400
+    assert "notes are required" in resp.get_json()["error"].lower()
+
+
+def test_complete_rejects_future_interview(client, monkeypatch):
+    monkeypatch.setattr(
+        normal_ui, "get_interview_response",
+        lambda i: _FakeResponse({
+            "interview_id": i, "application_id": 4,
+            "interview_status": "Interview Scheduled",
+            "interview_datetime": _future_dt(),
+        }),
+    )
+    resp = client.post("/interviews/1/complete", json={"interview_notes": _full_notes()})
+    assert resp.status_code == 400
+    assert "not taken place" in resp.get_json()["error"].lower()
+
+
+def test_complete_rejects_non_scheduled_interview(client, monkeypatch):
+    monkeypatch.setattr(
+        normal_ui, "get_interview_response",
+        lambda i: _FakeResponse({
+            "interview_id": i, "application_id": 4,
+            "interview_status": "Interview Requested",
+            "interview_datetime": _past_dt(),
+        }),
+    )
+    resp = client.post("/interviews/1/complete", json={"interview_notes": _full_notes()})
+    assert resp.status_code == 400
+    assert "scheduled" in resp.get_json()["error"].lower()
 
 
 def test_update_rejects_unknown_status(client):
@@ -290,6 +356,13 @@ def test_update_requires_some_payload(client):
     resp = client.put("/interviews/1", json={})
     assert resp.status_code == 400
     assert "No update details" in resp.get_json()["error"]
+
+
+def test_update_rejects_detail_edits(client):
+    # Interview details (date/time, link) are fixed after creation.
+    resp = client.put("/interviews/1", json={"interview_datetime": _future_dt()})
+    assert resp.status_code == 400
+    assert "interview_details" in resp.get_json()["errors"]
 
 
 def test_cancel_interview_not_found(client, monkeypatch):
