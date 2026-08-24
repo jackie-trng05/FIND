@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Interview Requests — FIND</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/common.js"></script>
+</head>
+<body>
+<div id="app-chrome"></div>
+<main class="app-shell">
+    <div class="page-head">
+        <div>
+            <h1>Interview Requests</h1>
+            <p>Respond to interviews you have been requested for.</p>
+        </div>
+    </div>
+
+    <div id="req-alert"></div>
+    <section id="req-body"><p class="loading">Loading…</p></section>
+</main>
+
+<script>
+let currentUser = null;
+
+function actionable(status) {
+    // Only pending invites need an applicant response (accept / decline).
+    return status === "Interview Requested";
+}
+
+// Only a pending invite actually needs the applicant to respond.
+function needsResponse(status) {
+    return status === "Interview Requested";
+}
+
+function card(it) {
+    const status = it.interview_status;
+    const pending = status === "Interview Requested";
+    const canAct = actionable(status);
+    return `
+    <section class="card" style="margin-bottom:1rem;" data-id="${it.interview_id}">
+        <div class="interview-row" style="border:0;padding:0;">
+            <div>
+                <div class="who">${escapeHtml(it.staff_name || "—")} · Application #${escapeHtml(it.application_id)}</div>
+                <div class="meta">${formatDateTime(it.interview_datetime)}</div>
+                ${it.job_posting_title ? `<div class="meta">${escapeHtml(it.job_posting_title)}</div>` : ""}
+                ${it.interview_notes ? `<div class="meta">${escapeHtml(it.interview_notes)}</div>` : ""}
+            </div>
+            <div class="btn-row">
+                ${statusBadge(status)}
+                <a class="btn btn-secondary btn-sm" href="details.html?id=${it.interview_id}&from=requests">View</a>
+            </div>
+        </div>
+        ${canAct ? `
+        <div class="btn-row" style="margin-top:1rem;">
+            ${pending ? `<button class="btn btn-primary btn-sm" data-act="accept">Accept</button>
+            <button class="btn btn-danger btn-sm" data-act="toggle-decline">Decline</button>` : ""}
+        </div>
+        ${pending ? `
+        <div class="decline-box" style="display:none;margin-top:0.75rem;">
+            <label>Reason for declining (optional)</label>
+            <textarea class="decline-reason" rows="2" placeholder="Let the recruiter know why"></textarea>
+            <div class="btn-row" style="margin-top:0.5rem;">
+                <button class="btn btn-danger btn-sm" data-act="submit-decline">Decline Interview</button>
+            </div>
+        </div>` : ""}
+        ` : `<p class="meta" style="margin-top:0.75rem;">No action needed — this request is ${escapeHtml(status)}.</p>`}
+    </section>`;
+}
+
+async function refresh() {
+    const body = document.getElementById("req-body");
+    let interviews;
+    try {
+        interviews = await fetchInterviews(currentUser);
+    } catch (err) {
+        body.innerHTML = `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+        return;
+    }
+    // Only pending invites belong here — this tab is just for interview
+    // requests staff have sent you. Accepted/other interviews live on the
+    // Calendar and All Interviews tabs.
+    const pending = interviews.filter((it) => needsResponse(it.interview_status));
+    if (!pending.length) {
+        body.innerHTML = `<div class="card"><div class="empty-state">You have no interview requests right now.</div></div>`;
+        return;
+    }
+    body.innerHTML = pending.map(card).join("");
+    wireCards();
+}
+
+function wireCards() {
+    document.querySelectorAll("section.card[data-id]").forEach((section) => {
+        const id = section.dataset.id;
+        section.querySelectorAll("[data-act]").forEach((btn) => {
+            btn.addEventListener("click", () => handleAction(section, id, btn.dataset.act));
+        });
+    });
+}
+
+async function post(url, payload) {
+    const opts = { method: "POST" };
+    if (payload) {
+        opts.headers = { "Content-Type": "application/json" };
+        opts.body = JSON.stringify(payload);
+    }
+    const resp = await fetch(url, opts);
+    const data = await resp.json().catch(() => ({}));
+    return { ok: resp.ok, data };
+}
+
+async function handleAction(section, id, act) {
+    const alert = document.getElementById("req-alert");
+    alert.innerHTML = "";
+
+    // Decline box toggle.
+    if (act === "toggle-decline") {
+        const d = section.querySelector(".decline-box");
+        if (d) d.style.display = d.style.display === "none" ? "block" : "none";
+        return;
+    }
+
+    if (act === "accept") {
+        const confirmed = await confirmDialog({
+            title: "Accept this interview?",
+            message: "Your application will move to “Interview Scheduled”.",
+            confirmText: "Accept",
+        });
+        if (!confirmed) return;
+        const { ok } = await post(`${BACKEND_URL}/interviews/${id}/accept`);
+        if (ok) { showToast("Interview accepted.", "success"); refresh(); }
+        else { showToast("Could not accept interview.", "error"); }
+        return;
+    }
+
+    if (act === "submit-decline") {
+        const reason = section.querySelector(".decline-reason").value.trim();
+        const confirmed = await confirmDialog({
+            title: "Decline this interview?",
+            message: "Declining withdraws your application. This cannot be undone.",
+            confirmText: "Decline",
+            danger: true,
+        });
+        if (!confirmed) return;
+        const { ok } = await post(`${BACKEND_URL}/interviews/${id}/decline`, { reason });
+        if (ok) { showToast("Interview declined. Application withdrawn.", "success"); refresh(); }
+        else { showToast("Could not decline interview.", "error"); }
+    }
+}
+
+(async function () {
+    currentUser = await initChrome("requests", { applicantOnly: true });
+    if (!currentUser) return;
+    refresh();
+})();
+</script>
+</body>
+</html>

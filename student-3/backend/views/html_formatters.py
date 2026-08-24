@@ -20,6 +20,7 @@ VALID_STATUSES = (
     "Draft",
     "Submitted",
     "Shortlisted",
+    "Interview Requested",
     "Interview Scheduled",
     "Interview Completed",
     "Evaluation Completed",
@@ -34,6 +35,7 @@ VALID_STATUSES = (
 WITHDRAWABLE_STATUSES = (
     "Submitted",
     "Shortlisted",
+    "Interview Requested",
     "Interview Scheduled",
     "Interview Completed",
     "Evaluation Completed",
@@ -43,7 +45,7 @@ WITHDRAWABLE_STATUSES = (
 DELETABLE_STATUSES = ("Draft",)
 
 # Statuses at which staff should see an "Interview" action on the row.
-INTERVIEW_ACTION_STATUSES = ("Shortlisted", "Interview Scheduled")
+INTERVIEW_ACTION_STATUSES = ("Shortlisted",)
 
 # Interview / Evaluations feature URLs (owned by student-4 & student-5).
 INTERVIEWS_URL = "http://localhost:16013"
@@ -71,6 +73,7 @@ def _status_badge(status: str) -> str:
         "Draft": "badge-warning",
         "Submitted": "badge-info",
         "Shortlisted": "badge-accent",
+        "Interview Requested": "badge-warning",
         "Interview Scheduled": "badge-info",
         "Interview Completed": "badge-accent",
         "Evaluation Completed": "badge-accent",
@@ -366,10 +369,9 @@ def render_application_detail(
             f'Withdraw Application</button>'
         )
     if status in INTERVIEW_ACTION_STATUSES:
-        label = "Reschedule Interview" if status == "Interview Scheduled" else "Schedule Interview"
         actions.append(
             f'<a class="btn btn-secondary" target="_blank" rel="noopener"'
-            f' href="{INTERVIEWS_URL}/?application={aid}">{label}</a>'
+            f' href="{INTERVIEWS_URL}/?application={aid}">Schedule Interview</a>'
         )
     actions_html = (
         f'<div class="panel-actions">{"".join(actions)}</div>' if actions else ""
@@ -510,11 +512,12 @@ def render_staff_applications_table(
         status_select = _render_status_select(aid, a["Application_Status"])
 
         interview_btn = ""
-        if a["Application_Status"] in INTERVIEW_ACTION_STATUSES:
-            label = "Reschedule" if a["Application_Status"] == "Interview Scheduled" else "Interview"
+        # Staff can only kick off scheduling for a shortlisted candidate; they
+        # do not reschedule a booked interview (applicants request that).
+        if a["Application_Status"] == "Shortlisted":
             interview_btn = (
                 f'<a class="btn btn-accent btn-sm" target="_blank" rel="noopener"'
-                f' href="{INTERVIEWS_URL}/?application={aid}">{label}</a>'
+                f' href="{INTERVIEWS_URL}/?application={aid}">Interview</a>'
             )
         evaluate_btn = ""
         if a["Application_Status"] == "Interview Completed":

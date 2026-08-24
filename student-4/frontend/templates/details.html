@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Interview Details — FIND</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/common.js"></script>
+</head>
+<body>
+<div id="app-chrome"></div>
+<main class="app-shell">
+    <div class="page-head">
+        <div>
+            <h1>Interview Details</h1>
+            <p id="detail-sub">&nbsp;</p>
+        </div>
+        <a class="btn btn-secondary btn-sm" id="back-link" href="list.html">&#8592; Back to list</a>
+    </div>
+
+    <div id="detail-alert"></div>
+    <section class="card" id="detail-card">
+        <p class="loading">Loading…</p>
+    </section>
+</main>
+
+<script>
+let currentUser = null;
+let interview = null;
+
+function getId() {
+    return new URLSearchParams(window.location.search).get("id");
+}
+
+function detailRows() {
+    const rows = [
+        ["Applicant", `${escapeHtml(interview.applicant_name || "—")}${interview.applicant_id ? ` (#${escapeHtml(interview.applicant_id)})` : ""}`],
+        ["Application", `#${escapeHtml(interview.application_id)}`],
+        ["Job Posting", interview.job_posting_title
+            ? `${escapeHtml(interview.job_posting_title)}${interview.job_posting_id ? ` (#${escapeHtml(interview.job_posting_id)})` : ""}`
+            : "—"],
+        ["Interviewer", `${escapeHtml(interview.staff_name || "—")} (#${escapeHtml(interview.staff_id)})`],
+        ["Date &amp; Time", formatDateTime(interview.interview_datetime)],
+        ["Meeting Link", interview.interview_link
+            ? `<a href="${escapeHtml(interview.interview_link)}" target="_blank" rel="noopener">${escapeHtml(interview.interview_link)}</a>`
+            : "No link provided"],
+    ];
+    return rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+}
+
+function statusHeader() {
+    return `<div class="status-header">${statusBadge(interview.interview_status)}</div>`;
+}
+
+function declineArea() {
+    return `
+        <div id="decline-area" style="display:none;margin-top:1.25rem;">
+            <label for="decline_reason">Reason for declining (optional)</label>
+            <textarea id="decline_reason" rows="2" placeholder="Let the recruiter know why"></textarea>
+            <div class="btn-row" style="margin-top:0.75rem;">
+                <button class="btn btn-danger" id="submit-decline" type="button">Decline Interview</button>
+            </div>
+        </div>`;
+}
+
+// Staff-only interview notes section: read-only once completed, an editable
+// five-section form once the scheduled time has passed, or a hint otherwise.
+function notesSection() {
+    const status = interview.interview_status;
+    if (status === "Interview Completed") {
+        return `
+            <div style="margin-top:1.5rem;">
+                <h2>Interview notes</h2>
+                ${notesView(interview.interview_notes)}
+            </div>`;
+    }
+    if (status === "Interview Scheduled" && isInterviewPast(interview.interview_datetime)) {
+        return `
+            <div id="complete-area" style="margin-top:1.5rem;">
+                <h2>Complete Interview</h2>
+                <p class="form-hint">Write up all five skill areas to mark this interview complete.</p>
+                ${notesForm(interview.interview_notes, "note")}
+                <div class="btn-row" style="margin-top:0.75rem;">
+                    <button class="btn btn-primary" id="complete-btn" type="button">Complete Interview</button>
+                </div>
+            </div>`;
+    }
+    if (status === "Interview Scheduled") {
+        return `
+            <div style="margin-top:1.5rem;">
+                <h2>Interview notes</h2>
+                <p class="form-hint">You can write up and complete this interview once its scheduled time has passed.</p>
+            </div>`;
+    }
+    return "";
+}
+
+function render() {
+    const staff = currentUser.role === "staff";
+    const status = interview.interview_status;
+    document.getElementById("detail-sub").textContent = `Interview #${interview.interview_id}`;
+
+    let actions = "";
+    let extra = "";
+    if (staff) {
+        const cancellable = status !== "Interview Completed" && status !== "Withdrawn";
+        actions = cancellable ? `
+            <div class="btn-row" style="margin-top:1.25rem;">
+                <button class="btn btn-danger" id="cancel-btn" type="button">Cancel Interview</button>
+            </div>` : "";
+        extra = notesSection();
+    } else if (status === "Interview Requested") {
+        actions = `
+            <div class="btn-row" style="margin-top:1.25rem;">
+                <button class="btn btn-primary" id="accept-btn" type="button">Accept Interview</button>
+                <button class="btn btn-danger" id="decline-btn" type="button">Decline Interview</button>
+            </div>
+            ${declineArea()}`;
+    }
+
+    document.getElementById("detail-card").innerHTML = `
+        ${statusHeader()}
+        <dl class="detail-grid">${detailRows()}</dl>
+        ${actions}
+        ${extra}
+    `;
+
+    const cancelBtn = document.getElementById("cancel-btn");
+    if (cancelBtn) cancelBtn.addEventListener("click", cancelInterview);
+    const acceptBtn = document.getElementById("accept-btn");
+    if (acceptBtn) acceptBtn.addEventListener("click", acceptInterview);
+    const declineBtn = document.getElementById("decline-btn");
+    if (declineBtn) declineBtn.addEventListener("click", toggleDecline);
+    const submitDeclineBtn = document.getElementById("submit-decline");
+    if (submitDeclineBtn) submitDeclineBtn.addEventListener("click", submitDeclineAction);
+    const completeBtn = document.getElementById("complete-btn");
+    if (completeBtn) completeBtn.addEventListener("click", submitComplete);
+}
+
+function toggleDecline() {
+    const d = document.getElementById("decline-area");
+    if (d) d.style.display = d.style.display === "none" ? "block" : "none";
+}
+
+async function reload() {
+    interview = await fetchInterview(interview.interview_id);
+    render();
+}
+
+function clearNoteErrors(container) {
+    container.querySelectorAll("[data-note-error]").forEach((e) => (e.textContent = ""));
+    container.querySelectorAll("textarea").forEach((t) => t.classList.remove("invalid"));
+}
+
+async function submitComplete() {
+    const area = document.getElementById("complete-area");
+    clearNoteErrors(area);
+    const { notes, missing } = collectNotes(area);
+    if (missing.length) {
+        missing.forEach((s) => {
+            const err = area.querySelector(`[data-note-error="${s}"]`);
+            const field = area.querySelector(`[data-note="${s}"]`);
+            if (err) err.textContent = "This section is required.";
+            if (field) field.classList.add("invalid");
+        });
+        showToast("Please complete all five note sections.", "error");
+        return;
+    }
+    const confirmed = await confirmDialog({
+        title: "Complete this interview?",
+        message: "The notes will be saved and the interview marked “Interview Completed”. This cannot be undone.",
+        confirmText: "Complete Interview",
+    });
+    if (!confirmed) return;
+    const { ok, data } = await completeInterviewWithNotes(interview.interview_id, notes);
+    if (ok) {
+        showToast("Interview completed.", "success");
+        await reload();
+        return;
+    }
+    if (data && data.errors) {
+        Object.entries(data.errors).forEach(([s, m]) => {
+            const err = area.querySelector(`[data-note-error="${s}"]`);
+            if (err) err.textContent = m;
+        });
+        showToast("Please complete all five note sections.", "error");
+    } else {
+        showToast((data && data.error) || "Could not complete the interview.", "error");
+    }
+}
+
+async function acceptInterview() {
+    const confirmed = await confirmDialog({
+        title: "Accept this interview?",
+        message: "Your application will move to “Interview Scheduled”.",
+        confirmText: "Accept",
+    });
+    if (!confirmed) return;
+    const alert = document.getElementById("detail-alert");
+    try {
+        const resp = await fetch(`${BACKEND_URL}/interviews/${interview.interview_id}/accept`, { method: "POST" });
+        if (!resp.ok) throw new Error();
+        showToast("Interview accepted.", "success");
+        await reload();
+    } catch {
+        alert.innerHTML = `<div class="alert alert-error">Could not accept interview.</div>`;
+        showToast("Could not accept interview.", "error");
+    }
+}
+
+async function submitDeclineAction() {
+    const reason = document.getElementById("decline_reason").value.trim();
+    const confirmed = await confirmDialog({
+        title: "Decline this interview?",
+        message: "Declining withdraws your application. This cannot be undone.",
+        confirmText: "Decline",
+        danger: true,
+    });
+    if (!confirmed) return;
+    const alert = document.getElementById("detail-alert");
+    try {
+        const resp = await fetch(`${BACKEND_URL}/interviews/${interview.interview_id}/decline`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason }),
+        });
+        if (!resp.ok) throw new Error();
+        setPendingToast("Interview declined. Application withdrawn.", "success");
+        window.location.href = "requests.html";
+    } catch {
+        alert.innerHTML = `<div class="alert alert-error">Could not decline interview.</div>`;
+        showToast("Could not decline interview.", "error");
+    }
+}
+
+async function cancelInterview() {
+    const confirmed = await confirmDialog({
+        title: "Cancel this interview?",
+        message: "This removes the interview request. This cannot be undone.",
+        confirmText: "Cancel Interview",
+        cancelText: "Keep",
+        danger: true,
+    });
+    if (!confirmed) return;
+    const alert = document.getElementById("detail-alert");
+    try {
+        const resp = await fetch(`${BACKEND_URL}/interviews/${interview.interview_id}`, { method: "DELETE" });
+        if (!resp.ok) {
+            alert.innerHTML = `<div class="alert alert-error">Could not cancel interview.</div>`;
+            showToast("Could not cancel interview.", "error");
+            return;
+        }
+        setPendingToast(`Interview #${interview.interview_id} cancelled.`, "success");
+        window.location.href = "list.html";
+    } catch {
+        alert.innerHTML = `<div class="alert alert-error">Connection error. Please try again.</div>`;
+        showToast("Connection error. Please try again.", "error");
+    }
+}
+
+(async function () {
+    currentUser = await initChrome("");
+    if (!currentUser) return;
+
+    // Send the Back button to whichever page the user arrived from.
+    const BACK_TARGETS = {
+        calendar: "index.html",
+        list: "list.html",
+        requests: "requests.html",
+        schedule: "schedule.html",
+        "to-complete": "to-complete.html",
+    };
+    const from = new URLSearchParams(window.location.search).get("from");
+    document.getElementById("back-link").href = BACK_TARGETS[from] || "list.html";
+
+    const id = getId();
+    if (!id) {
+        document.getElementById("detail-card").innerHTML =
+            `<div class="empty-state">No interview selected.</div>`;
+        return;
+    }
+
+    try {
+        interview = await fetchInterview(id);
+    } catch (err) {
+        document.getElementById("detail-card").innerHTML =
+            `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+        return;
+    }
+
+    if (!interview || !ownsInterview(currentUser, interview)) {
+        document.getElementById("detail-card").innerHTML =
+            `<div class="empty-state">This interview is not available to you.</div>`;
+        return;
+    }
+
+    render();
+})();
+</script>
+</body>
+</html>

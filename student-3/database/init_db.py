@@ -301,6 +301,10 @@ SEED_APPLICATIONS = [
     # Sophie Martinez
     (10, 2, 14, "Evaluation Completed", 25, True),
     (10, 7, 28, "Submitted",             1, True),
+    # Appended last so existing Application_Ids stay stable (interviews in the
+    # Student 4 seed reference these ids). Extra shortlisted app for Emily so
+    # the interview "To Schedule" tab has content.
+    (6, 11, 20, "Shortlisted",           8, True),
 ]
 
 

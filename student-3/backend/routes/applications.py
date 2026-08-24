@@ -516,10 +516,12 @@ def all_applications():
 
     apps: list[dict] = resp.json()
 
-    # Staff never see Withdrawn applications — once a candidate withdraws,
-    # the application drops out of the pipeline. Enforced here rather than
-    # in the database so the raw data is still available for the applicant.
-    apps = [a for a in apps if a.get("Application_Status") != "Withdrawn"]
+    # Staff never see Draft or Withdrawn applications. Drafts have not been
+    # submitted yet (still owned by the applicant); Withdrawn applications
+    # have dropped out of the pipeline. Enforced here rather than in the
+    # database so the raw data is still available to the applicant.
+    _staff_hidden = {"Draft", "Withdrawn"}
+    apps = [a for a in apps if a.get("Application_Status") not in _staff_hidden]
 
     # Filters that need to be applied here (over the joined dataset).
     q = request.args.get("q", "").strip().lower()

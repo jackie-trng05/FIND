@@ -195,6 +195,51 @@ services:
       - find-network
     restart: unless-stopped
 
+  student-4-frontend:
+    build:
+      context: ./student-4/frontend
+    container_name: find-student-4-frontend
+    ports:
+      - "16013:80"
+    depends_on:
+      - student-4-backend
+    networks:
+      - find-network
+    restart: unless-stopped
+
+  student-4-backend:
+    build:
+      context: ./student-4/backend
+    container_name: find-student-4-backend
+    ports:
+      - "16014:5001"
+    environment:
+      DATABASE_SERVICE_URL: http://student-4-db:5002
+      APPLICATION_DB_URL: http://student-3-db:6003
+      JOB_POSTING_DB_URL: http://student-2-db:6002
+      SHARED_DB_URL: http://find-shared-db:6000
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
+      OLLAMA_MODEL: qwen2.5:0.5b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - student-4-db
+    networks:
+      - find-network
+    restart: unless-stopped
+
+  student-4-db:
+    build:
+      context: ./student-4/database
+    container_name: find-student-4-db
+    ports:
+      - "16015:5002"
+    networks:
+      find-network:
+        aliases:
+          - student-4-db
+    restart: unless-stopped
+
 networks:
   find-network:
     driver: bridge

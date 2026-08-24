@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Schedule Interview — FIND</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/common.js"></script>
+</head>
+<body>
+<div id="app-chrome"></div>
+<main class="app-shell">
+    <div class="page-head">
+        <div>
+            <h1>Schedule Interview</h1>
+            <p>Create a new interview request for an applicant.</p>
+        </div>
+    </div>
+
+    <div class="split">
+        <section class="card">
+            <div id="schedule-alert"></div>
+            <form id="schedule-form" novalidate>
+                <div class="form-grid">
+                    <div>
+                        <label for="application_id">Application</label>
+                        <select id="application_id" name="application_id">
+                            <option value="">Select an application…</option>
+                        </select>
+                        <div class="form-hint">Shortlisted applications for your job postings.</div>
+                        <div class="field-error" data-for="application_id"></div>
+                    </div>
+                    <div>
+                        <label for="applicant_name">Applicant</label>
+                        <input id="applicant_name" name="applicant_name" type="text" placeholder="Auto-filled from application" readonly>
+                        <div class="form-hint">Resolved from the selected application.</div>
+                        <div class="field-error" data-for="applicant_name"></div>
+                    </div>
+                    <div>
+                        <label for="staff_display">Interviewer (you)</label>
+                        <input id="staff_display" type="text" readonly>
+                    </div>
+                    <div>
+                        <label for="interview_datetime">Date &amp; Time</label>
+                        <input id="interview_datetime" name="interview_datetime" type="datetime-local">
+                        <div class="form-hint">Must be in the future.</div>
+                        <div class="field-error" data-for="interview_datetime"></div>
+                    </div>
+                    <div>
+                        <label for="interview_link">Meeting Link</label>
+                        <input id="interview_link" name="interview_link" type="url" placeholder="https://meet.find.app/int-x">
+                        <div class="field-error" data-for="interview_link"></div>
+                    </div>
+                </div>
+                <input type="hidden" id="applicant_id" name="applicant_id">
+                <input type="hidden" id="staff_id" name="staff_id">
+                <input type="hidden" id="job_posting_id" name="job_posting_id">
+                <input type="hidden" id="job_posting_title" name="job_posting_title">
+                <button class="btn btn-primary" type="submit" style="margin-top:1.25rem;">Schedule Interview</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>AI Mode · Suggest Optimal Times</h2>
+            <p class="form-hint">Describe availability and let the local AI agent propose interview slots to paste above.</p>
+            <form id="suggest-form">
+                <label for="preferences">Staff availability &amp; applicant preferences</label>
+                <textarea id="preferences" name="preferences" rows="4">Staff is available weekday mornings between 9am and 12pm. The applicant prefers early in the week and cannot attend Wednesdays.</textarea>
+                <button class="btn btn-accent" type="submit" style="margin-top:1.25rem;">Suggest Times</button>
+            </form>
+            <div id="suggest-result" class="panel">Suggestions will appear here.</div>
+        </section>
+    </div>
+</main>
+
+<script>
+let currentUser = null;
+
+function setError(field, message) {
+    const el = document.querySelector(`.field-error[data-for="${field}"]`);
+    const input = document.getElementById(field);
+    if (el) el.textContent = message || "";
+    if (input) input.classList.toggle("invalid", Boolean(message));
+}
+
+function clearErrors() {
+    document.querySelectorAll(".field-error").forEach((e) => (e.textContent = ""));
+    document.querySelectorAll(".invalid").forEach((e) => e.classList.remove("invalid"));
+}
+
+function validateClientSide(values) {
+    const errors = {};
+    if (!/^\d+$/.test(values.application_id) || Number(values.application_id) < 1) {
+        errors.application_id = "Please select an application.";
+    } else if (!values.applicant_id) {
+        errors.application_id = "No applicant found for this application.";
+    }
+    if (!values.applicant_name) errors.applicant_name = "Applicant could not be resolved.";
+    if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(values.interview_datetime)) {
+        errors.interview_datetime = "Please choose a date and time.";
+    } else if (!isFutureLocal(values.interview_datetime)) {
+        errors.interview_datetime = "Interview date/time must be in the future.";
+    }
+    if (values.interview_link && !/^https?:\/\//.test(values.interview_link)) {
+        errors.interview_link = "Link must start with http:// or https://.";
+    }
+    return errors;
+}
+
+(async function () {
+    currentUser = await initChrome("schedule", { staffOnly: true });
+    if (!currentUser) return;
+
+    document.getElementById("staff_display").value =
+        `${currentUser.first_name} ${currentUser.last_name} (#${currentUser.user_id})`;
+    document.getElementById("staff_id").value = currentUser.user_id;
+
+    const dtInput = document.getElementById("interview_datetime");
+    dtInput.min = nowLocalInput();
+
+    // Real shortlisted applications for this staff member's job postings
+    // (sourced from Student 3 via the interview backend).
+    const appInput = document.getElementById("application_id");
+    const appMap = {};
+    try {
+        const apps = await fetchSchedulableApplications(currentUser);
+        apps.forEach((info) => {
+            appMap[String(info.application_id)] = info;
+            const opt = document.createElement("option");
+            opt.value = info.application_id;
+            opt.textContent = `#${info.application_id} — ${info.applicant_name} · ${info.job_posting_title}`;
+            appInput.appendChild(opt);
+        });
+    } catch (err) {
+        document.getElementById("schedule-alert").innerHTML =
+            `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
+    }
+
+    function applyApplication(info) {
+        document.getElementById("applicant_name").value = info ? info.applicant_name : "";
+        document.getElementById("applicant_id").value = info ? info.applicant_id : "";
+        document.getElementById("job_posting_id").value = info ? info.job_posting_id : "";
+        document.getElementById("job_posting_title").value = info ? info.job_posting_title : "";
+    }
+
+    appInput.addEventListener("change", () => {
+        applyApplication(appMap[appInput.value] || null);
+        setError("application_id", "");
+    });
+
+    // Pre-select an application when arriving from the "To Schedule" page or
+    // the Applications service (?application_id= or ?application=).
+    const params = new URLSearchParams(window.location.search);
+    const preselect = params.get("application_id") || params.get("application");
+    if (preselect && appMap[String(preselect)]) {
+        appInput.value = String(preselect);
+        appInput.dispatchEvent(new Event("change"));
+    }
+
+    document.getElementById("schedule-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        clearErrors();
+        const alert = document.getElementById("schedule-alert");
+        alert.innerHTML = "";
+
+        const values = {
+            application_id: appInput.value.trim(),
+            applicant_id: document.getElementById("applicant_id").value.trim(),
+            applicant_name: document.getElementById("applicant_name").value.trim(),
+            staff_id: String(currentUser.user_id),
+            staff_name: `${currentUser.first_name} ${currentUser.last_name}`,
+            job_posting_id: document.getElementById("job_posting_id").value.trim(),
+            job_posting_title: document.getElementById("job_posting_title").value.trim(),
+            interview_datetime: toBackendDateTime(document.getElementById("interview_datetime").value),
+            interview_link: document.getElementById("interview_link").value.trim(),
+        };
+
+        const clientErrors = validateClientSide(values);
+        if (Object.keys(clientErrors).length) {
+            Object.entries(clientErrors).forEach(([f, m]) => setError(f, m));
+            return;
+        }
+
+        const confirmed = await confirmDialog({
+            title: "Schedule this interview?",
+            message: `Book an interview with ${values.applicant_name} for ${values.interview_datetime}?`,
+            confirmText: "Schedule",
+        });
+        if (!confirmed) return;
+
+        try {
+            const resp = await fetch(`${BACKEND_URL}/interviews`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(values),
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                if (data.errors) Object.entries(data.errors).forEach(([f, m]) => setError(f, m));
+                else alert.innerHTML = `<div class="alert alert-error">${escapeHtml(data.error || "Could not schedule interview.")}</div>`;
+                showToast("Could not schedule interview. Please check the form.", "error");
+                return;
+            }
+            alert.innerHTML = "";
+            showToast(`Interview #${data.interview_id} scheduled for ${data.applicant_name}.`, "success");
+            event.target.reset();
+            document.getElementById("applicant_name").value = "";
+        } catch (err) {
+            alert.innerHTML = `<div class="alert alert-error">Connection error. Please try again.</div>`;
+            showToast("Connection error. Please try again.", "error");
+        }
+    });
+
+    document.getElementById("suggest-form").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const panel = document.getElementById("suggest-result");
+        panel.innerHTML = thinkingHtml();
+        try {
+            const body = new URLSearchParams(new FormData(event.target));
+            const resp = await fetch(`${BACKEND_URL}/suggest-times`, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body,
+            });
+            renderSuggestions(panel, await resp.text(), "interview_datetime");
+        } catch (err) {
+            panel.innerHTML = `<p>Request failed. Is the local AI agent running?</p>`;
+        }
+    });
+})();
+</script>
+</body>
+</html>
