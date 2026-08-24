@@ -240,6 +240,63 @@ services:
           - student-4-db
     restart: unless-stopped
 
+  student-5-frontend:
+    build:
+      context: ./student-5/frontend
+    container_name: find-student-5-frontend
+    ports:
+      - "16016:3005"
+    environment:
+      BACKEND_PUBLIC_URL: http://localhost:16017
+      FIND_HOME_URL: http://localhost:16001/dashboard
+    volumes:
+      - ./shared/css:/app/shared-css:ro
+    depends_on:
+      - student-5-backend
+    networks:
+      - find-network
+    restart: unless-stopped
+
+  student-5-backend:
+    build:
+      context: ./student-5/backend
+    container_name: find-student-5-backend
+    ports:
+      - "16017:5005"
+    environment:
+      DATABASE_SERVICE_URL: http://find-student-5-db:6005
+      SHARED_API_URL: http://find-shared-api:5000
+      SHARED_DB_URL: http://find-shared-db:6000
+      APPLICATIONS_DB_URL: http://student-3-db:6003
+      POSTINGS_DB_URL: http://student-2-db:6002
+      INTERVIEWS_DB_URL: http://student-4-db:5002
+      FRONTEND_PUBLIC_URL: http://localhost:16016
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
+      OLLAMA_MODEL: llama3.1:8b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - student-5-db
+      - shared-api
+      - student-3-db
+      - student-2-db
+      - student-4-db
+    networks:
+      - find-network
+    restart: unless-stopped
+
+  student-5-db:
+    build:
+      context: ./student-5/database
+    container_name: find-student-5-db
+    ports:
+      - "16018:6005"
+    environment:
+      PORT: 6005
+    networks:
+      - find-network
+    restart: unless-stopped
+
 networks:
   find-network:
     driver: bridge
