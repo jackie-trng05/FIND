@@ -286,20 +286,20 @@ APPLICANT_INFO = {
 SEED_APPLICATIONS = [
     # Emily Johnson
     (6, 1, 14, "Submitted",             5, True),
-    (6, 3, 21, "Shortlisted",          10, True),
+    (6, 3, 21, "Interview Completed",  10, True),
     (6, 7, 30, "Draft",              None, True),
     # Michael Brown
-    (7, 2, 10, "Interview Scheduled",  12, True),
-    (7, 5, 28, "Submitted",             3, True),
+    (7, 2, 10, "Interview Completed",  12, True),
+    (7, 5, 28, "Interview Completed",   3, True),
     # Jessica Davis
     (8, 4, 14, "Rejected",             15, True),
     (8, 6, 21, "Interview Completed",  20, True),
     (8, 8, 45, "Draft",              None, True),
     # David Wilson
-    (9, 1, 35, "Withdrawn",            18, True),
+    (9, 1, 35, "Interview Completed",  18, True),
     (9, 5, 20, "Hired",                40, True),
     # Sophie Martinez
-    (10, 2, 14, "Evaluation Completed", 25, True),
+    (10, 2, 14, "Interview Completed",  25, True),
     (10, 7, 28, "Submitted",             1, True),
     # Appended last so existing Application_Ids stay stable (interviews in the
     # Student 4 seed reference these ids). Extra shortlisted app for Emily so

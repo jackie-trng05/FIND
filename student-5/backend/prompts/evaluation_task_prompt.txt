@@ -1,0 +1,31 @@
+Score the candidate on these five criteria, each from 1 to 5:
+- Technical Knowledge
+- Education/Training
+- Communication
+- Problem Solving
+- Professionalism
+
+The interviewer's notes from the completed interview are the PRIMARY source of truth for
+scoring the candidate. Base your scores mainly on what these notes say about the candidate's
+performance, and use the job posting, applicant info, and application details only as
+supporting context.
+
+Interview Notes (primary source):
+{interview_notes}
+
+Job Posting:
+{job_info}
+
+Applicant Info:
+{applicant_info}
+
+Application Details:
+{application_info}
+
+Respond in valid JSON with exactly these keys:
+- "technical": integer 1-5
+- "education": integer 1-5
+- "communication": integer 1-5
+- "problem_solving": integer 1-5
+- "professionalism": integer 1-5
+- "rationale": a short explanation (2-3 sentences) of why you chose these scores

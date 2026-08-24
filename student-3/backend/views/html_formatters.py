@@ -523,7 +523,7 @@ def render_staff_applications_table(
         if a["Application_Status"] == "Interview Completed":
             evaluate_btn = (
                 f'<a class="btn btn-primary btn-sm" target="_blank" rel="noopener"'
-                f' href="{EVALUATIONS_URL}/?application={aid}">Evaluate</a>'
+                f' href="{EVALUATIONS_URL}/evaluate/{aid}">Evaluate</a>'
             )
 
         actions_html = interview_btn + evaluate_btn
