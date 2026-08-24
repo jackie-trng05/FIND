@@ -1,19 +1,142 @@
 # CI workflow for Student 5 (frontend, backend, database)
-
-# GitHub Actions workflow placeholder
-# Add CI/CD automation for the integrated application here.
-# TODO: define build, test, and deployment jobs.
 name: student-5-ci
 
 on:
   push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  placeholder:
+  build-images:
     runs-on: ubuntu-latest
     steps:
-      - name: Placeholder step
-        run: echo "Add workflow jobs for build, test, and deploy."
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Docker
+        run: docker --version
+
+      - name: Verify Docker Compose
+        run: docker compose version
+
+      - name: Build Student 5 services
+        run: docker compose build student-5-frontend student-5-backend student-5-db
+
+  smoke-check:
+    runs-on: ubuntu-latest
+    needs: [build-images]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Docker
+        run: docker --version
+
+      - name: Verify Docker Compose
+        run: docker compose version
+
+      - name: Start Student 5 services
+        run: docker compose up -d student-5-frontend student-5-backend student-5-db
+
+      - name: Smoke check Student 5 services
+        run: |
+          check_url() {
+            local url="$1"
+            local attempts=8
+            local code=""
+
+            for i in $(seq 1 "$attempts"); do
+              code=$(curl -sS \
+                -o /dev/null \
+                -w "%{http_code}" \
+                --connect-timeout 5 \
+                --max-time 20 \
+                "$url" || true)
+
+              if [ "$code" = "200" ]; then
+                echo "PASS: $url -> HTTP $code"
+                return 0
+              fi
+
+              echo "Retry $i/$attempts for $url (got: ${code:-none})"
+              sleep 2
+            done
+
+            echo "FAIL: $url after $attempts attempts"
+            return 1
+          }
+
+          echo "=== Student 5 Frontend ==="
+          check_url "http://localhost:16016/health"
+
+          echo "=== Student 5 Backend ==="
+          check_url "http://localhost:16017/health"
+
+          echo "=== Student 5 Database ==="
+          check_url "http://localhost:16018/health"
+
+      - name: Stop Student 5 services
+        if: always()
+        run: docker compose down -v
+
+  evidence-pack:
+    runs-on: ubuntu-latest
+    needs: [smoke-check]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create reports directory
+        run: mkdir -p reports
+
+      - name: Generate report.json
+        run: |
+          cat > reports/report.json << EOF
+          {
+            "workflow_name": "student-5-ci",
+            "run_id": "${{ github.run_id }}",
+            "commit_sha": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "repository": "${{ github.repository }}"
+          }
+          EOF
+
+      - name: Generate report.md
+        run: |
+          cat > reports/report.md << EOF
+          # Student 5 CI Workflow Report
+
+          - Workflow: student-5-ci
+          - Run ID: ${{ github.run_id }}
+          - Commit SHA: ${{ github.sha }}
+          - Branch: ${{ github.ref_name }}
+          - Repository: ${{ github.repository }}
+
+          ## CI Stages
+
+          1. Docker image build
+          2. Student 5 service smoke check
+          3. Evidence generation
+
+          ## Services
+
+          - Frontend: http://localhost:16016 (Evaluations UI)
+          - Backend: http://localhost:16017 (Evaluations API)
+          - Database: http://localhost:16018 (SQLite evaluations store)
+          EOF
+
+      - name: Generate run-view.md
+        run: |
+          cat > reports/run-view.md << EOF
+          # GitHub Actions Run
+
+          Run URL:
+
+          https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+
+      - name: Upload CI evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-5-ci-evidence
+          path: reports
