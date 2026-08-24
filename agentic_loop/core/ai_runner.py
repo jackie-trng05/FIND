@@ -14,9 +14,9 @@ class AIRunner:
     def __init__(self):
         self.base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
         self.implementation_model = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
-        # Falls back to the implementation model so the loop works with a single
-        # local model; override with OLLAMA_REVIEW_MODEL to use a stronger reviewer.
-        self.review_model = os.getenv("OLLAMA_REVIEW_MODEL", self.implementation_model)
+        # Two-model loop by default: qwen implements, the stronger llama reviews.
+        # Override either with OLLAMA_MODEL / OLLAMA_REVIEW_MODEL.
+        self.review_model = os.getenv("OLLAMA_REVIEW_MODEL", "llama3.1:8b")
         self.client = OpenAI(base_url=self.base_url, api_key="ollama", timeout=180.0)
 
     def call(
