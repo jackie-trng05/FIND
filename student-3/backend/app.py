@@ -34,7 +34,7 @@ DATABASE_SERVICE_URL = os.environ["DATABASE_SERVICE_URL"]
 SHARED_API_URL = os.environ["SHARED_API_URL"]
 SHARED_DB_URL = os.environ["SHARED_DB_URL"]
 POSTINGS_DB_URL = os.environ["POSTINGS_DB_URL"]
-STUDENT_1_BACKEND_URL = os.environ["STUDENT_1_BACKEND_URL"]
+STUDENT_1_DB_URL = os.environ["STUDENT_1_DB_URL"]
 BACKEND_PUBLIC_URL = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:16011")
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
@@ -147,38 +147,62 @@ def get_postings_map(job_posting_ids):
 # Student-1 resume integration                                                #
 # --------------------------------------------------------------------------- #
 #
-# All calls go through student-1's authenticated backend (forwarding the
-# caller's session cookie), never the raw database service - student-1's
-# backend is the only place that knows how to authorize access to a resume.
+# Calls student-1's database microservice directly (frontend -> own backend ->
+# other student's DB is the convention used throughout this repo - see
+# student-2's APPLICATIONS_DB_URL, student-4/5's APPLICATION_DB_URL). The DB
+# service does no authentication itself, so ownership checks below are
+# reimplemented here rather than delegated to student-1.
 
-def get_latest_profile_resume(user_id):
-    """The applicant's single stored resume from their student-1 profile, if any."""
+def _get_student1_profile_by_user_id(user_id):
     try:
-        resp = requests.get(
-            f"{STUDENT_1_BACKEND_URL}/api/profiles/me", headers=_forward_cookie(), timeout=TIMEOUT
-        )
+        resp = requests.get(f"{STUDENT_1_DB_URL}/profiles/by-user/{user_id}", timeout=TIMEOUT)
     except requests.RequestException:
         return None
     if resp.status_code != 200:
         return None
-    profile = (resp.json() or {}).get("profile")
+    return resp.json() or None
+
+
+def _get_student1_profile(profile_id):
+    try:
+        resp = requests.get(f"{STUDENT_1_DB_URL}/profiles/{profile_id}", timeout=TIMEOUT)
+    except requests.RequestException:
+        return None
+    if resp.status_code != 200:
+        return None
+    return resp.json() or None
+
+
+def _get_student1_resume_meta(resume_id):
+    try:
+        resp = requests.get(f"{STUDENT_1_DB_URL}/resumes/{resume_id}", timeout=TIMEOUT)
+    except requests.RequestException:
+        return None
+    if resp.status_code != 200:
+        return None
+    return resp.json() or None
+
+
+def get_latest_profile_resume(user_id):
+    """The applicant's single stored resume from their student-1 profile, if any."""
+    profile = _get_student1_profile_by_user_id(user_id)
     if not profile:
+        return None
+    profile_id = profile.get("profile_id")
+    if not profile_id:
         return None
 
     try:
-        resumes_resp = requests.get(
-            f"{STUDENT_1_BACKEND_URL}/api/profiles/{profile['profile_id']}/resumes",
-            headers=_forward_cookie(), timeout=TIMEOUT,
-        )
+        resp = requests.get(f"{STUDENT_1_DB_URL}/profiles/{profile_id}/resumes", timeout=TIMEOUT)
     except requests.RequestException:
         return None
-    if resumes_resp.status_code != 200:
+    if resp.status_code != 200:
         return None
 
-    resumes = resumes_resp.json() or []
+    resumes = resp.json() or []
     if not resumes:
         return None
-    latest = resumes[0]
+    latest = resumes[0]  # one resume per profile, enforced by student-1's UNIQUE constraint
     return {
         "resume_id": latest.get("resume_id"),
         "file_name": latest.get("file_name", "resume.pdf"),
@@ -190,18 +214,15 @@ def get_latest_profile_resume(user_id):
 
 def upload_application_resume(filename, mimetype, raw_bytes):
     """Upload a one-off resume for this application only - NOT the applicant's
-    profile default resume. Ownership is tracked via applications.user_id on
-    this side, not by linking to a student-1 profile."""
+    profile default resume. profile_id is left NULL on student-1's side;
+    ownership is tracked via applications.user_id on this side instead."""
     payload = {
         "file_name": filename,
         "file_type": mimetype,
         "file_data": base64.b64encode(raw_bytes).decode("utf-8"),
     }
     try:
-        resp = requests.post(
-            f"{STUDENT_1_BACKEND_URL}/api/resumes", json=payload,
-            headers=_forward_cookie(), timeout=15,
-        )
+        resp = requests.post(f"{STUDENT_1_DB_URL}/resumes", json=payload, timeout=15)
     except requests.RequestException:
         return None
     if resp.status_code != 201:
@@ -209,29 +230,36 @@ def upload_application_resume(filename, mimetype, raw_bytes):
     return (resp.json() or {}).get("resume_id")
 
 
-def get_resume_metadata(resume_id, role=None, current_user_id=None):
-    """Resume metadata via student-1's authenticated backend. Authorization
-    (staff, or owning applicant) is enforced there, not here."""
+def get_resume_metadata(resume_id, role, current_user_id=None):
     if not resume_id:
         return None
-    try:
-        resp = requests.get(
-            f"{STUDENT_1_BACKEND_URL}/api/resumes/{resume_id}",
-            headers=_forward_cookie(), timeout=TIMEOUT,
-        )
-    except requests.RequestException:
+    meta = _get_student1_resume_meta(resume_id)
+    if not meta:
         return None
-    if resp.status_code != 200:
+
+    if role == "staff":
+        return meta
+
+    profile_id = meta.get("profile_id")
+    if profile_id is None:
+        # Application-only resume (not linked to a profile): ownership is
+        # this application's own concern, already checked by the caller.
+        return meta
+
+    if current_user_id is None:
         return None
-    return resp.json() or None
+    profile = _get_student1_profile(profile_id)
+    if not profile or profile.get("user_id") != current_user_id:
+        return None
+    return meta
 
 
-def download_resume_stream(resume_id, role=None, current_user_id=None):
-    """Streaming Response from student-1's authenticated backend download endpoint."""
-    return requests.get(
-        f"{STUDENT_1_BACKEND_URL}/api/resumes/{resume_id}/download",
-        headers=_forward_cookie(), timeout=15, stream=True,
-    )
+def download_resume_stream(resume_id, role, current_user_id=None):
+    if role != "staff":
+        allowed = get_resume_metadata(resume_id, role, current_user_id)
+        if not allowed:
+            return None
+    return requests.get(f"{STUDENT_1_DB_URL}/resumes/{resume_id}/file", timeout=15, stream=True)
 
 
 # --------------------------------------------------------------------------- #
@@ -1440,9 +1468,7 @@ def download_resume(resume_id):
         )
     except requests.RequestException:
         return "Backend unavailable", 502
-    if upstream.status_code == 401:
-        return "Unauthorized", 401
-    if upstream.status_code == 403:
+    if upstream is None:
         return "Forbidden", 403
     if upstream.status_code == 404:
         return "Resume not found", 404

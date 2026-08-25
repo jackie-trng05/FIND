@@ -35,8 +35,6 @@ candidate screening.
 - **All Applications** table with sortable column headers, keyword search
   (name / email / job title), and filter dropdowns for job title, status,
   and submitted date range.
-- **Save Filter** stores the current filter query string as a Favorite
-  Filter for re-use across sessions.
 - Row click → **Candidate Profile** page. Inline **Status** dropdown on
   each row updates the application status via HTMX; changing to `Rejected`
   triggers the "Remove from recruitment?" confirmation.
@@ -49,25 +47,23 @@ candidate screening.
 
 ### AI-Mode (Frontend → Backend/API → Ollama → Llama)
 - Endpoint: `POST /api/applications/<id>/screen`
-- **PLAN → ACT → OBSERVE → ADAPT** workflow (see
-  `backend/routes/ai_mode.py`).
+- **PLAN → ACT → OBSERVE → ADAPT** workflow (see `backend/app.py`).
 - Extracts resume text from PDFs with `pypdf`, combines it with the job
   posting details, and asks the LLM to return a suitability score
   (0–100), matched skills, skill gaps, and a one-line summary.
-- Result is cached in the `ai_screenings` table so re-opening the profile
-  does not re-invoke the model.
+- The screening result is not persisted; it is regenerated on demand each
+  time "Generate AI recommendation" is clicked.
 
 ## Database schema
 
-`applications.db` (SQLite) contains four tables:
+`applications.db` (SQLite) contains one table:
 
 - `applications` — one row per application. Statuses:
   `Draft`, `Submitted`, `Shortlisted`, `Interview Scheduled`,
   `Interview Completed`, `Evaluation Completed`, `Hired`, `Rejected`,
-  `Withdrawn`.
-- `resumes` — BLOB storage for uploaded PDF/DOCX files.
-- `ai_screenings` — cached AI screening results keyed by `Application_Id`.
-- `favorite_filters` — staff-saved filter presets.
+  `Withdrawn`. `resume_id` is a soft cross-service reference to student-1's
+  `resumes.resume_id` (SQLite databases are per-service, so this isn't a real
+  foreign key — the API layer is responsible for validating it).
 
 The database is seeded with **12 applications** across the five seeded
 applicant accounts and the twelve seeded job postings from student-2.
@@ -96,6 +92,10 @@ python -m pytest tests -q
   route; role (`applicant` / `staff`) drives UI visibility.
 - **shared-db** — direct read access for candidate details (first name,
   last name, email) shown on the staff table.
+- **student-1-db** — resume storage. The applicant's default profile resume
+  is read from student-1's `resumes` table; a resume uploaded specifically
+  for an application is written there too (with `profile_id` left `NULL`,
+  since it isn't the profile's default resume).
 - **student-2-db** — read access for job posting title / description /
   requirements used both by the apply form and the AI screening prompt.
 - **student-4 (Interviews)** — deep-linked from the "Schedule Interview"
