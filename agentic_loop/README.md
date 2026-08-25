@@ -33,7 +33,21 @@ not fully satisfy the requirement.
 
 ## Running the review tool
 
+Install the tool's own dependencies first (separate from any per-service
+`requirements.txt` — this is a repo-root dev tool, not a container):
+
+```bash
+pip install -r requirements.txt   # openai, python-dotenv, requests (repo root)
+```
+
+Then start the stack and run the loop:
+
 ```bash
 docker compose up --build   # start the stack first
 python agentic_loop/agentic_loop.py
 ```
+
+If you see `ModuleNotFoundError: No module named 'openai'`, the root
+`requirements.txt` above hasn't been installed for whichever Python interpreter
+you're running the script with.
+
