@@ -47,6 +47,7 @@
 
         <!-- Profile Section -->
         <div class="card" style="margin-bottom:2rem;">
+          <div id="profile-alert-area"></div>
           <h2 id="profile-heading" style="margin-bottom:1rem;">User Profile</h2>
           <div id="no-profile-message" class="alert alert-warning" style="display:none;">
             You do not have a profile yet. Create one below.
@@ -82,6 +83,7 @@
           <!-- My Resumes (nested under User Profile - resumes belong to the profile) -->
           <div id="resume-section" style="display:none;margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);">
             <h3 style="margin-bottom:1rem;">My Resumes</h3>
+            <div id="resume-alert-area"></div>
 
             <div class="table-wrapper" id="resume-table-wrapper" style="margin-bottom:1.5rem;">
               <table>
@@ -156,8 +158,8 @@
       document.getElementById('user-name').textContent = `${body.first_name || ''} ${body.last_name || ''}`.trim();
     }
 
-    function showAlert(msg, type) {
-      const area = document.getElementById('alert-area');
+    function showAlert(msg, type, targetId = 'alert-area') {
+      const area = document.getElementById(targetId);
       area.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
       setTimeout(() => { area.innerHTML = ''; }, 5000);
     }
@@ -249,11 +251,11 @@
       }
 
       if (resp.ok) {
-        showAlert(currentProfile ? 'Profile updated.' : 'Profile created.', 'success');
+        showAlert(currentProfile ? 'Profile updated.' : 'Profile created.', 'success', 'profile-alert-area');
         await loadProfile();
       } else {
         const data = await resp.json();
-        showAlert(data.error || 'Failed to save profile.', 'error');
+        showAlert(data.error || 'Failed to save profile.', 'error', 'profile-alert-area');
       }
     }
 
@@ -263,13 +265,13 @@
 
       const resp = await apiFetch(`/api/profiles/${currentProfile.profile_id}`, { method: 'DELETE' });
       if (resp.ok) {
-        showAlert('Profile deleted.', 'success');
+        showAlert('Profile deleted.', 'success', 'profile-alert-area');
         currentProfile = null;
         document.getElementById('profile-form').reset();
         await loadProfile();
       } else {
         const data = await resp.json();
-        showAlert(data.error || 'Failed to delete profile.', 'error');
+        showAlert(data.error || 'Failed to delete profile.', 'error', 'profile-alert-area');
       }
     }
 
@@ -307,11 +309,11 @@
 
       const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
       if (!allowed.includes(file.type)) {
-        showAlert('Only PDF, DOC, and DOCX files are allowed.', 'error');
+        showAlert('Only PDF, DOC, and DOCX files are allowed.', 'error', 'resume-alert-area');
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        showAlert('File exceeds 5MB limit.', 'error');
+        showAlert('File exceeds 5MB limit.', 'error', 'resume-alert-area');
         return;
       }
 
@@ -331,12 +333,12 @@
       btn.textContent = 'Upload';
 
       if (resp.ok) {
-        showAlert('Resume uploaded.', 'success');
+        showAlert('Resume uploaded.', 'success', 'resume-alert-area');
         fileInput.value = '';
         await loadResumes();
       } else {
         const data = await resp.json();
-        showAlert(data.error || 'Upload failed.', 'error');
+        showAlert(data.error || 'Upload failed.', 'error', 'resume-alert-area');
       }
     }
 
@@ -344,11 +346,11 @@
       if (!confirm('Delete this resume?')) return;
       const resp = await apiFetch(`/api/resumes/${resumeId}`, { method: 'DELETE' });
       if (resp.ok) {
-        showAlert('Resume deleted.', 'success');
+        showAlert('Resume deleted.', 'success', 'resume-alert-area');
         await loadResumes();
       } else {
         const data = await resp.json();
-        showAlert(data.error || 'Failed to delete resume.', 'error');
+        showAlert(data.error || 'Failed to delete resume.', 'error', 'resume-alert-area');
       }
     }
 
