@@ -5,7 +5,7 @@ Applicant profile CRUD and resume storage for the FIND HR application.
 ## Feature scope (Release 0, AI to be implemented)
 
 - Create / View / Edit / Delete user profile (applicant self-service)
-- Upload / View / Download / Delete resume (PDF, DOC, DOCX; 10MB max)
+- Upload / View / Download / Delete resume (PDF, DOC, DOCX; 5MB max)
 - Cross-service session via shared HttpOnly cookie (`session_token`)
 
 ## Services
@@ -42,12 +42,6 @@ resumes (5 PDF, 5 DOCX) from files committed under `database/seed_data/resumes/`
 - Resumes are stored as a `BLOB` in SQLite (`file_data`), not as a `Resume_FilePath`.
 - Resume-level routes are `/api/resumes/{resumeId}` rather than nested under
   `/api/profiles/{id}/resumes/{resumeId}`; ownership is still checked server-side.
-
-## Testing status
-
-`tests/` currently contains a placeholder test only (`test_placeholder.py`). A real
-pytest suite covering profile CRUD, ownership checks, and resume upload validation
-is planned but not yet implemented.
 
 ## AI feature status
 

@@ -15,6 +15,7 @@
           FIND
         </a>
         <div class="navbar-user">
+          <a class="btn btn-ghost btn-sm" href="http://localhost:16001/dashboard">&#8592; Home</a>
           <span class="user-badge" id="user-role-badge"></span>
           <span id="user-name" style="font-size:0.9rem;font-weight:500;"></span>
           <button class="btn btn-ghost btn-sm" onclick="handleLogout()">Log Out</button>
@@ -104,7 +105,7 @@
             </div>
             <form id="resume-upload-form" onsubmit="handleResumeUpload(event)">
               <div class="form-group">
-                <label class="form-label" for="resume-file">Choose file (PDF, DOC, or DOCX — max 10MB)</label>
+                <label class="form-label" for="resume-file">Choose file (PDF, DOC, or DOCX — max 5MB)</label>
                 <input class="form-input" type="file" id="resume-file" name="file" accept=".pdf,.doc,.docx" required>
               </div>
               <button type="submit" class="btn btn-secondary" id="upload-btn">Upload</button>
@@ -309,8 +310,8 @@
         showAlert('Only PDF, DOC, and DOCX files are allowed.', 'error');
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        showAlert('File exceeds 10MB limit.', 'error');
+      if (file.size > 5 * 1024 * 1024) {
+        showAlert('File exceeds 5MB limit.', 'error');
         return;
       }
 

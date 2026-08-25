@@ -16,7 +16,7 @@ ALLOWED_FILE_TYPES = {
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
-MAX_FILE_SIZE = 10 * 1024 * 1024
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
 def get_db():
@@ -171,7 +171,7 @@ def upload_resume(profile_id):
         return jsonify({"error": "Invalid base64 file_data"}), 400
 
     if len(file_bytes) > MAX_FILE_SIZE:
-        return jsonify({"error": "File exceeds 10MB limit"}), 400
+        return jsonify({"error": "File exceeds 5MB limit"}), 400
 
     conn = get_db()
     profile = conn.execute("SELECT profile_id FROM profiles WHERE profile_id = ?", (profile_id,)).fetchone()
