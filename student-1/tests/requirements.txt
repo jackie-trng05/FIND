@@ -1,0 +1,4 @@
+-r ../backend/requirements.txt
+-r ../database/requirements.txt
+pytest
+requests-mock

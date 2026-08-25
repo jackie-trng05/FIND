@@ -103,12 +103,18 @@ def update_user_identity():
         return err
 
     data = request.get_json() or {}
+    first_name = data.get("first_name", "").strip()
+    last_name = data.get("last_name", "").strip()
+    if not first_name or not last_name:
+        return jsonify({"error": "First name and last name are required"}), 400
+
     cookie = request.headers.get("Cookie", "")
     resp = requests.put(f"{SHARED_API_URL}/api/auth/user", json={
-        "first_name": data.get("first_name", ""),
-        "last_name": data.get("last_name", ""),
+        "first_name": first_name,
+        "last_name": last_name,
     }, headers={"Cookie": cookie})
     return jsonify(resp.json()), resp.status_code
+
 
 
 @app.post("/api/auth/logout")
