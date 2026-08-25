@@ -11,8 +11,28 @@ STUDENT1_DIR = os.path.dirname(TESTS_DIR)
 
 SHARED_API_URL = "http://shared-api.test"
 DB_SERVICE_URL = "http://db-service.test"
-STUDENT1_BACKEND_URL = "http://backend-service.test"
-COOKIE_DOMAIN = "localhost"
+BACKEND_PUBLIC_URL = "http://backend-service.test"
+FRONTEND_PUBLIC_URL = "http://frontend-service.test"
+SHARED_API_PUBLIC_URL = "http://shared-api-public.test"
+LOGIN_URL = "http://frontend.test/login"
+LOGOUT_URL = "http://shared-api-public.test/api/auth/logout"
+FIND_HOME_URL = "http://frontend.test/dashboard"
+
+# These URLs are constant for the whole test run, so set them once here rather
+# than per-test — the backend/frontend routes/services modules read them via
+# os.environ at import time, and are only ever imported once per process.
+os.environ.setdefault("SHARED_API_URL", SHARED_API_URL)
+os.environ.setdefault("DB_SERVICE_URL", DB_SERVICE_URL)
+os.environ.setdefault("BACKEND_PUBLIC_URL", BACKEND_PUBLIC_URL)
+os.environ.setdefault("FRONTEND_PUBLIC_URL", FRONTEND_PUBLIC_URL)
+os.environ.setdefault("SHARED_API_PUBLIC_URL", SHARED_API_PUBLIC_URL)
+os.environ.setdefault("LOGIN_URL", LOGIN_URL)
+os.environ.setdefault("LOGOUT_URL", LOGOUT_URL)
+os.environ.setdefault("FIND_HOME_URL", FIND_HOME_URL)
+
+# Lets `import services`, `import views`, `import routes.*` resolve when
+# backend/app.py (and its submodules) are loaded below.
+sys.path.insert(0, os.path.join(STUDENT1_DIR, "backend"))
 
 
 def _load_module(module_name, file_path):
@@ -72,10 +92,8 @@ def db_client(db_app):
 
 
 @pytest.fixture
-def backend_app(monkeypatch):
-    """Student 1 backend service, with outbound URLs pointed at fake hosts for requests_mock."""
-    monkeypatch.setenv("SHARED_API_URL", SHARED_API_URL)
-    monkeypatch.setenv("DB_SERVICE_URL", DB_SERVICE_URL)
+def backend_app():
+    """Student 1 backend service (routes/views/services package)."""
     module = _load_module("student1_backend_app", os.path.join(STUDENT1_DIR, "backend", "app.py"))
     module.app.config.update(TESTING=True)
     return module.app
@@ -87,10 +105,8 @@ def backend_client(backend_app):
 
 
 @pytest.fixture
-def frontend_app(monkeypatch):
-    """Student 1 frontend service, with its backend URL pointed at a fake host for requests_mock."""
-    monkeypatch.setenv("STUDENT1_BACKEND_URL", STUDENT1_BACKEND_URL)
-    monkeypatch.setenv("COOKIE_DOMAIN", COOKIE_DOMAIN)
+def frontend_app():
+    """Student 1 frontend service (thin template-rendering server)."""
     module = _load_module("student1_frontend_app", os.path.join(STUDENT1_DIR, "frontend", "app.py"))
     module.app.config.update(TESTING=True)
     return module.app
@@ -112,3 +128,4 @@ def auth_headers(backend_client):
 def mock_session(requests_mock, user):
     """Register a fake shared-api session response for the given user dict."""
     requests_mock.get(f"{SHARED_API_URL}/api/auth/session", json={"user": user})
+

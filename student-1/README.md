@@ -29,7 +29,9 @@ docker compose up --build
 
 Session is shared via an HttpOnly `session_token` cookie with `domain=localhost`.
 The cookie is set on login by shared-api and automatically sent by the browser to all
-localhost services. The frontend proxies API calls server-side, forwarding the cookie.
+localhost services. The browser calls `student-1-backend` directly via HTMX
+(`hx-get`/`hx-post`/etc.) using that cookie — the frontend is a thin template
+shell and does not proxy any calls (same convention as student-2/3).
 
 ## Database seeding
 
@@ -40,8 +42,8 @@ resumes (PDF only) from files committed under `database/seed_data/resumes/`.
 
 - Identity fields (first/last name) live on the shared `users` table, not on `profiles`.
 - Resumes are stored as a `BLOB` in SQLite (`file_data`), not as a `Resume_FilePath`.
-- Resume-level routes are `/api/resumes/{resumeId}` rather than nested under
-  `/api/profiles/{id}/resumes/{resumeId}`; ownership is still checked server-side.
+- Resume-level routes are `/resume/{resumeId}` rather than nested under
+  `/profile/{id}/resume/{resumeId}`; ownership is still checked server-side.
 
 ## AI feature status
 

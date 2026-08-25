@@ -8,8 +8,9 @@ session_token cookie, and never stores first/last name or credentials in its own
 profiles table.
 
 Resumes (PDF only, 5MB max) are stored as a BLOB in student-1-db, owned entirely
-by this feature; resume-level routes live at /api/resumes/{resumeId} rather than
-nested under /api/profiles/{id}/resumes/{resumeId}.
+by this feature; resume-level routes live at /resume/{resumeId} rather than
+nested under /profile/{id}/resume/{resumeId}. The backend renders HTML
+fragments for an HTMX frontend (no JSON API), matching student-2/3's pattern.
 
 The AI resume-autofill capability (suggest professional title/summary/interests from
 an uploaded resume, with review/accept/discard) is not yet implemented in this

@@ -1,27 +1,31 @@
 # Student 1 backend
 
-Flask API for the User Profile Customisation feature. Validates the shared session
-cookie against `shared-api`, then proxies to `student-1-db` for persistence.
+Flask app for the User Profile Customisation feature. Validates the shared session
+cookie against `shared-api`, then proxies to `student-1-db` for persistence. Every
+route renders an HTML fragment for the HTMX frontend (matching student-2/3's
+convention) — there is no JSON API.
 
 Local dev URL: http://localhost:16005/
 
-## Endpoints
+## Routes
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/api/profiles` | Create the caller's profile |
-| GET | `/api/profiles/me` | Get caller's profile + identity + role |
-| GET | `/api/profiles/{id}` | Get a profile (owner only) |
-| PUT | `/api/profiles/{id}` | Update a profile (owner only) |
-| DELETE | `/api/profiles/{id}` | Delete a profile and its resumes (owner only) |
-| PUT | `/api/user` | Update first/last name on the shared users table |
-| POST | `/api/profiles/{id}/resumes` | Upload a resume (applicant only, owner only) |
-| GET | `/api/profiles/{id}/resumes` | List resumes for a profile (applicant only, owner only) |
-| GET | `/api/resumes/{id}/download` | Download a resume file (owner only) |
-| DELETE | `/api/resumes/{id}` | Delete a resume (owner only) |
+| GET | `/user` | User details fragment (first/last name form) |
+| PUT | `/user` | Update first/last name on the shared users table |
+| GET | `/profile` | Profile fragment (create-prompt or update form + nested resume panel) |
+| POST | `/profile` | Create the caller's profile |
+| PUT | `/profile/{id}` | Update a profile (owner only) |
+| DELETE | `/profile/{id}` | Delete a profile and its resume (owner only) |
+| GET | `/resume` | Resume fragment (upload form or resume table) |
+| POST | `/resume` | Upload the caller's resume (applicant only, one per profile) |
+| DELETE | `/resume/{id}` | Delete a resume (owner only) |
+| GET | `/resume/{id}/download` | Download a resume file (owner only, or staff) |
 
 Resume uploads are restricted to PDF and 5MB max, enforced both here and
-in `student-1-db`.
+in `student-1-db`. Code is organised as `routes/` (blueprints), `views/`
+(HTML fragment builders), and `services/` (HTTP clients for shared-api/db),
+mirroring student-2/3's structure.
 
 ## Not yet implemented
 
