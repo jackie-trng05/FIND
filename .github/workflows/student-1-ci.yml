@@ -108,14 +108,16 @@ jobs:
 
       - name: Run Student 1 pytest suite
         working-directory: student-1
-        run: python -m pytest tests -q --junitxml=pytest-results.xml
+        run: python -m pytest tests -v --junitxml=pytest-results.xml | tee pytest-output.txt
 
       - name: Upload pytest results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: student-1-pytest-results
-          path: student-1/pytest-results.xml
+          path: |
+            student-1/pytest-results.xml
+            student-1/pytest-output.txt
           if-no-files-found: warn
 
   evidence-pack:
@@ -182,8 +184,8 @@ jobs:
 
       - name: Generate report.md
         run: |
-          cat > reports/report.md << EOF
-          # Student 1 CI Workflow Report
+          python - <<'PY'
+          report_md = """# Student 1 CI Workflow Report
 
           - Workflow: student-1-ci
           - Run ID: ${{ github.run_id }}
@@ -206,12 +208,24 @@ jobs:
           ${{ steps.test-summary.outputs.skipped }} skipped).
           See student-1/tests/README.md for the full feature-coverage breakdown.
 
-          ## Health Check Status
 
-          The current CI uses temporary HTTP retry-based smoke checks.
-          As a future improvement, Docker healthchecks can replace these checks once the
-          service healthcheck configuration has been added.
-          EOF
+          ## Pytest Results
+
+          ```
+          {pytest_log}
+          ```
+          """
+
+          import os
+          log_path = "reports/pytest-output.txt"
+          pytest_log = "No pytest output captured."
+          if os.path.exists(log_path):
+              with open(log_path) as f:
+                  pytest_log = f.read().strip() or pytest_log
+
+          with open("reports/report.md", "w") as f:
+              f.write(report_md.format(pytest_log=pytest_log))
+          PY
 
       - name: Generate run-view.md
         run: |
