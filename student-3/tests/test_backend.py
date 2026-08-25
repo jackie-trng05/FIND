@@ -12,7 +12,7 @@ def _load_backend_module():
     os.environ.setdefault("SHARED_API_URL", "http://find-shared-api:5000")
     os.environ.setdefault("SHARED_DB_URL", "http://find-shared-db:6000")
     os.environ.setdefault("POSTINGS_DB_URL", "http://student-2-db:6002")
-    os.environ.setdefault("STUDENT_1_DB_URL", "http://find-student-1-db:6001")
+    os.environ.setdefault("STUDENT_1_BACKEND_URL", "http://find-student-1-backend:5001")
 
     spec = importlib.util.spec_from_file_location("student3_backend_app", backend_path)
     module = importlib.util.module_from_spec(spec)
