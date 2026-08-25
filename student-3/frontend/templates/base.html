@@ -60,8 +60,11 @@
 
 <script>
 (function () {
-    const SHARED_API_URL = 'http://localhost:16002';
-    const LOGIN_URL = 'http://localhost:16001/login';
+    const SHARED_API_URL = '{{ shared_api_public_url }}';
+    const LOGIN_URL = '{{ login_url }}';
+    const LOGOUT_URL = '{{ logout_url }}';
+    window.__findLoginUrl = LOGIN_URL;
+    window.__findLogoutUrl = LOGOUT_URL;
 
     /* ---- Themed confirmation modal ------------------------------------- */
     const overlay = document.getElementById('confirm-modal');
@@ -202,9 +205,9 @@
 })();
 
 function handleLogout() {
-    fetch('http://localhost:16002/api/auth/logout', {
+    fetch(window.__findLogoutUrl, {
         method: 'POST', credentials: 'include'
-    }).catch(() => {}).then(() => { window.location.href = 'http://localhost:16001/login'; });
+    }).catch(() => {}).then(() => { window.location.href = window.__findLoginUrl; });
 }
 </script>
 

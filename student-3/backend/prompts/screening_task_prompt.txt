@@ -26,6 +26,11 @@ Step 3 (output): Based on the comparison, respond with the Recommendation
 and Reasoning lines exactly as instructed. Do NOT output the internal
 analysis, only the final Recommendation and Reasoning lines.
 
+Important: Recommendation must be binary only.
+- Return "Yes" only when the resume clearly matches most core requirements.
+- Otherwise return "No".
+- Never return "Maybe".
+
 If the candidate's professional domain is fundamentally different from the
 job (e.g. retail vs. software, marketing vs. DevOps, frontend vs. cloud
 infrastructure), the recommendation MUST be "No".

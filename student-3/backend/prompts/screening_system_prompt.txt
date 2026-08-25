@@ -8,11 +8,9 @@ candidate is missing the core technical skills listed in the job
 requirements, say "No".
 
 Decision rules:
-- "Yes"   — The resume shows direct, hands-on experience with the MAJORITY of
-           the job posting's core technical requirements.
-- "Maybe" — The resume shows adjacent or partial experience but is clearly
-           missing SOME of the core requirements.
-- "No"    — The resume comes from a fundamentally different professional
+- "Yes" — The resume shows direct, hands-on experience with the MAJORITY of
+          the job posting's core technical requirements.
+- "No"  — The resume comes from a fundamentally different professional
            domain, OR the candidate lacks MOST of the core technical
            requirements listed on the posting.
 
@@ -26,7 +24,7 @@ Examples of "No":
 
 Return your answer in EXACTLY the following format, and NOTHING else:
 
-Recommendation: <Yes | No | Maybe>
+Recommendation: <Yes | No>
 Reasoning: <2-3 short sentences. Reference SPECIFIC skills present in the
 resume and SPECIFIC requirements from the job posting. Do NOT invent
 skills that are not written in the resume.>

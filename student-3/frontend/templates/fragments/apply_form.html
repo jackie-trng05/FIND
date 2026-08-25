@@ -1,0 +1,106 @@
+{% set posting = data.posting %}
+{% set user = data.user %}
+{% set application = data.application %}
+{% set resume = data.resume %}
+{% set editing = application is not none %}
+{% set declaration_checked = editing and application.declaration_accepted %}
+
+<div class="apply-page">
+    <div class="card posting-summary">
+        <div class="posting-summary-head">
+            <h1>{{ posting.Job_Title }}</h1>
+            <span class="badge badge-info">{{ posting.Job_Type or '' }}</span>
+        </div>
+        <p class="posting-summary-desc">{{ posting.Job_Description or '' }}</p>
+        <div class="posting-summary-grid">
+            <div><span class="label">Location</span><span>{{ posting.Location or '-' }}</span></div>
+            <div><span class="label">Salary</span><span>{{ posting.Salary_Range or '-' }}</span></div>
+            <div><span class="label">Deadline</span><span>{{ format_date(posting.Application_Deadline or '') }}</span></div>
+        </div>
+        <div class="posting-summary-reqs">
+            <h4>Requirements</h4>
+            {% set reqs = requirements_list(posting.Requirements or '') %}
+            {% if reqs %}
+            <ul class="requirements-list">
+                {% for req in reqs %}<li>{{ req }}</li>{% endfor %}
+            </ul>
+            {% else %}
+            <p>-</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h2 class="card-title">{{ 'Edit draft application' if editing else 'Apply for this position' }}</h2></div>
+        <div id="form-msg" class="form-alert"></div>
+
+        <form id="apply-form" class="apply-form" enctype="multipart/form-data">
+            <input type="hidden" name="job_posting_id" value="{{ posting.JobPosting_Id }}">
+
+            <fieldset class="form-section">
+                <legend>Your details</legend>
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">First name</label>
+                        <input class="form-input" value="{{ user.first_name or '' }}" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Last name</label>
+                        <input class="form-input" value="{{ user.last_name or '' }}" disabled>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email address</label>
+                    <input class="form-input" value="{{ user.email or '' }}" disabled>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Resume</legend>
+                {% if resume %}
+                <div class="resume-current">
+                    <span class="resume-current-label">Current file:</span>
+                    <span class="resume-current-name">{{ resume.file_name or 'resume.pdf' }}</span>
+                    {% if resume.from_profile %}
+                    <span class="resume-current-source">- auto-filled from your profile</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <div class="form-group">
+                    <label class="form-label">
+                        {{ 'Replace resume' if resume else 'Upload resume *' }}
+                    </label>
+                    <input class="form-input" type="file" name="resume_file"
+                           accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                    <p class="form-help">PDF or DOCX, maximum 5 MB.</p>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend>Declaration</legend>
+                <label class="form-checkbox">
+                    <input type="checkbox" name="declaration_accepted" value="1"{% if declaration_checked %} checked{% endif %}>
+                    <span>I confirm that the information provided in this application is accurate to the best of my knowledge. *</span>
+                </label>
+            </fieldset>
+
+            <div class="form-actions">
+                {% if editing %}
+                <button type="button" class="btn btn-secondary" data-action="save" data-endpoint="/api/applications/{{ application.application_id }}/save">Save Draft</button>
+                <button type="button" class="btn btn-primary" id="apply-submit-btn" data-action="submit" data-endpoint="/api/applications/{{ application.application_id }}/submit">Submit Application</button>
+                {% if application.application_status == 'Draft' %}
+                <button type="button" class="btn btn-danger"
+                        hx-delete="{{ backend_url }}/api/applications/{{ application.application_id }}" hx-target="#form-msg" hx-swap="innerHTML"
+                        hx-confirm="Are you sure you want to delete this draft application? This cannot be undone.">
+                    Delete draft
+                </button>
+                {% endif %}
+                {% else %}
+                <button type="button" class="btn btn-secondary" data-action="save" data-endpoint="/api/applications/save">Save Draft</button>
+                <button type="button" class="btn btn-primary" id="apply-submit-btn" data-action="submit" data-endpoint="/api/applications/submit">Submit Application</button>
+                {% endif %}
+                <a class="btn btn-ghost" href="/">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

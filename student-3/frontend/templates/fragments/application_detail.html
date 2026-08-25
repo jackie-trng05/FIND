@@ -1,0 +1,108 @@
+{% set application = data.application %}
+{% set posting = data.posting %}
+{% set user = data.user %}
+{% set resume = data.resume %}
+{% set status = application.application_status %}
+{% set withdrawable_statuses = data.withdrawable_statuses %}
+{% set interview_action_statuses = data.interview_action_statuses %}
+
+<div id="detail-actions-msg"></div>
+<div class="apply-page">
+    <div class="detail-status-bar">
+        <div class="detail-status-info">
+            <span class="detail-status-label">Status</span>
+            <span class="badge {{ status_class.get(status, 'badge-muted') }}">{{ status }}</span>
+        </div>
+        <div class="detail-status-info">
+            <span class="detail-status-label">Date submitted</span>
+            <span class="detail-status-value">{{ format_date(application.submitted_at or '') }}</span>
+        </div>
+        <div class="detail-status-info">
+            <span class="detail-status-label">Application ID</span>
+            <span class="detail-status-value">#{{ application.application_id }}</span>
+        </div>
+
+        <div class="panel-actions">
+            {% if status in withdrawable_statuses %}
+            <button class="btn btn-danger"
+                    hx-put="{{ backend_url }}/api/applications/{{ application.application_id }}/withdraw"
+                    hx-target="#detail-actions-msg" hx-swap="innerHTML"
+                    hx-confirm="Are you sure you want to withdraw this application?">
+                Withdraw Application
+            </button>
+            {% endif %}
+            {% if status in interview_action_statuses %}
+            <a class="btn btn-secondary" target="_blank" rel="noopener"
+               href="{{ data.interviews_url }}/?application={{ application.application_id }}">Schedule Interview</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card posting-summary">
+        <div class="posting-summary-head">
+            <h1>{{ posting.Job_Title }}</h1>
+            <span class="badge badge-info">{{ posting.Job_Type or '' }}</span>
+        </div>
+        <p class="posting-summary-desc">{{ posting.Job_Description or '' }}</p>
+        <div class="posting-summary-grid">
+            <div><span class="label">Location</span><span>{{ posting.Location or '-' }}</span></div>
+            <div><span class="label">Salary</span><span>{{ posting.Salary_Range or '-' }}</span></div>
+            <div><span class="label">Deadline</span><span>{{ format_date(posting.Application_Deadline or '') }}</span></div>
+        </div>
+        <div class="posting-summary-reqs">
+            <h4>Requirements</h4>
+            {% set reqs = requirements_list(posting.Requirements or '') %}
+            {% if reqs %}
+            <ul class="requirements-list">
+                {% for req in reqs %}<li>{{ req }}</li>{% endfor %}
+            </ul>
+            {% else %}
+            <p>-</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h2 class="card-title">Your submitted application</h2></div>
+        <form class="apply-form" onsubmit="event.preventDefault()">
+            <fieldset class="form-section">
+                <legend>Your details</legend>
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label class="form-label">First name</label>
+                        <input class="form-input" value="{{ user.first_name or '' }}" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Last name</label>
+                        <input class="form-input" value="{{ user.last_name or '' }}" disabled>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email address</label>
+                    <input class="form-input" value="{{ user.email or '' }}" disabled>
+                </div>
+            </fieldset>
+            <fieldset class="form-section">
+                <legend>Resume</legend>
+                {% if resume %}
+                <div class="resume-current">
+                    <span class="resume-current-label">Uploaded file:</span>
+                    <a class="resume-current-name" target="_blank"
+                       href="{{ backend_url }}/api/resumes/{{ resume.resume_id }}/download">
+                        {{ resume.file_name or 'resume.pdf' }}
+                    </a>
+                </div>
+                {% else %}
+                <p class="form-help">No resume uploaded.</p>
+                {% endif %}
+            </fieldset>
+            <fieldset class="form-section">
+                <legend>Declaration</legend>
+                <label class="form-checkbox">
+                    <input type="checkbox" {% if application.declaration_accepted %}checked{% endif %} disabled>
+                    <span>I confirm that the information provided in this application is accurate to the best of my knowledge.</span>
+                </label>
+            </fieldset>
+        </form>
+    </div>
+</div>

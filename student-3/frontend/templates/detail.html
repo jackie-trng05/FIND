@@ -7,7 +7,7 @@
 </div>
 <div class="card">
     <div id="application-detail"
-         hx-get="{{ backend_url }}/api/applications/{{ application_id }}/detail"
+         hx-get="/fragments/applications/{{ application_id }}/detail"
          hx-trigger="authReady from:body, applicationWithdrawn from:body"
          hx-swap="innerHTML"></div>
 </div>
