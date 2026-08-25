@@ -7,7 +7,7 @@
 </div>
 
 <div id="apply-slot"
-     hx-get="{{ backend_url }}/api/apply/{{ job_posting_id }}"
+    hx-get="/fragments/apply/{{ job_posting_id }}"
      hx-trigger="authReady from:body"
      hx-swap="innerHTML"></div>
 {% endblock %}
@@ -26,8 +26,8 @@
         const form = document.getElementById('apply-form');
         if (!form || !endpoint) return;
 
-        const resumeInput = form.querySelector('input[name="Resume_File"]');
-        const declaration = form.querySelector('input[name="Declaration_Accepted"]');
+        const resumeInput = form.querySelector('input[name="resume_file"]');
+        const declaration = form.querySelector('input[name="declaration_accepted"]');
         const msg = document.getElementById('form-msg');
 
         function showError(text) {

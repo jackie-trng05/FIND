@@ -1,0 +1,84 @@
+{% set application = data.application %}
+{% set posting = data.posting %}
+{% set candidate = data.candidate %}
+{% set resume = data.resume %}
+{% set status = application.application_status %}
+{% set selectable = ['Shortlisted', 'Rejected'] %}
+
+<div id="profile-msg"></div>
+<div class="panel-head">
+    <div class="panel-heading">
+        <h2>{{ candidate.user_first_name or '' }} {{ candidate.user_last_name or '' }}</h2>
+        <span class="badge {{ status_class.get(status, 'badge-muted') }}">{{ status }}</span>
+        <label class="header-status-label">Change status:</label>
+        <select class="form-select form-select-sm status-select header-status-select"
+                data-application-id="{{ application.application_id }}"
+                data-current="{{ status }}"
+                hx-put="{{ backend_url }}/api/applications/{{ application.application_id }}/status"
+                hx-vals='js:{"application_status": event.target.value}'
+                hx-target="#toast-area" hx-swap="none"
+                hx-trigger="change">
+            {% if status not in selectable %}
+            <option value="{{ status }}" selected disabled>{{ status }}</option>
+            {% endif %}
+            {% for item in selectable %}
+            <option value="{{ item }}"{% if item == status %} selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+        </select>
+        {% if status == 'Submitted' %}
+        <button type="button" class="btn btn-primary btn-sm"
+                onclick="shortlistCandidate({{ application.application_id }})">
+            Shortlist candidate
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="detail-grid detail-grid-single">
+    <section>
+        <h3>Candidate Information</h3>
+        <table class="detail-table">
+            <tr><th>First name</th><td>{{ candidate.user_first_name or '-' }}</td></tr>
+            <tr><th>Last name</th><td>{{ candidate.user_last_name or '-' }}</td></tr>
+            <tr><th>Email</th><td>{{ candidate.user_email or '-' }}</td></tr>
+            <tr><th>Applied position</th><td>{{ posting.Job_Title or '-' }}</td></tr>
+            <tr><th>Date submitted</th><td>{{ format_date(application.submitted_at or '') }}</td></tr>
+        </table>
+        <h4 class="section-subhead">Uploaded Resume</h4>
+        {% if resume %}
+        <table class="detail-table">
+            <tr><th>File</th>
+                <td>
+                    <a class="btn btn-secondary btn-sm" target="_blank"
+                       href="{{ backend_url }}/api/resumes/{{ resume.resume_id }}/download">
+                       Download {{ resume.file_name or 'resume.pdf' }}
+                    </a>
+                </td>
+            </tr>
+            <tr><th>Uploaded</th><td>{{ format_date(resume.uploaded_at or '') }}</td></tr>
+        </table>
+        {% else %}
+        <p>No resume uploaded.</p>
+        {% endif %}
+    </section>
+</div>
+
+<section class="ai-section">
+    <h3>AI Screening</h3>
+    <div id="ai-screening-panel">
+        <div class="ai-empty">
+            <p>No AI recommendation yet. Ask the AI for a shortlist suggestion based on job and resume match.</p>
+            <div class="ai-actions-row">
+                <button class="btn btn-accent"
+                    hx-post="{{ backend_url }}/api/applications/{{ application.application_id }}/screen"
+                    hx-target="#ai-screening-panel" hx-swap="innerHTML"
+                    hx-indicator="#ai-spinner" hx-disabled-elt="this">
+                    Generate AI recommendation
+                </button>
+                <span id="ai-spinner" class="htmx-indicator ai-spinner">
+                    <span class="spinner"></span> Thinking...
+                </span>
+            </div>
+        </div>
+    </div>
+</section>

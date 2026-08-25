@@ -7,7 +7,7 @@
 </div>
 <div class="card">
     <div id="candidate-profile"
-         hx-get="{{ backend_url }}/api/staff/applications/{{ application_id }}/profile"
+         hx-get="/fragments/staff/applications/{{ application_id }}/profile"
          hx-trigger="authReady from:body, statusChanged from:body"
          hx-swap="innerHTML"></div>
 </div>
@@ -16,13 +16,13 @@
 {% block scripts %}
 <script>
 (function () {
-    /* ---- Shortlist button on the AI recommendation panel --------------- */
+    /* ---- Manual shortlist action (independent from AI suggestion) ------ */
     window.shortlistCandidate = function (applicationId) {
         fetch('{{ backend_url }}/api/applications/' + applicationId + '/status', {
             method: 'PUT',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ Application_Status: 'Shortlisted' })
+            body: JSON.stringify({ application_status: 'Shortlisted' })
         }).then((r) => {
             if (r.ok) {
                 window.showToast('Candidate shortlisted.', 'success');
@@ -49,7 +49,7 @@
                     method: 'PUT',
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ Application_Status: 'Rejected' })
+                    body: JSON.stringify({ application_status: 'Rejected' })
                 }).then((r) => {
                     if (r.ok) {
                         window.showToast('Candidate rejected and removed from recruitment.', 'success');
