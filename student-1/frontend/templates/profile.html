@@ -107,8 +107,8 @@
             </div>
             <form id="resume-upload-form" onsubmit="handleResumeUpload(event)">
               <div class="form-group">
-                <label class="form-label" for="resume-file">Choose file (PDF, DOC, or DOCX — max 5MB)</label>
-                <input class="form-input" type="file" id="resume-file" name="file" accept=".pdf,.doc,.docx" required>
+                <label class="form-label" for="resume-file">Choose file (PDF only — max 5MB)</label>
+                <input class="form-input" type="file" id="resume-file" name="file" accept=".pdf" required>
               </div>
               <button type="submit" class="btn btn-secondary" id="upload-btn">Upload</button>
             </form>
@@ -307,9 +307,9 @@
       const file = fileInput.files[0];
       if (!file) return;
 
-      const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const allowed = ['application/pdf'];
       if (!allowed.includes(file.type)) {
-        showAlert('Only PDF, DOC, and DOCX files are allowed.', 'error', 'resume-alert-area');
+        showAlert('Only PDF files are allowed.', 'error', 'resume-alert-area');
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
@@ -367,8 +367,6 @@
 
     function fileTypeLabel(mime) {
       if (mime.includes('pdf')) return 'PDF';
-      if (mime.includes('wordprocessingml')) return 'DOCX';
-      if (mime.includes('msword')) return 'DOC';
       return mime;
     }
 

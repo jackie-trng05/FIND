@@ -20,7 +20,7 @@ Local dev URL: http://localhost:16005/
 | GET | `/api/resumes/{id}/download` | Download a resume file (owner only) |
 | DELETE | `/api/resumes/{id}` | Delete a resume (owner only) |
 
-Resume uploads are restricted to PDF/DOC/DOCX and 5MB max, enforced both here and
+Resume uploads are restricted to PDF and 5MB max, enforced both here and
 in `student-1-db`.
 
 ## Not yet implemented

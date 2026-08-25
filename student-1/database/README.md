@@ -14,9 +14,9 @@ Local dev URL: http://localhost:16006/ (health check at `/health`)
   `uploaded_at`, `updated_at`, `parsed_at`.
 
 `init_db.py` re-creates both tables and seeds 10 profiles (mapped to shared-db
-user IDs 1–10) and 10 resumes with realistic, persona-matched content — 5 PDF and
-5 DOCX, alternating by profile id. The files live under `seed_data/resumes/` and are
-read as-is at build time; see `seed_data/README.md` for details.
+user IDs 1–10) and 10 resumes with realistic, persona-matched content, all PDF.
+The files live under `seed_data/resumes/` and are read as-is at build time; see
+`seed_data/README.md` for details.
 
 ## Not yet implemented
 

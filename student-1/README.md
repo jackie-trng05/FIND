@@ -5,7 +5,7 @@ Applicant profile CRUD and resume storage for the FIND HR application.
 ## Feature scope (Release 0, AI to be implemented)
 
 - Create / View / Edit / Delete user profile (applicant self-service)
-- Upload / View / Download / Delete resume (PDF, DOC, DOCX; 5MB max)
+- Upload / View / Download / Delete resume (PDF only; 5MB max)
 - Cross-service session via shared HttpOnly cookie (`session_token`)
 
 ## Services
@@ -34,7 +34,7 @@ localhost services. The frontend proxies API calls server-side, forwarding the c
 ## Database seeding
 
 `init_db.py` seeds 10 profiles (mapped to shared-db user IDs 1–10) and 10 realistic
-resumes (5 PDF, 5 DOCX) from files committed under `database/seed_data/resumes/`.
+resumes (PDF only) from files committed under `database/seed_data/resumes/`.
 
 ## Known deviations from the registration form
 

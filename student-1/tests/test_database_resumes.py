@@ -93,8 +93,8 @@ def test_get_resumes_for_profile_multiple(db_client):
         "file_data": VALID_FILE_DATA,
     })
     db_client.post(f"/profiles/{profile_2['profile_id']}/resumes", json={
-        "file_name": "resume_v2.docx",
-        "file_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "file_name": "resume_v2.pdf",
+        "file_type": "application/pdf",
         "file_data": VALID_FILE_DATA,
     })
 
@@ -102,7 +102,7 @@ def test_get_resumes_for_profile_multiple(db_client):
     resp_2 = db_client.get(f"/profiles/{profile_2['profile_id']}/resumes")
 
     assert resp_1.get_json()[0]["file_name"] == "resume_v1.pdf"
-    assert resp_2.get_json()[0]["file_name"] == "resume_v2.docx"
+    assert resp_2.get_json()[0]["file_name"] == "resume_v2.pdf"
 
 
 def test_upload_resume_rejects_second_upload_for_same_profile(db_client):
@@ -115,8 +115,8 @@ def test_upload_resume_rejects_second_upload_for_same_profile(db_client):
     assert first.status_code == 201
 
     second = db_client.post(f"/profiles/{profile['profile_id']}/resumes", json={
-        "file_name": "resume_v2.docx",
-        "file_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "file_name": "resume_v2.pdf",
+        "file_type": "application/pdf",
         "file_data": VALID_FILE_DATA,
     })
     assert second.status_code == 409

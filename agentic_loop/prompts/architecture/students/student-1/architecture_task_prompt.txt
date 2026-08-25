@@ -7,7 +7,7 @@ service (shared-api/shared-db) for identity (users and sessions) via an HttpOnly
 session_token cookie, and never stores first/last name or credentials in its own
 profiles table.
 
-Resumes (PDF/DOC/DOCX, 5MB max) are stored as a BLOB in student-1-db, owned entirely
+Resumes (PDF only, 5MB max) are stored as a BLOB in student-1-db, owned entirely
 by this feature; resume-level routes live at /api/resumes/{resumeId} rather than
 nested under /api/profiles/{id}/resumes/{resumeId}.
 

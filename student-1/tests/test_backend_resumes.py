@@ -179,7 +179,7 @@ def test_upload_resume_multipart_rejects_disallowed_type(backend_client, request
     )
 
     assert resp.status_code == 400
-    assert "PDF, DOC, and DOCX" in resp.get_json()["error"]
+    assert "Only PDF files are allowed" in resp.get_json()["error"]
 
 
 def test_upload_resume_multipart_rejects_oversized_file(backend_client, requests_mock, auth_headers):

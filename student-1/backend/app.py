@@ -13,8 +13,6 @@ DB_SERVICE_URL = os.environ["DB_SERVICE_URL"]
 
 ALLOWED_FILE_TYPES = {
     "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
 
@@ -150,7 +148,7 @@ def _parse_resume_payload():
 
         file_type = file.content_type or ""
         if file_type not in ALLOWED_FILE_TYPES:
-            return None, ({"error": "Only PDF, DOC, and DOCX files are allowed"}, 400)
+            return None, ({"error": "Only PDF files are allowed"}, 400)
 
         file_bytes = file.read()
         if len(file_bytes) > 5 * 1024 * 1024:

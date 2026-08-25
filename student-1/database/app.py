@@ -13,8 +13,6 @@ DATABASE_NAME = os.path.join(DATA_DIR, "student1.db")
 
 ALLOWED_FILE_TYPES = {
     "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
@@ -160,7 +158,7 @@ def _validate_resume_payload(data):
         return None, None, None, ({"error": "file_name, file_type, and file_data are required"}, 400)
 
     if file_type not in ALLOWED_FILE_TYPES:
-        return None, None, None, ({"error": "Only PDF, DOC, and DOCX files are allowed"}, 400)
+        return None, None, None, ({"error": "Only PDF files are allowed"}, 400)
 
     try:
         file_bytes = base64.b64decode(file_data_b64)
