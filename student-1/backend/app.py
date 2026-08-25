@@ -140,6 +140,34 @@ def delete_profile(profile_id):
     return jsonify(resp.json()), resp.status_code
 
 
+def _parse_resume_payload():
+    """Parse a resume upload request (multipart file or JSON body) into a DB payload.
+    Returns (payload, None) on success, or (None, (response_json, status_code)) on failure."""
+    if "file" in request.files:
+        file = request.files["file"]
+        if not file.filename:
+            return None, ({"error": "No file selected"}, 400)
+
+        file_type = file.content_type or ""
+        if file_type not in ALLOWED_FILE_TYPES:
+            return None, ({"error": "Only PDF, DOC, and DOCX files are allowed"}, 400)
+
+        file_bytes = file.read()
+        if len(file_bytes) > 5 * 1024 * 1024:
+            return None, ({"error": "File exceeds 5MB limit"}, 400)
+
+        return {
+            "file_name": file.filename,
+            "file_type": file_type,
+            "file_data": base64.b64encode(file_bytes).decode("utf-8"),
+        }, None
+
+    data = request.get_json()
+    if not data:
+        return None, ({"error": "No file provided"}, 400)
+    return data, None
+
+
 @app.post("/api/profiles/<int:profile_id>/resumes")
 def upload_resume(profile_id):
     user, err = require_session()
@@ -154,31 +182,32 @@ def upload_resume(profile_id):
     if check.json()["user_id"] != user["user_id"]:
         return jsonify({"error": "Forbidden"}), 403
 
-    if "file" in request.files:
-        file = request.files["file"]
-        if not file.filename:
-            return jsonify({"error": "No file selected"}), 400
-
-        file_type = file.content_type or ""
-        if file_type not in ALLOWED_FILE_TYPES:
-            return jsonify({"error": "Only PDF, DOC, and DOCX files are allowed"}), 400
-
-        file_bytes = file.read()
-        if len(file_bytes) > 5 * 1024 * 1024:
-            return jsonify({"error": "File exceeds 5MB limit"}), 400
-
-        payload = {
-            "file_name": file.filename,
-            "file_type": file_type,
-            "file_data": base64.b64encode(file_bytes).decode("utf-8"),
-        }
-    else:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No file provided"}), 400
-        payload = data
+    payload, err = _parse_resume_payload()
+    if err:
+        return jsonify(err[0]), err[1]
 
     resp = requests.post(f"{DB_SERVICE_URL}/profiles/{profile_id}/resumes", json=payload)
+    return jsonify(resp.json()), resp.status_code
+
+
+@app.post("/api/resumes")
+def upload_unlinked_resume():
+    """Upload a resume that is not the caller's default profile resume (e.g. a
+    one-off resume attached to a specific job application). Not linked to a
+    profile; the caller (student-3) is responsible for tracking ownership via
+    its own applications.user_id FK.
+    """
+    user, err = require_session()
+    if err:
+        return err
+    if user["role"] == "staff":
+        return jsonify({"error": "Forbidden"}), 403
+
+    payload, err = _parse_resume_payload()
+    if err:
+        return jsonify(err[0]), err[1]
+
+    resp = requests.post(f"{DB_SERVICE_URL}/resumes", json=payload)
     return jsonify(resp.json()), resp.status_code
 
 
@@ -200,22 +229,43 @@ def get_resumes(profile_id):
     return jsonify(resp.json()), resp.status_code
 
 
+@app.get("/api/resumes/<int:resume_id>")
+def get_resume_meta(resume_id):
+    user, err = require_session()
+    if err:
+        return err
+
+    meta_resp = requests.get(f"{DB_SERVICE_URL}/resumes/{resume_id}")
+    if meta_resp.status_code != 200:
+        return jsonify(meta_resp.json()), meta_resp.status_code
+    meta = meta_resp.json()
+
+    # Resumes with no profile_id are application-only uploads (see student-3's
+    # ApplicationService); ownership for those is enforced by the caller via
+    # applications.user_id, not here.
+    if user["role"] != "staff" and meta["profile_id"] is not None:
+        profile_resp = requests.get(f"{DB_SERVICE_URL}/profiles/{meta['profile_id']}")
+        if profile_resp.status_code != 200 or profile_resp.json()["user_id"] != user["user_id"]:
+            return jsonify({"error": "Forbidden"}), 403
+
+    return jsonify(meta), 200
+
+
 @app.get("/api/resumes/<int:resume_id>/download")
 def download_resume(resume_id):
     user, err = require_session()
     if err:
         return err
-    if user["role"] == "staff":
-        return jsonify({"error": "Forbidden"}), 403
 
     meta_resp = requests.get(f"{DB_SERVICE_URL}/resumes/{resume_id}")
     if meta_resp.status_code != 200:
         return jsonify(meta_resp.json()), meta_resp.status_code
-
     meta = meta_resp.json()
-    profile_resp = requests.get(f"{DB_SERVICE_URL}/profiles/{meta['profile_id']}")
-    if profile_resp.status_code != 200 or profile_resp.json()["user_id"] != user["user_id"]:
-        return jsonify({"error": "Forbidden"}), 403
+
+    if user["role"] != "staff" and meta["profile_id"] is not None:
+        profile_resp = requests.get(f"{DB_SERVICE_URL}/profiles/{meta['profile_id']}")
+        if profile_resp.status_code != 200 or profile_resp.json()["user_id"] != user["user_id"]:
+            return jsonify({"error": "Forbidden"}), 403
 
     file_resp = requests.get(f"{DB_SERVICE_URL}/resumes/{resume_id}/file")
     if file_resp.status_code != 200:
@@ -241,6 +291,10 @@ def delete_resume(resume_id):
         return jsonify(meta_resp.json()), meta_resp.status_code
 
     meta = meta_resp.json()
+    # This endpoint only manages the profile's default resume; application-only
+    # resumes (profile_id is None) are owned/managed by student-3, not here.
+    if meta["profile_id"] is None:
+        return jsonify({"error": "Forbidden"}), 403
     profile_resp = requests.get(f"{DB_SERVICE_URL}/profiles/{meta['profile_id']}")
     if profile_resp.status_code != 200 or profile_resp.json()["user_id"] != user["user_id"]:
         return jsonify({"error": "Forbidden"}), 403

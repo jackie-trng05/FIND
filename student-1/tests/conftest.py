@@ -41,7 +41,7 @@ def _create_schema(db_path):
     conn.execute("""
         CREATE TABLE resumes (
             resume_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            profile_id INTEGER NOT NULL UNIQUE,
+            profile_id INTEGER UNIQUE,
             file_name TEXT NOT NULL,
             file_type TEXT NOT NULL,
             file_data BLOB NOT NULL,

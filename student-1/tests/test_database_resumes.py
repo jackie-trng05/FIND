@@ -177,3 +177,44 @@ def test_delete_resume_success(db_client):
 def test_delete_resume_not_found(db_client):
     resp = db_client.delete("/resumes/999")
     assert resp.status_code == 404
+
+
+def test_upload_unlinked_resume_success(db_client):
+    resp = db_client.post("/resumes", json={
+        "file_name": "cover.pdf",
+        "file_type": "application/pdf",
+        "file_data": VALID_FILE_DATA,
+    })
+    assert resp.status_code == 201
+    body = resp.get_json()
+    assert body["resume_id"] is not None
+
+    meta = db_client.get(f"/resumes/{body['resume_id']}").get_json()
+    assert meta["profile_id"] is None
+
+
+def test_upload_unlinked_resume_missing_fields(db_client):
+    resp = db_client.post("/resumes", json={"file_name": "cover.pdf"})
+    assert resp.status_code == 400
+
+
+def test_upload_unlinked_resume_rejects_disallowed_file_type(db_client):
+    resp = db_client.post("/resumes", json={
+        "file_name": "cover.exe",
+        "file_type": "application/x-msdownload",
+        "file_data": VALID_FILE_DATA,
+    })
+    assert resp.status_code == 400
+
+
+def test_upload_unlinked_resume_no_uniqueness_conflict(db_client):
+    # Multiple unlinked (profile_id NULL) resumes must not collide with the
+    # UNIQUE(profile_id) constraint used for the one-resume-per-profile rule.
+    first = db_client.post("/resumes", json={
+        "file_name": "cover1.pdf", "file_type": "application/pdf", "file_data": VALID_FILE_DATA,
+    })
+    second = db_client.post("/resumes", json={
+        "file_name": "cover2.pdf", "file_type": "application/pdf", "file_data": VALID_FILE_DATA,
+    })
+    assert first.status_code == 201
+    assert second.status_code == 201
