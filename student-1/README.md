@@ -43,12 +43,6 @@ resumes (5 PDF, 5 DOCX) from files committed under `database/seed_data/resumes/`
 - Resume-level routes are `/api/resumes/{resumeId}` rather than nested under
   `/api/profiles/{id}/resumes/{resumeId}`; ownership is still checked server-side.
 
-## Testing status
-
-`tests/` currently contains a placeholder test only (`test_placeholder.py`). A real
-pytest suite covering profile CRUD, ownership checks, and resume upload validation
-is planned but not yet implemented.
-
 ## AI feature status
 
 The resume-based AI autofill feature (suggest professional title/summary/interests,
