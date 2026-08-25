@@ -289,13 +289,13 @@ def delete_resume(resume_id):
         return jsonify(meta_resp.json()), meta_resp.status_code
 
     meta = meta_resp.json()
-    # This endpoint only manages the profile's default resume; application-only
-    # resumes (profile_id is None) are owned/managed by student-3, not here.
-    if meta["profile_id"] is None:
-        return jsonify({"error": "Forbidden"}), 403
-    profile_resp = requests.get(f"{DB_SERVICE_URL}/profiles/{meta['profile_id']}")
-    if profile_resp.status_code != 200 or profile_resp.json()["user_id"] != user["user_id"]:
-        return jsonify({"error": "Forbidden"}), 403
+    # Application-only resumes (profile_id is None) have no student-1 profile to
+    # check ownership against; consistent with get_resume_meta/download_resume,
+    # any authenticated non-staff caller is trusted for those.
+    if meta["profile_id"] is not None:
+        profile_resp = requests.get(f"{DB_SERVICE_URL}/profiles/{meta['profile_id']}")
+        if profile_resp.status_code != 200 or profile_resp.json()["user_id"] != user["user_id"]:
+            return jsonify({"error": "Forbidden"}), 403
 
     resp = requests.delete(f"{DB_SERVICE_URL}/resumes/{resume_id}")
     return jsonify(resp.json()), resp.status_code

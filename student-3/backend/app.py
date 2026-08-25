@@ -228,6 +228,19 @@ def upload_application_resume(filename, mimetype, raw_bytes):
     return (resp.json() or {}).get("resume_id")
 
 
+def _user_owns_application_resume(user_id, resume_id):
+    """True if resume_id is attached to one of user_id's own applications
+    (covers application-only resumes, which have no profile_id to check)."""
+    if user_id is None:
+        return False
+    try:
+        resp = requests.get(f"{DATABASE_SERVICE_URL}/applications", params={"user_id": user_id}, timeout=TIMEOUT)
+        resp.raise_for_status()
+    except requests.RequestException:
+        return False
+    return any(a.get("resume_id") == resume_id for a in (resp.json() or []))
+
+
 def get_resume_metadata(resume_id, role, current_user_id=None):
     if not resume_id:
         return None
@@ -240,8 +253,10 @@ def get_resume_metadata(resume_id, role, current_user_id=None):
 
     profile_id = meta.get("profile_id")
     if profile_id is None:
-        # Application-only resume (not linked to a profile): ownership is
-        # this application's own concern, already checked by the caller.
+        # Application-only resume (not linked to a profile): verify it belongs
+        # to one of the caller's own applications instead of trusting the caller.
+        if not _user_owns_application_resume(current_user_id, resume_id):
+            return None
         return meta
 
     if current_user_id is None:

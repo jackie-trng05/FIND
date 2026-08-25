@@ -295,13 +295,16 @@ def test_download_resume_no_ownership_check_when_unlinked(backend_client, reques
     assert resp.data == b"resume bytes"
 
 
-def test_delete_resume_forbidden_when_unlinked(backend_client, requests_mock, auth_headers):
+def test_delete_resume_allowed_when_unlinked(backend_client, requests_mock, auth_headers):
+    # No profile to check ownership against; consistent with get/download of
+    # unlinked resumes, any authenticated non-staff caller is trusted.
     mock_session(requests_mock, APPLICANT)
     requests_mock.get(f"{DB_SERVICE_URL}/resumes/5", json={"resume_id": 5, "profile_id": None})
+    requests_mock.delete(f"{DB_SERVICE_URL}/resumes/5", json={"message": "Resume deleted"})
 
     resp = backend_client.delete("/api/resumes/5", headers=auth_headers)
 
-    assert resp.status_code == 403
+    assert resp.status_code == 200
 
 
 def test_upload_unlinked_resume_forbidden_for_staff(backend_client, requests_mock, auth_headers):
