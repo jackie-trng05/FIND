@@ -107,12 +107,13 @@ def render_postings_table(postings, *, frontend_url: str, role: str = "staff") -
 # Single posting page (detail + actions + inline editor)                      #
 # --------------------------------------------------------------------------- #
 
-def render_posting_panel(posting: dict, *, backend_url: str, frontend_url: str, role: str = "staff", existing_application_status: str | None = None) -> str:
+def render_posting_panel(posting: dict, *, backend_url: str, frontend_url: str, role: str = "staff", existing_application: dict | None = None) -> str:
     """Full detail panel for a single posting page: info + management actions.
 
-    ``existing_application_status`` is passed by the applicant view so that
-    the Apply button can be disabled (or re-labelled as "Continue draft") if
-    the current candidate already has an active application for this posting.
+    ``existing_application`` is passed by the applicant view so that when the
+    current candidate already has an active application for this posting,
+    the panel shows a single "View Application" button that links directly to
+    that draft/submitted application page.
     """
     pid = posting["JobPosting_Id"]
     base = f"{backend_url}/job-postings/{pid}"
@@ -121,24 +122,13 @@ def render_posting_panel(posting: dict, *, backend_url: str, frontend_url: str, 
 
     if is_applicant:
         apply_url = f"http://localhost:16010/apply/{pid}"
-        applications_url = f"http://localhost:16010/"
-        if existing_application_status == "Draft":
-            # Candidate has a saved draft — let them resume it.
+        if existing_application and existing_application.get("application_id"):
+            app_id = existing_application["application_id"]
+            view_url = f"http://localhost:16010/applications/{app_id}"
             actions_html = (
                 '<div class="panel-actions">'
-                f'<a class="btn btn-primary" href="{apply_url}" '
-                'title="Continue your draft application">Continue draft</a>'
-                '</div>'
-            )
-        elif existing_application_status is not None:
-            # Non-terminal existing application — Apply button is disabled.
-            actions_html = (
-                '<div class="panel-actions">'
-                f'<button class="btn btn-primary" type="button" disabled '
-                f'title="You already applied for this job">'
-                f'Already applied ({_e(existing_application_status)})</button>'
-                f'<a class="btn btn-secondary" href="{applications_url}">'
-                'View my applications</a>'
+                f'<a class="btn btn-primary" href="{view_url}" '
+                'title="View your application">View Application</a>'
                 '</div>'
             )
         else:

@@ -107,10 +107,12 @@ def _get_session_user() -> dict | None:
     return resp.json().get("user")
 
 
-def _get_existing_application_status(user_id: int, posting_id: int) -> str | None:
-    """Return the status of the applicant's existing application for this
-    posting, or None if there isn't one. Withdrawn/Rejected applications are
-    treated as "no application" so the candidate can apply again.
+def _get_existing_application(user_id: int, posting_id: int) -> dict | None:
+    """Return the applicant's existing active application for this posting,
+    or None if there isn't one.
+
+    Withdrawn/Rejected applications are treated as "no application" so the
+    candidate can apply again.
     """
     try:
         resp = requests.get(
@@ -122,9 +124,12 @@ def _get_existing_application_status(user_id: int, posting_id: int) -> str | Non
     except requests.RequestException:
         return None
     for row in resp.json() or []:
-        status = row.get("Application_Status")
+        status = row.get("application_status")
         if status not in ("Withdrawn", "Rejected"):
-            return status
+            return {
+                "application_id": row.get("application_id"),
+                "application_status": status,
+            }
     return None
 
 
@@ -210,15 +215,15 @@ def get_posting(posting_id: int):
     if role == "applicant" and posting.get("JobPosting_Status") != "Published":
         return render_message("Job posting not found.", "error"), 200
 
-    existing_status = None
+    existing_application = None
     if role == "applicant" and user:
-        existing_status = _get_existing_application_status(
+        existing_application = _get_existing_application(
             user.get("user_id"), posting_id
         )
     return (
         render_posting_panel(
             posting, backend_url=BACKEND_PUBLIC_URL, frontend_url=FRONTEND_PUBLIC_URL,
-            role=role, existing_application_status=existing_status,
+            role=role, existing_application=existing_application,
         ),
         200,
     )
