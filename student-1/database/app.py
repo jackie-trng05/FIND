@@ -180,10 +180,15 @@ def upload_resume(profile_id):
         return jsonify({"error": "Profile not found"}), 404
 
     now = datetime.utcnow().isoformat()
-    cursor = conn.execute("""
-        INSERT INTO resumes (profile_id, file_name, file_type, file_data, uploaded_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (profile_id, file_name, file_type, file_bytes, now, now))
+    try:
+        cursor = conn.execute("""
+            INSERT INTO resumes (profile_id, file_name, file_type, file_data, uploaded_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (profile_id, file_name, file_type, file_bytes, now, now))
+    except sqlite3.IntegrityError:
+        conn.close()
+        # UNIQUE(profile_id) violation: this profile already has a resume.
+        return jsonify({"error": "This profile already has a resume. Delete the existing resume before uploading a new one."}), 409
     conn.commit()
     resume_id = cursor.lastrowid
     conn.close()

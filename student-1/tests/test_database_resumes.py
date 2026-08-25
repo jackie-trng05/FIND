@@ -83,24 +83,48 @@ def test_get_resumes_for_profile(db_client):
 
 
 def test_get_resumes_for_profile_multiple(db_client):
-    profile = _create_profile(db_client)
-    db_client.post(f"/profiles/{profile['profile_id']}/resumes", json={
+    # A profile is only ever allowed one resume (see test_upload_resume_rejects_second_upload
+    # below); two different profiles each with their own resume should both list correctly.
+    profile_1 = _create_profile(db_client, user_id=1)
+    profile_2 = _create_profile(db_client, user_id=2)
+    db_client.post(f"/profiles/{profile_1['profile_id']}/resumes", json={
         "file_name": "resume_v1.pdf",
         "file_type": "application/pdf",
         "file_data": VALID_FILE_DATA,
     })
-    db_client.post(f"/profiles/{profile['profile_id']}/resumes", json={
+    db_client.post(f"/profiles/{profile_2['profile_id']}/resumes", json={
         "file_name": "resume_v2.docx",
         "file_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "file_data": VALID_FILE_DATA,
     })
 
-    resp = db_client.get(f"/profiles/{profile['profile_id']}/resumes")
+    resp_1 = db_client.get(f"/profiles/{profile_1['profile_id']}/resumes")
+    resp_2 = db_client.get(f"/profiles/{profile_2['profile_id']}/resumes")
 
-    assert resp.status_code == 200
+    assert resp_1.get_json()[0]["file_name"] == "resume_v1.pdf"
+    assert resp_2.get_json()[0]["file_name"] == "resume_v2.docx"
+
+
+def test_upload_resume_rejects_second_upload_for_same_profile(db_client):
+    profile = _create_profile(db_client)
+    first = db_client.post(f"/profiles/{profile['profile_id']}/resumes", json={
+        "file_name": "resume_v1.pdf",
+        "file_type": "application/pdf",
+        "file_data": VALID_FILE_DATA,
+    })
+    assert first.status_code == 201
+
+    second = db_client.post(f"/profiles/{profile['profile_id']}/resumes", json={
+        "file_name": "resume_v2.docx",
+        "file_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "file_data": VALID_FILE_DATA,
+    })
+    assert second.status_code == 409
+
+    resp = db_client.get(f"/profiles/{profile['profile_id']}/resumes")
     resumes = resp.get_json()
-    assert len(resumes) == 2
-    assert {r["file_name"] for r in resumes} == {"resume_v1.pdf", "resume_v2.docx"}
+    assert len(resumes) == 1
+    assert resumes[0]["file_name"] == "resume_v1.pdf"
 
 
 def test_get_resume_meta(db_client):

@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS resumes (
     resume_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    profile_id INTEGER NOT NULL,
+    profile_id INTEGER NOT NULL UNIQUE,
     file_name TEXT NOT NULL,
     file_type TEXT NOT NULL,
     file_data BLOB NOT NULL,
