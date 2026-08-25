@@ -5,7 +5,7 @@ Applicant profile CRUD and resume storage for the FIND HR application.
 ## Feature scope (Release 0, AI to be implemented)
 
 - Create / View / Edit / Delete user profile (applicant self-service)
-- Upload / View / Download / Delete resume (PDF, DOC, DOCX; 10MB max)
+- Upload / View / Download / Delete resume (PDF, DOC, DOCX; 5MB max)
 - Cross-service session via shared HttpOnly cookie (`session_token`)
 
 ## Services

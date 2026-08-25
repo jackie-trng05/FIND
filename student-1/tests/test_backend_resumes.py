@@ -179,9 +179,9 @@ def test_upload_resume_multipart_rejects_oversized_file(backend_client, requests
     mock_session(requests_mock, APPLICANT)
     requests_mock.get(f"{DB_SERVICE_URL}/profiles/10", json={"profile_id": 10, "user_id": 1})
 
-    # Flask's app.config["MAX_CONTENT_LENGTH"] (10MB) rejects the oversized body at the
+    # Flask's app.config["MAX_CONTENT_LENGTH"] (5MB) rejects the oversized body at the
     # request-parsing layer with 413, before the handler's own size check ever runs.
-    oversized = io.BytesIO(b"x" * (10 * 1024 * 1024 + 1))
+    oversized = io.BytesIO(b"x" * (5 * 1024 * 1024 + 1))
     data = {"file": (oversized, "resume.pdf", "application/pdf")}
     resp = backend_client.post(
         "/api/profiles/10/resumes", data=data, content_type="multipart/form-data", headers=auth_headers

@@ -4,7 +4,7 @@ import os
 import requests as http_requests
 
 app = Flask(__name__, template_folder="templates")
-app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 CORS(app, supports_credentials=True)
 
 STUDENT1_BACKEND_URL = os.environ["STUDENT1_BACKEND_URL"]

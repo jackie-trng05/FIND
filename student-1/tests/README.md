@@ -35,7 +35,7 @@ Remaining:
   database via docker-compose); all current tests load each Flask app in isolation with
   its outbound calls faked via `requests_mock`. Closing this needs a docker-compose-based
   test run rather than more pytest-level unit tests.
-- Found while adding multipart tests: the backend's own 10MB resume size check
+- Found while adding multipart tests: the backend's own 5MB resume size check
   (`upload_resume` in `student-1/backend/app.py`) is unreachable via multipart uploads —
   Flask's `MAX_CONTENT_LENGTH` config rejects an oversized body with `413` before the
   handler's manual `len(file_bytes) > ...` check ever runs. Not a test gap, but worth

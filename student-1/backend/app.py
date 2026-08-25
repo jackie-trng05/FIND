@@ -5,7 +5,7 @@ import requests
 import base64
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 CORS(app, supports_credentials=True)
 
 SHARED_API_URL = os.environ["SHARED_API_URL"]
@@ -164,8 +164,8 @@ def upload_resume(profile_id):
             return jsonify({"error": "Only PDF, DOC, and DOCX files are allowed"}), 400
 
         file_bytes = file.read()
-        if len(file_bytes) > 10 * 1024 * 1024:
-            return jsonify({"error": "File exceeds 10MB limit"}), 400
+        if len(file_bytes) > 5 * 1024 * 1024:
+            return jsonify({"error": "File exceeds 5MB limit"}), 400
 
         payload = {
             "file_name": file.filename,

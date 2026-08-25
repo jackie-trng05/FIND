@@ -49,7 +49,7 @@ def test_upload_resume_rejects_invalid_base64(db_client):
 
 def test_upload_resume_rejects_oversized_file(db_client):
     profile = _create_profile(db_client)
-    oversized = base64.b64encode(b"x" * (10 * 1024 * 1024 + 1)).decode("utf-8")
+    oversized = base64.b64encode(b"x" * (5 * 1024 * 1024 + 1)).decode("utf-8")
     resp = db_client.post(f"/profiles/{profile['profile_id']}/resumes", json={
         "file_name": "resume.pdf",
         "file_type": "application/pdf",
