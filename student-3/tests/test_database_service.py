@@ -1,208 +1,162 @@
-"""Tests for the Student 3 database microservice (Application Management)."""
+"""Tests for the Student 3 database microservice (applications-only)."""
 
-import base64
 import importlib.util
-import os
+import sqlite3
+from pathlib import Path
 
 import pytest
 
-import init_db
 
-_DB_APP_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "database", "app.py"
-)
+APP_PATH = Path(__file__).resolve().parents[1] / "database" / "app.py"
 
 
-def _load_database_app():
-    """Load the database service's app.py under a unique module name.
-
-    The backend service also defines an ``app.py``; importing by the bare name
-    ``app`` is ambiguous, so we load this one from its explicit file path.
-    """
-    spec = importlib.util.spec_from_file_location("student3_db_app", _DB_APP_PATH)
+def _load_database_module():
+    spec = importlib.util.spec_from_file_location("student3_database_app", APP_PATH)
     module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
 
 
+def _seed_database(db_path: Path):
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """
+        CREATE TABLE applications (
+            application_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            job_posting_id INTEGER NOT NULL,
+            resume_id INTEGER,
+            application_status TEXT NOT NULL DEFAULT 'Draft',
+            availability_date TEXT NOT NULL DEFAULT '',
+            declaration_accepted INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            submitted_at TEXT
+        )
+        """
+    )
+
+    seed = [
+        (6, 1, 6, "Submitted", "2099-01-01", 1, "2026-01-01T00:00:00"),
+        (6, 2, 6, "Shortlisted", "2099-01-10", 1, "2026-01-02T00:00:00"),
+        (6, 3, 6, "Draft", "2099-01-15", 0, None),
+        (7, 1, 7, "Interview Completed", "2099-01-20", 1, "2026-01-03T00:00:00"),
+        (8, 4, 8, "Rejected", "2099-01-25", 1, "2026-01-04T00:00:00"),
+    ]
+    conn.executemany(
+        """
+        INSERT INTO applications (
+            user_id, job_posting_id, resume_id, application_status,
+            availability_date, declaration_accepted, submitted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        seed,
+    )
+    conn.commit()
+    conn.close()
+
+
 @pytest.fixture()
-def client():
-    # Rebuild a clean, seeded database, then load the app against it.
-    init_db.initialise()
-    app_module = _load_database_app()
+def client(tmp_path):
+    db_file = tmp_path / "student3_test.db"
+    _seed_database(db_file)
+
+    app_module = _load_database_module()
+    app_module.DATABASE_NAME = str(db_file)
     app_module.app.config.update(TESTING=True)
+
     with app_module.app.test_client() as test_client:
         yield test_client
 
 
-# --------------------------------------------------------------------------- #
-# Health & seed                                                                #
-# --------------------------------------------------------------------------- #
-
 def test_health(client):
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.get_json()["status"] == "ok"
+    res = client.get("/health")
+    assert res.status_code == 200
+    assert res.get_json()["status"] == "ok"
 
 
-def test_seed_has_at_least_ten_applications(client):
-    applications = client.get("/applications").get_json()
-    assert isinstance(applications, list)
-    assert len(applications) >= 10, "Seed data must contain 10+ applications"
+def test_list_filter_by_user_and_status(client):
+    by_user = client.get("/applications?user_id=6").get_json()
+    assert by_user
+    assert all(r["user_id"] == 6 for r in by_user)
 
+    by_status = client.get("/applications?status=Submitted").get_json()
+    assert by_status
+    assert all(r["application_status"] == "Submitted" for r in by_status)
 
-def test_seed_has_resumes(client):
-    resumes = client.get("/resumes").get_json()
-    assert isinstance(resumes, list)
-    assert len(resumes) >= 5
-
-
-# --------------------------------------------------------------------------- #
-# List filters                                                                #
-# --------------------------------------------------------------------------- #
-
-def test_list_filter_by_user_id(client):
-    rows = client.get("/applications?user_id=6").get_json()
-    assert rows
-    assert all(r["User_Id"] == 6 for r in rows)
-
-
-def test_list_filter_by_status(client):
-    rows = client.get("/applications?status=Submitted").get_json()
-    assert all(r["Application_Status"] == "Submitted" for r in rows)
-
-
-# --------------------------------------------------------------------------- #
-# Create / update / submit / withdraw / delete                                #
-# --------------------------------------------------------------------------- #
 
 def test_create_defaults_to_draft(client):
-    body = client.post("/applications", json={
-        "User_Id": 6, "JobPosting_Id": 999,
-        "Availability_Date": "2099-01-01",
-    }).get_json()
-    assert body["Application_Status"] == "Draft"
-    assert body["Application_SubmittedAt"] is None
+    body = client.post(
+        "/applications",
+        json={"user_id": 10, "job_posting_id": 77},
+    ).get_json()
+    assert body["application_status"] == "Draft"
+    assert body["submitted_at"] is None
 
 
 def test_duplicate_active_application_is_blocked(client):
-    # user 6 already has a Submitted application for posting 1 in the seed.
-    resp = client.post("/applications", json={
-        "User_Id": 6, "JobPosting_Id": 1,
-    })
-    assert resp.status_code == 409
-    assert "already" in resp.get_json()["error"].lower()
+    res = client.post("/applications", json={"user_id": 6, "job_posting_id": 1})
+    assert res.status_code == 409
+    assert "already" in res.get_json()["error"].lower()
 
 
 def test_submit_requires_resume_and_declaration(client):
-    created = client.post("/applications", json={
-        "User_Id": 6, "JobPosting_Id": 999,
-    }).get_json()
-    aid = created["Application_Id"]
-    # Missing resume + declaration.
-    resp = client.put(f"/applications/{aid}/submit")
-    assert resp.status_code == 400
+    created = client.post(
+        "/applications",
+        json={"user_id": 11, "job_posting_id": 88},
+    ).get_json()
+    aid = created["application_id"]
+
+    res = client.put(f"/applications/{aid}/submit")
+    assert res.status_code == 400
 
 
 def test_submit_when_ready_transitions_to_submitted(client):
-    # Upload a resume first.
-    resume_body = client.post("/resumes", json={
-        "User_Id": 6,
-        "Resume_Filename": "test.pdf",
-        "Resume_MimeType": "application/pdf",
-        "Resume_Data_Base64": base64.b64encode(b"%PDF-1.4\ntest\n").decode(),
-    }).get_json()
-    resume_id = resume_body["Resume_Id"]
-    # Create + fill + submit.
-    created = client.post("/applications", json={
-        "User_Id": 6, "JobPosting_Id": 999,
-        "Resume_Id": resume_id,
-        "Declaration_Accepted": 1,
-    }).get_json()
-    aid = created["Application_Id"]
-    submitted = client.put(f"/applications/{aid}/submit").get_json()
-    assert submitted["Application_Status"] == "Submitted"
-    assert submitted["Application_SubmittedAt"] is not None
+    created = client.post(
+        "/applications",
+        json={
+            "user_id": 12,
+            "job_posting_id": 89,
+            "resume_id": 123,
+            "declaration_accepted": 1,
+        },
+    ).get_json()
+    aid = created["application_id"]
+
+    submitted = client.put(f"/applications/{aid}/submit")
+    assert submitted.status_code == 200
+    out = submitted.get_json()
+    assert out["application_status"] == "Submitted"
+    assert out["submitted_at"] is not None
 
 
-def test_withdraw_updates_status(client):
-    # user 6 has a Shortlisted application in the seed.
-    rows = client.get("/applications?user_id=6&status=Shortlisted").get_json()
-    assert rows
-    aid = rows[0]["Application_Id"]
-    withdrawn = client.put(f"/applications/{aid}/withdraw").get_json()
-    assert withdrawn["Application_Status"] == "Withdrawn"
+def test_withdraw_and_delete_rules(client):
+    shortlisted = client.get("/applications?user_id=6&status=Shortlisted").get_json()
+    aid_shortlisted = shortlisted[0]["application_id"]
+    withdrawn = client.put(f"/applications/{aid_shortlisted}/withdraw")
+    assert withdrawn.status_code == 200
+    assert withdrawn.get_json()["application_status"] == "Withdrawn"
+
+    rejected = client.get("/applications?status=Rejected").get_json()[0]["application_id"]
+    cannot_withdraw = client.put(f"/applications/{rejected}/withdraw")
+    assert cannot_withdraw.status_code == 400
+
+    submitted = client.get("/applications?status=Submitted").get_json()[0]["application_id"]
+    cannot_delete = client.delete(f"/applications/{submitted}")
+    assert cannot_delete.status_code == 400
+
+    draft = client.get("/applications?status=Draft").get_json()[0]["application_id"]
+    deleted = client.delete(f"/applications/{draft}")
+    assert deleted.status_code == 200
+    assert client.get(f"/applications/{draft}").status_code == 404
 
 
-def test_cannot_withdraw_terminal_status(client):
-    hired = client.get("/applications?status=Hired").get_json()
-    assert hired
-    resp = client.put(f"/applications/{hired[0]['Application_Id']}/withdraw")
-    assert resp.status_code == 400
-
-
-def test_delete_only_allowed_for_draft(client):
-    submitted = client.get("/applications?status=Submitted").get_json()
-    assert submitted
-    resp = client.delete(f"/applications/{submitted[0]['Application_Id']}")
-    assert resp.status_code == 400
-
-
-def test_delete_draft_succeeds(client):
-    drafts = client.get("/applications?status=Draft").get_json()
-    assert drafts
-    aid = drafts[0]["Application_Id"]
-    resp = client.delete(f"/applications/{aid}")
-    assert resp.status_code in (200, 204)
-    assert client.get(f"/applications/{aid}").status_code == 404
-
-
-# --------------------------------------------------------------------------- #
-# Resumes                                                                     #
-# --------------------------------------------------------------------------- #
-
-def test_upload_and_download_resume(client):
-    payload = b"%PDF-1.4\nhello world\n"
-    resp = client.post("/resumes", json={
-        "User_Id": 6,
-        "Resume_Filename": "my.pdf",
-        "Resume_MimeType": "application/pdf",
-        "Resume_Data_Base64": base64.b64encode(payload).decode(),
-    })
-    assert resp.status_code == 201
-    resume_id = resp.get_json()["Resume_Id"]
-    dl = client.get(f"/resumes/{resume_id}/download")
-    assert dl.status_code == 200
-    assert dl.data == payload
-
-
-# --------------------------------------------------------------------------- #
-# AI screenings                                                               #
-# --------------------------------------------------------------------------- #
-
-def test_upsert_and_get_screening(client):
-    apps = client.get("/applications?status=Submitted").get_json()
-    aid = apps[0]["Application_Id"]
-    payload = {
-        "Recommendation": "Yes",
-        "Reasoning": "Strong overall fit.",
-    }
-    resp = client.put(f"/ai-screenings/{aid}", json=payload).get_json()
-    assert resp["Recommendation"] == "Yes"
-    got = client.get(f"/ai-screenings/{aid}").get_json()
-    assert got["Reasoning"] == "Strong overall fit."
-
-
-# --------------------------------------------------------------------------- #
-# Favorite filters                                                            #
-# --------------------------------------------------------------------------- #
-
-def test_save_and_delete_favorite_filter(client):
-    created = client.post("/favorite-filters", json={
-        "Staff_UserId": 1, "Filter_Name": "Hot list", "Filter_Query": "status=Shortlisted",
-    })
-    assert created.status_code == 201
-    filter_id = created.get_json()["Filter_Id"]
-    listing = client.get("/favorite-filters?staff_user_id=1").get_json()
-    assert any(f["Filter_Id"] == filter_id for f in listing)
-    assert client.delete(f"/favorite-filters/{filter_id}").status_code == 200
+def test_update_status_via_generic_update_endpoint(client):
+    submitted = client.get("/applications?status=Submitted").get_json()[0]["application_id"]
+    res = client.put(
+        f"/applications/{submitted}",
+        json={"application_status": "Interview Scheduled"},
+    )
+    assert res.status_code == 200
+    assert res.get_json()["application_status"] == "Interview Scheduled"
