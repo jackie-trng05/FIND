@@ -19,7 +19,7 @@ candidate screening.
 - **Apply** button on any Published job posting opens the Application form
   (auto-populates job title, first name, last name, email).
 - Required sections: **Availability** (future date), **Resume Upload**
-  (PDF/DOCX, ≤5 MB), **Declaration** checkbox.
+  (PDF only, ≤5 MB), **Declaration** checkbox.
 - **Save Draft** stores in-progress applications; **Delete** hard-deletes
   drafts with a themed confirmation dialog.
 - **Submit** requires all validations to pass; Apply is disabled if the

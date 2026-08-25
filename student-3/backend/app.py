@@ -56,10 +56,8 @@ EVALUATIONS_URL = os.getenv("EVALUATIONS_PUBLIC_URL", "http://localhost:16016")
 MAX_RESUME_BYTES = 5 * 1024 * 1024
 ALLOWED_RESUME_MIME = {
     "application/pdf": "PDF",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
-    "application/msword": "DOC",
 }
-ALLOWED_RESUME_EXTS = (".pdf", ".docx", ".doc")
+ALLOWED_RESUME_EXTS = (".pdf",)
 
 VALID_STATUSES = (
     "Draft", "Submitted", "Shortlisted", "Interview Requested",
@@ -520,8 +518,8 @@ def render_apply_form(posting, user, application=None, resume=None, error=""):
                             {"Replace resume" if resume else f"Upload resume {_REQ}"}
                         </label>
                         <input class="form-input" type="file" name="resume_file"
-                               accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                        <p class="form-help">PDF or DOCX, maximum 5 MB.</p>
+                               accept=".pdf,application/pdf">
+                        <p class="form-help">PDF only, maximum 5 MB.</p>
                     </div>
                 </fieldset>
 
@@ -895,11 +893,11 @@ def parse_screening_response(text):
 def validate_resume(file_storage):
     filename = (file_storage.filename or "").lower()
     if not any(filename.endswith(ext) for ext in ALLOWED_RESUME_EXTS):
-        return "Resume must be a PDF or DOCX file."
+        return "Resume must be a PDF file."
     mimetype = (file_storage.mimetype or "").lower()
     if mimetype and mimetype not in ALLOWED_RESUME_MIME:
         if not any(filename.endswith(ext) for ext in ALLOWED_RESUME_EXTS):
-            return "Resume must be a PDF or DOCX file."
+            return "Resume must be a PDF file."
     try:
         file_storage.stream.seek(0, 2)
         size = file_storage.stream.tell()

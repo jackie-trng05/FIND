@@ -44,7 +44,7 @@
             }
             if (hasNewFile) {
                 const f = resumeInput.files[0];
-                if (!/\.(pdf|docx)$/i.test(f.name)) { showError('Resume must be a PDF or DOCX file.'); return; }
+                if (!/\.pdf$/i.test(f.name)) { showError('Resume must be a PDF file.'); return; }
                 if (f.size > 5 * 1024 * 1024) { showError('Resume must be 5 MB or smaller.'); return; }
             }
             if (declaration && !declaration.checked) {
@@ -52,7 +52,7 @@
             }
         } else if (action === 'save' && resumeInput && resumeInput.files && resumeInput.files.length > 0) {
             const f = resumeInput.files[0];
-            if (!/\.(pdf|docx)$/i.test(f.name)) { showError('Resume must be a PDF or DOCX file.'); return; }
+            if (!/\.pdf$/i.test(f.name)) { showError('Resume must be a PDF file.'); return; }
             if (f.size > 5 * 1024 * 1024) { showError('Resume must be 5 MB or smaller.'); return; }
         }
         clearError();
