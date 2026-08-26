@@ -272,4 +272,4 @@ def delete_resume(resume_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=6001, debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6001")), debug=True)

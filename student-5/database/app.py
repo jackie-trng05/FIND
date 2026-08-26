@@ -185,4 +185,4 @@ def delete_evaluation(evaluation_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=6005, debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6005")), debug=True)
