@@ -18,7 +18,7 @@ import os
 from datetime import date, datetime
 
 import requests
-from flask import Flask, make_response, render_template, request, send_from_directory
+from flask import Flask, Response, make_response, render_template, request, send_from_directory, stream_with_context
 
 app = Flask(__name__, template_folder="templates")
 LOCAL_CSS_DIR = os.path.join(os.path.dirname(__file__), "css")
@@ -96,6 +96,39 @@ def _backend_get(path, params=None):
         params=params,
         headers=headers,
         timeout=TIMEOUT,
+    )
+
+
+@app.get("/resumes/<int:resume_id>/download")
+def download_resume(resume_id: int):
+    headers = {}
+    cookie = request.headers.get("Cookie", "")
+    if cookie:
+        headers["Cookie"] = cookie
+    try:
+        resp = requests.get(
+            f"{BACKEND_SERVICE_URL}/api/resumes/{resume_id}/download",
+            headers=headers,
+            timeout=TIMEOUT,
+            stream=True,
+        )
+    except requests.RequestException:
+        return Response("Backend unavailable", status=502, mimetype="text/plain")
+
+    proxy_headers = {
+        "Content-Type": resp.headers.get("Content-Type", "application/octet-stream")
+    }
+    disposition = resp.headers.get("Content-Disposition")
+    if disposition:
+        proxy_headers["Content-Disposition"] = disposition
+
+    if resp.status_code != 200:
+        return Response(resp.content, status=resp.status_code, headers=proxy_headers)
+
+    return Response(
+        stream_with_context(resp.iter_content(chunk_size=8192)),
+        status=200,
+        headers=proxy_headers,
     )
 
 

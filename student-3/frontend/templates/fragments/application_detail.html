@@ -87,8 +87,7 @@
                 {% if resume %}
                 <div class="resume-current">
                     <span class="resume-current-label">Uploaded file:</span>
-                    <a class="resume-current-name" target="_blank"
-                       href="{{ backend_url }}/api/resumes/{{ resume.resume_id }}/download">
+                    <a class="resume-current-name" href="/resumes/{{ resume.resume_id }}/download">
                         {{ resume.file_name or 'resume.pdf' }}
                     </a>
                 </div>
