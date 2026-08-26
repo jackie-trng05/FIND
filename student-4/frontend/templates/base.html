@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Interviews — FIND{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+<div id="page-wrapper" style="display:none;">
+<nav class="navbar">
+    <div class="container">
+        <a href="{{ home_url }}" class="navbar-brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="28" height="28"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            FIND
+        </a>
+        <div class="navbar-user">
+            <a class="btn btn-ghost btn-sm" href="{{ home_url }}">&#8592; Home</a>
+            <span class="user-badge" id="nav-role-badge"></span>
+            <span id="nav-user-name" style="font-size:0.9rem;font-weight:500;"></span>
+            <button class="btn btn-ghost btn-sm" id="nav-logout-btn" onclick="handleLogout()" style="display:none;">Log Out</button>
+        </div>
+    </div>
+</nav>
+
+<div class="subnav">
+    <div class="container">
+        <a href="/" class="{{ 'active' if active_page == 'calendar' }}">Interview Calendar</a>
+        <a href="/list" class="{{ 'active' if active_page == 'list' }}">All Interviews</a>
+        <a href="/applications" class="staff-only {{ 'active' if active_page == 'applications' }}">To Schedule</a>
+        <a href="/to-complete" class="staff-only {{ 'active' if active_page == 'to-complete' }}">Interviews To Complete</a>
+        <a href="/schedule" class="staff-only {{ 'active' if active_page == 'schedule' }}">Schedule Interview</a>
+        <a href="/requests" class="applicant-only {{ 'active' if active_page == 'requests' }}">My Requests</a>
+    </div>
+</div>
+
+<main class="main-content">
+    <div class="container">
+        <div id="toast-area"></div>
+        {% block content %}{% endblock %}
+    </div>
+</main>
+</div>
+
+<!-- Themed confirmation dialog (shared runtime reuses these nodes). -->
+<div id="confirm-modal" class="modal-overlay" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <h3 class="modal-title" id="confirm-title">Please confirm</h3>
+        <p class="modal-message" id="confirm-message"></p>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="confirm-cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirm-ok">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Shared FIND runtime: session auth guard, navbar, toasts, htmx.config,
+    // 401->login, HX-Redirect, themed confirm dialog and delegated row clicks.
+    window.__FIND_CONFIG = {
+        sharedApiUrl: '{{ shared_api_url }}',
+        loginUrl: '{{ login_url }}',
+        homeUrl: '{{ home_url }}'{% if require_role %},
+        requireRole: '{{ require_role }}'{% endif %}
+    };
+</script>
+<script src="/js/find-app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

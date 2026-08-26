@@ -1,7 +1,14 @@
-FROM nginx:alpine
+FROM python:3.11-slim
 
-COPY templates/ /usr/share/nginx/html/
-COPY css/ /usr/share/nginx/html/css/
-COPY js/ /usr/share/nginx/html/js/
+WORKDIR /app
 
-EXPOSE 80
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app.py .
+COPY templates/ ./templates/
+COPY css/ ./css/
+
+EXPOSE 3004
+
+CMD ["python", "app.py"]

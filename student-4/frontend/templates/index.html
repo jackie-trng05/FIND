@@ -1,140 +1,19 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Interviews · Calendar — FIND</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <script src="js/common.js"></script>
-</head>
-<body>
-<div id="app-chrome"></div>
-<main class="app-shell">
-    <div class="page-head">
-        <div>
-            <h1>Interview Calendar</h1>
-            <p id="cal-sub">Your interviews at a glance.</p>
-        </div>
+{% extends "base.html" %}
+{% block title %}Interviews · Calendar — FIND{% endblock %}
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Interview Calendar</h1>
+        <p>Your interviews at a glance.</p>
     </div>
+</div>
 
-    <section class="card calendar">
-        <div class="calendar-bar">
-            <button class="btn btn-secondary btn-sm" id="prev-month" type="button">&larr; Prev</button>
-            <h2 id="cal-title">&nbsp;</h2>
-            <button class="btn btn-secondary btn-sm" id="next-month" type="button">Next &rarr;</button>
-        </div>
-        <div id="cal-body"><p class="loading">Loading…</p></div>
-    </section>
-</main>
-
-<script>
-const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const CAL_STATUS_CLASS = {
-    "shortlisted": "cal-shortlisted",
-    "interview requested": "cal-requested",
-    "interview scheduled": "cal-scheduled",
-    "interview completed": "cal-completed",
-    "withdrawn": "cal-withdrawn",
-};
-let interviews = [];
-let viewYear, viewMonth;
-
-function keyForDate(d) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function renderCalendar() {
-    const title = document.getElementById("cal-title");
-    const first = new Date(viewYear, viewMonth, 1);
-    title.textContent = first.toLocaleString(undefined, { month: "long", year: "numeric" });
-
-    const eventsByDay = {};
-    interviews.forEach((it) => {
-        const dt = parseDateTime(it.interview_datetime);
-        if (!dt) return;
-        if (dt.getFullYear() !== viewYear || dt.getMonth() !== viewMonth) return;
-        const key = keyForDate(dt);
-        (eventsByDay[key] = eventsByDay[key] || []).push({ dt, it });
-    });
-
-    const startDay = first.getDay();
-    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-    const todayKey = keyForDate(new Date());
-
-    let cells = "";
-    for (let i = 0; i < startDay; i++) cells += `<div class="cal-cell empty"></div>`;
-
-    for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(viewYear, viewMonth, day);
-        const key = keyForDate(date);
-        const isToday = key === todayKey;
-        const dayEvents = (eventsByDay[key] || []).sort((a, b) => a.dt - b.dt);
-        const eventsHtml = dayEvents
-            .map((e) => {
-                const time = e.dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-                const label = `${time} · ${escapeHtml(e.it.applicant_name)}`;
-                const cls = CAL_STATUS_CLASS[String(e.it.interview_status || "").toLowerCase()] || "cal-scheduled";
-                return `<a class="cal-event ${cls}" href="details.html?id=${e.it.interview_id}&from=calendar" title="${label} (${escapeHtml(e.it.interview_status)})">${label}</a>`;
-            })
-            .join("");
-        cells += `
-            <div class="cal-cell ${isToday ? "today" : ""}">
-                <span class="cal-daynum">${day}</span>
-                ${eventsHtml}
-            </div>`;
-    }
-
-    const dow = DOW.map((d) => `<div class="cal-dow">${d}</div>`).join("");
-    document.getElementById("cal-body").innerHTML = `<div class="cal-grid">${dow}${cells}</div>`;
-}
-
-function shiftMonth(delta) {
-    viewMonth += delta;
-    if (viewMonth < 0) { viewMonth = 11; viewYear--; }
-    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
-    renderCalendar();
-}
-
-(async function () {
-    // Deep link from the Applications service (?application=ID) opens the
-    // schedule form for that application directly.
-    const appParam = new URLSearchParams(window.location.search).get("application");
-    if (appParam) {
-        window.location.replace(`schedule.html?application_id=${encodeURIComponent(appParam)}`);
-        return;
-    }
-
-    const user = await initChrome("calendar");
-    if (!user) return;
-
-    document.getElementById("cal-sub").textContent =
-        user.role === "staff"
-            ? "Interviews you are handling."
-            : "Interviews you have been requested for.";
-
-    document.getElementById("prev-month").addEventListener("click", () => shiftMonth(-1));
-    document.getElementById("next-month").addEventListener("click", () => shiftMonth(1));
-
-    try {
-        interviews = await fetchInterviews(user);
-    } catch (err) {
-        document.getElementById("cal-body").innerHTML =
-            `<div class="alert alert-error">${escapeHtml(err.message)}</div>`;
-        return;
-    }
-
-    const now = new Date();
-    const upcoming = interviews
-        .map((it) => parseDateTime(it.interview_datetime))
-        .filter(Boolean)
-        .sort((a, b) => a - b);
-    const anchor = upcoming.find((d) => d >= now) || upcoming[0] || now;
-    viewYear = anchor.getFullYear();
-    viewMonth = anchor.getMonth();
-
-    renderCalendar();
-})();
-</script>
-</body>
-</html>
-
+<section class="card calendar">
+    <div id="cal-wrap"
+         hx-get="{{ backend_url }}/ui/calendar"
+         hx-trigger="load, interviewsChanged from:body"
+         hx-target="this">
+        <p class="loading">Loading…</p>
+    </div>
+</section>
+{% endblock %}

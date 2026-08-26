@@ -568,6 +568,25 @@ textarea::placeholder {
     min-height: 0;
 }
 
+/* ===== Schedule summary ===== */
+.summary-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1rem;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+}
+
+.muted {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+
 input.invalid,
 select.invalid,
 textarea.invalid {
