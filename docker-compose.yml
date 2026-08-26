@@ -7,6 +7,11 @@ services:
       - "16001:3000"
     environment:
       STUDENT_1_FRONTEND_URL: http://localhost:16004
+      STUDENT_2_FRONTEND_URL: http://localhost:16007
+      STUDENT_3_FRONTEND_URL: http://localhost:16010
+      STUDENT_4_FRONTEND_URL: http://localhost:16013
+      STUDENT_5_FRONTEND_URL: http://localhost:16016
+      SHARED_API_PUBLIC_URL: http://localhost:16002
     volumes:
       - ./shared/css:/app/shared-css:ro
     depends_on:
