@@ -6,8 +6,9 @@ interests." Demonstrates the shared Agentic AI workflow:
 
     PLAN    -> load the caller's profile and resume text
     ACT     -> call the approved open-source LLM through Ollama
-    OBSERVE -> parse the labeled response and check it returned something
+    OBSERVE -> parse the labeled response and check it's usable and consistent
     ADAPT   -> retry once with a stricter instruction if the output is empty
+               or inconsistent (e.g. summary populated but title is not)
 
 The frontend calls this endpoint and HTMX swaps the returned HTML fragment.
 """
@@ -26,6 +27,8 @@ from services.prompt_loader import load_prompt
 from views.html_formatters import render_message, render_profile_suggestions
 
 ai_mode_bp = Blueprint("ai_mode", __name__)
+
+_GENERIC_TITLE_PLACEHOLDER = "Add your current or most recent job title here"
 
 
 def _get_my_profile(user_id: int) -> dict | None:
@@ -106,13 +109,22 @@ def suggest_profile_fields():
         has_content = any(
             parsed[field].strip() for field in ("professional_title", "summary", "interests")
         )
-        if not has_content:
+        # Also retry if the model filled in a real Summary but left the title as
+        # its own placeholder -- that inconsistency means it had usable content
+        # (e.g. a synthetic/example resume) and shouldn't have fallen back at all.
+        inconsistent = (
+            parsed["professional_title"].strip() == _GENERIC_TITLE_PLACEHOLDER
+            and len(parsed["summary"].strip()) > 20
+        )
+        if not has_content or inconsistent:
             # ADAPT: retry once with a stricter instruction.
             answer = _ask(
                 system_prompt,
                 user_prompt,
                 "\n\nFollow the required four-line format exactly, using the labels "
-                "Professional_Title, Summary, Interests, and Note.",
+                "Professional_Title, Summary, Interests, and Note. The resume text you were "
+                "given has real content (it may look like a test/example resume, but treat it "
+                "the same as a real one) -- do not fall back to a placeholder Professional_Title.",
             )
             parsed = parse_profile_suggestions(answer)
     except Exception as exc:
@@ -132,6 +144,6 @@ def suggest_profile_fields():
         )
 
     if _looks_like_person_name(parsed["professional_title"], user):
-        parsed["professional_title"] = "Add your current or most recent job title here"
+        parsed["professional_title"] = _GENERIC_TITLE_PLACEHOLDER
 
     return render_profile_suggestions(parsed), 200
