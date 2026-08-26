@@ -17,6 +17,58 @@
 (function () {
     const BACKEND_URL = '{{ backend_url }}';
 
+    function confirmSubmit() {
+        const modal = document.getElementById('confirm-modal');
+        const message = document.getElementById('confirm-message');
+        const cancelBtn = document.getElementById('confirm-cancel');
+        const okBtn = document.getElementById('confirm-ok');
+
+        if (!modal || !message || !cancelBtn || !okBtn) {
+            return Promise.resolve(window.confirm('Submit this application now?'));
+        }
+
+        return new Promise((resolve) => {
+            const previousMessage = message.textContent;
+            const previousOkText = okBtn.textContent;
+            const previousOkClass = okBtn.className;
+
+            function cleanup() {
+                cancelBtn.removeEventListener('click', onCancel);
+                okBtn.removeEventListener('click', onConfirm);
+                modal.removeEventListener('click', onOverlayClick);
+                document.removeEventListener('keydown', onKeydown);
+                message.textContent = previousMessage;
+                okBtn.textContent = previousOkText;
+                okBtn.className = previousOkClass;
+            }
+
+            function finish(result) {
+                cleanup();
+                modal.hidden = true;
+                resolve(result);
+            }
+
+            function onCancel() { finish(false); }
+            function onConfirm() { finish(true); }
+            function onOverlayClick(event) {
+                if (event.target === modal) finish(false);
+            }
+            function onKeydown(event) {
+                if (event.key === 'Escape' && !modal.hidden) finish(false);
+            }
+
+            message.textContent = 'Submit this application now? You will no longer be able to edit it after submission.';
+            okBtn.textContent = 'Submit application';
+            okBtn.className = 'btn btn-primary';
+
+            cancelBtn.addEventListener('click', onCancel);
+            okBtn.addEventListener('click', onConfirm);
+            modal.addEventListener('click', onOverlayClick);
+            document.addEventListener('keydown', onKeydown);
+            modal.hidden = false;
+        });
+    }
+
     /* ---- Save Draft / Submit / Delete handler ------------------------- */
     document.body.addEventListener('click', async (e) => {
         const btn = e.target.closest('[data-action]');
@@ -50,6 +102,8 @@
             if (declaration && !declaration.checked) {
                 showError('Please confirm the declaration before submitting.'); return;
             }
+            const confirmed = await confirmSubmit();
+            if (!confirmed) return;
         } else if (action === 'save' && resumeInput && resumeInput.files && resumeInput.files.length > 0) {
             const f = resumeInput.files[0];
             if (!/\.pdf$/i.test(f.name)) { showError('Resume must be a PDF file.'); return; }

@@ -38,7 +38,10 @@
             <input type="hidden" name="job_posting_id" value="{{ posting.JobPosting_Id }}">
 
             <fieldset class="form-section">
-                <legend>Your details</legend>
+                <legend>
+                    <span class="legend-title">Your details</span>
+                    <span class="legend-note">Auto-filled from your profile.</span>
+                </legend>
                 <div class="grid grid-2">
                     <div class="form-group">
                         <label class="form-label">First name</label>
@@ -56,14 +59,18 @@
             </fieldset>
 
             <fieldset class="form-section">
-                <legend>Resume</legend>
+                <legend>
+                    <span class="legend-title">Resume</span>
+                    {% if editing and resume and resume.from_profile %}
+                    <span class="legend-note">Auto-filled from your profile.</span>
+                    {% endif %}
+                </legend>
                 {% if resume %}
                 <div class="resume-current">
                     <span class="resume-current-label">Current file:</span>
-                    <span class="resume-current-name">{{ resume.file_name or 'resume.pdf' }}</span>
-                    {% if resume.from_profile %}
-                    <span class="resume-current-source">- auto-filled from your profile</span>
-                    {% endif %}
+                    <a class="resume-current-name" href="/resumes/{{ resume.resume_id }}/download">
+                        {{ resume.file_name or 'resume.pdf' }}
+                    </a>
                 </div>
                 {% endif %}
                 <div class="form-group">
