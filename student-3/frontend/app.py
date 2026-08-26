@@ -18,9 +18,26 @@ import os
 from datetime import date, datetime
 
 import requests
-from flask import Flask, make_response, render_template, request
+from flask import Flask, make_response, render_template, request, send_from_directory
 
-app = Flask(__name__, static_folder="css", static_url_path="/css")
+app = Flask(__name__, template_folder="templates")
+LOCAL_CSS_DIR = os.path.join(os.path.dirname(__file__), "css")
+
+
+@app.get("/css/<path:filename>")
+def serve_css(filename):
+    # Local styles.css is served from this service; the shared theme.css comes
+    # from the mounted shared-css volume (single source of truth).
+    if os.path.exists(os.path.join(LOCAL_CSS_DIR, filename)):
+        return send_from_directory(LOCAL_CSS_DIR, filename)
+    return send_from_directory("/app/shared-css", filename)
+
+
+@app.get("/js/<path:filename>")
+def serve_js(filename):
+    # Shared front-end runtime served from the mounted shared-js volume.
+    return send_from_directory("/app/shared-js", filename)
+
 
 # Browser-facing URLs.
 BACKEND_PUBLIC_URL = os.environ["BACKEND_PUBLIC_URL"]

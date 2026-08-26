@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import sys
 
 from flask import Flask
@@ -14,7 +15,16 @@ from routes.normal_ui import normal_ui_bp
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
+    # The HTMX front-end (a different origin) calls this API with the shared
+    # session cookie, so credentialed CORS must be scoped to that origin and the
+    # HX-* response headers must be exposed for HTMX to act on them.
+    frontend_origin = os.getenv("FRONTEND_PUBLIC_URL", "http://localhost:16013")
+    CORS(
+        app,
+        supports_credentials=True,
+        origins=[frontend_origin],
+        expose_headers=["HX-Redirect", "HX-Trigger"],
+    )
 
     app.register_blueprint(normal_ui_bp)
     app.register_blueprint(ai_mode_bp)

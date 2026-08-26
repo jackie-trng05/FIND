@@ -3,13 +3,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}My Profile — FIND{% endblock %}</title>
+    <title>{% block title %}Interviews — FIND{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="/css/styles.css">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
 <body>
+<div id="page-wrapper" style="display:none;">
 <nav class="navbar">
     <div class="container">
         <a href="{{ home_url }}" class="navbar-brand">
@@ -25,14 +27,26 @@
     </div>
 </nav>
 
+<div class="subnav">
+    <div class="container">
+        <a href="/" class="{{ 'active' if active_page == 'calendar' }}">Interview Calendar</a>
+        <a href="/list" class="{{ 'active' if active_page == 'list' }}">All Interviews</a>
+        <a href="/applications" class="staff-only {{ 'active' if active_page == 'applications' }}">To Schedule</a>
+        <a href="/to-complete" class="staff-only {{ 'active' if active_page == 'to-complete' }}">Interviews To Complete</a>
+        <a href="/schedule" class="staff-only {{ 'active' if active_page == 'schedule' }}">Schedule Interview</a>
+        <a href="/requests" class="applicant-only {{ 'active' if active_page == 'requests' }}">My Requests</a>
+    </div>
+</div>
+
 <main class="main-content">
     <div class="container">
         <div id="toast-area"></div>
         {% block content %}{% endblock %}
     </div>
 </main>
+</div>
 
-<!-- Themed confirmation dialog (replaces the browser's native confirm) -->
+<!-- Themed confirmation dialog (shared runtime reuses these nodes). -->
 <div id="confirm-modal" class="modal-overlay" hidden>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
         <h3 class="modal-title" id="confirm-title">Please confirm</h3>
@@ -44,56 +58,17 @@
     </div>
 </div>
 
-<footer class="footer">
-    <div class="container">
-        <span>&copy; 2026 FIND — Advanced Software Development</span>
-        <span>UTS 41026</span>
-    </div>
-</footer>
-
 <script>
     // Shared FIND runtime: session auth guard, navbar, toasts, htmx.config,
-    // 401->login, HX-Redirect and the themed confirm dialog all live here.
+    // 401->login, HX-Redirect, themed confirm dialog and delegated row clicks.
     window.__FIND_CONFIG = {
-        sharedApiUrl: '{{ shared_api_public_url }}',
+        sharedApiUrl: '{{ shared_api_url }}',
         loginUrl: '{{ login_url }}',
-        logoutUrl: '{{ logout_url }}'
+        homeUrl: '{{ home_url }}'{% if require_role %},
+        requireRole: '{{ require_role }}'{% endif %}
     };
 </script>
 <script src="/js/find-app.js"></script>
-
-<script>
-    // Student-1-specific behaviour layered on top of the shared runtime.
-    (function () {
-        // Extra upload/error toasts (the shared runtime already redirects on 401).
-        document.body.addEventListener('htmx:responseError', function (e) {
-            var status = e.detail && e.detail.xhr && e.detail.xhr.status;
-            if (status === 401) return;
-            if (status === 413) {
-                window.showToast('File is too large. Max 5MB.', 'error');
-            } else {
-                window.showToast('Something went wrong. Please try again.', 'error');
-            }
-        });
-
-        // Auto-dismiss inline fragment messages (profile/resume/user forms).
-        document.body.addEventListener('htmx:afterSwap', function () {
-            ['profile-msg', 'resume-msg', 'user-details-msg'].forEach(function (id) {
-                var el = document.getElementById(id);
-                if (el && el.innerHTML.trim()) {
-                    setTimeout(function () { el.innerHTML = ''; }, 5000);
-                }
-            });
-        });
-
-        // Keep the navbar name in sync after a successful /user save (HX-Trigger).
-        document.body.addEventListener('userUpdated', function (e) {
-            var nameEl = document.getElementById('nav-user-name');
-            if (nameEl && e.detail && e.detail.first_name) {
-                nameEl.textContent = e.detail.first_name + ' ' + (e.detail.last_name || '');
-            }
-        });
-    })();
-</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

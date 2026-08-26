@@ -8,6 +8,18 @@ CORS(app, supports_credentials=True)
 
 BACKEND_PUBLIC_URL = os.environ.get("BACKEND_PUBLIC_URL", "http://localhost:16017")
 FIND_HOME_URL = os.environ.get("FIND_HOME_URL", "http://localhost:16001/dashboard")
+SHARED_API_PUBLIC_URL = os.environ.get("SHARED_API_PUBLIC_URL", "http://localhost:16002")
+LOGIN_URL = os.environ.get("LOGIN_URL", "http://localhost:16001/login")
+APPLICATIONS_PUBLIC_URL = os.environ.get("APPLICATIONS_PUBLIC_URL", "http://localhost:16010")
+
+
+@app.context_processor
+def inject_public_urls():
+    return {
+        "shared_api_url": SHARED_API_PUBLIC_URL,
+        "login_url": LOGIN_URL,
+        "applications_public_url": APPLICATIONS_PUBLIC_URL,
+    }
 
 
 @app.get("/health")
@@ -42,6 +54,11 @@ def edit_evaluation(evaluation_id):
 @app.get("/css/<path:filename>")
 def shared_css(filename):
     return send_from_directory("/app/shared-css", filename)
+
+
+@app.get("/js/<path:filename>")
+def shared_js(filename):
+    return send_from_directory("/app/shared-js", filename)
 
 
 if __name__ == "__main__":

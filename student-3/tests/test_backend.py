@@ -1,23 +1,35 @@
-"""Tests for the Student 3 backend helper rendering and AI parsing logic."""
+"""Tests for the Student 3 backend helper rendering and AI parsing logic.
 
-import importlib.util
+The backend is composed from the ``config``, ``services`` and ``views``
+packages (see ``backend/app.py``); this suite exercises the presentation and
+AI-parsing helpers directly from those modules.
+"""
+
 import os
-from pathlib import Path
+import types
+
+# config.py reads these service URLs at import time.
+os.environ.setdefault("DATABASE_SERVICE_URL", "http://student-3-db:6003")
+os.environ.setdefault("SHARED_API_URL", "http://find-shared-api:5000")
+os.environ.setdefault("SHARED_DB_URL", "http://find-shared-db:6000")
+os.environ.setdefault("POSTINGS_DB_URL", "http://student-2-db:6002")
+os.environ.setdefault("STUDENT_1_DB_URL", "http://find-student-1-db:6001")
+
+# backend/ is placed on sys.path by conftest.py.
+import config
+from services import llm_client
+from views import html_formatters
 
 
 def _load_backend_module():
-    backend_path = Path(__file__).resolve().parents[1] / "backend" / "app.py"
-
-    os.environ.setdefault("DATABASE_SERVICE_URL", "http://student-3-db:6003")
-    os.environ.setdefault("SHARED_API_URL", "http://find-shared-api:5000")
-    os.environ.setdefault("SHARED_DB_URL", "http://find-shared-db:6000")
-    os.environ.setdefault("POSTINGS_DB_URL", "http://student-2-db:6002")
-    os.environ.setdefault("STUDENT_1_DB_URL", "http://find-student-1-db:6001")
-
-    spec = importlib.util.spec_from_file_location("student3_backend_app", backend_path)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
+    """Expose the formatter/parsing helpers under a single namespace."""
+    module = types.SimpleNamespace()
+    module.render_message = html_formatters.render_message
+    module.render_my_applications_table = html_formatters.render_my_applications_table
+    module.render_ai_screening_panel = html_formatters.render_ai_screening_panel
+    module.render_pending_interviews_bar = html_formatters.render_pending_interviews_bar
+    module.parse_screening_response = llm_client.parse_screening_response
+    module.FRONTEND_PUBLIC_URL = config.FRONTEND_PUBLIC_URL
     return module
 
 

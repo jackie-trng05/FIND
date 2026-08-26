@@ -16,12 +16,41 @@ sync with the interview lifecycle.
 import os
 
 import requests
+from flask import request
 
 APPLICATION_DB_URL = os.getenv("APPLICATION_DB_URL", "http://student-3-db:6003")
 JOB_POSTING_DB_URL = os.getenv("JOB_POSTING_DB_URL", "http://student-2-db:6002")
 SHARED_DB_URL = os.getenv("SHARED_DB_URL", "http://find-shared-db:6000")
+SHARED_API_URL = os.getenv("SHARED_API_URL", "http://find-shared-api:5000")
 
 TIMEOUT = 5
+
+
+# --------------------------------------------------------------------------- #
+# Session (shared authentication service)                                     #
+# --------------------------------------------------------------------------- #
+
+def get_session_user():
+    """Resolve the logged-in user from the shared session cookie.
+
+    Authentication lives entirely in the shared service — this only forwards
+    the incoming cookie to the shared API's session endpoint and returns the
+    user, or ``None`` when there is no valid session.
+    """
+    cookie = request.headers.get("Cookie", "")
+    if not cookie:
+        return None
+    try:
+        resp = requests.get(
+            f"{SHARED_API_URL}/api/auth/session",
+            headers={"Cookie": cookie},
+            timeout=TIMEOUT,
+        )
+    except requests.RequestException:
+        return None
+    if resp.status_code != 200:
+        return None
+    return (resp.json() or {}).get("user")
 
 
 # --------------------------------------------------------------------------- #
@@ -60,7 +89,7 @@ def set_application_status(application_id, status):
     try:
         resp = requests.put(
             f"{APPLICATION_DB_URL}/applications/{application_id}",
-            json={"Application_Status": status},
+            json={"application_status": status},
             timeout=TIMEOUT,
         )
         resp.raise_for_status()
@@ -108,7 +137,7 @@ def enrich_interviews(interviews):
     applicant + job posting, and each ``staff_id`` -> user name (shared DB).
     Missing services degrade gracefully to empty strings.
     """
-    apps_by_id = {str(a.get("Application_Id")): a for a in list_applications()}
+    apps_by_id = {str(a.get("application_id")): a for a in list_applications()}
     postings = _postings_by_id()
     users = _users_by_id()
 
@@ -116,15 +145,15 @@ def enrich_interviews(interviews):
     for row in interviews:
         item = dict(row)
         app = apps_by_id.get(str(row.get("application_id"))) or {}
-        applicant_id = app.get("User_Id")
-        posting_id = app.get("JobPosting_Id")
+        applicant_id = app.get("user_id")
+        posting_id = app.get("job_posting_id")
         posting = postings.get(str(posting_id)) or {}
 
         item["applicant_id"] = applicant_id or ""
         item["applicant_name"] = _full_name(users.get(str(applicant_id)))
         item["job_posting_id"] = posting_id or ""
         item["job_posting_title"] = posting.get("Job_Title", "")
-        item["application_status"] = app.get("Application_Status", "")
+        item["application_status"] = app.get("application_status", "")
         item["staff_name"] = _full_name(users.get(str(row.get("staff_id"))))
         enriched.append(item)
     return enriched
@@ -151,16 +180,16 @@ def shortlisted_for_staff(staff_id):
     apps = list_applications(status="Shortlisted")
     result = []
     for app in apps:
-        posting_id = str(app.get("JobPosting_Id"))
+        posting_id = str(app.get("job_posting_id"))
         if owned and posting_id not in owned:
             continue
         posting = postings.get(posting_id) or {}
         result.append({
-            "application_id": app.get("Application_Id"),
-            "applicant_id": app.get("User_Id"),
-            "applicant_name": _full_name(users.get(str(app.get("User_Id")))),
-            "job_posting_id": app.get("JobPosting_Id"),
+            "application_id": app.get("application_id"),
+            "applicant_id": app.get("user_id"),
+            "applicant_name": _full_name(users.get(str(app.get("user_id")))),
+            "job_posting_id": app.get("job_posting_id"),
             "job_posting_title": posting.get("Job_Title", f"Posting #{posting_id}"),
-            "application_status": app.get("Application_Status", "Shortlisted"),
+            "application_status": app.get("application_status", "Shortlisted"),
         })
     return result

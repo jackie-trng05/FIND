@@ -66,6 +66,17 @@ def stub_integration(monkeypatch):
     monkeypatch.setattr(integration_api, "set_application_status", lambda *a, **k: True)
 
 
+@pytest.fixture(autouse=True)
+def stub_session(monkeypatch):
+    """Treat every request as an authenticated staff member.
+
+    Authentication itself lives in the shared service; these tests only need
+    the session gate to pass so the route logic can be exercised.
+    """
+    fake_user = {"user_id": 1, "role": "staff", "first_name": "Test", "last_name": "Staff"}
+    monkeypatch.setattr(normal_ui, "get_session_user", lambda: fake_user)
+
+
 # --------------------------------------------------------------------------- #
 # HTML formatters                                                              #
 # --------------------------------------------------------------------------- #
