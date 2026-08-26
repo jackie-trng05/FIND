@@ -6,9 +6,13 @@ the markup here separates presentation from the route/handler logic.
 
 from datetime import date
 from html import escape
+import os
 
 # Values allowed for the job-type select controls.
 JOB_TYPES = ("Full time", "Part time", "Casual", "Contract")
+
+# Browser-facing URL of Student 3's Application service (for apply/view links).
+APPLICATIONS_PUBLIC_URL = os.getenv("APPLICATIONS_PUBLIC_URL", "http://localhost:16010")
 
 
 def _e(value) -> str:
@@ -121,10 +125,10 @@ def render_posting_panel(posting: dict, *, backend_url: str, frontend_url: str, 
     is_applicant = role == "applicant"
 
     if is_applicant:
-        apply_url = f"http://localhost:16010/apply/{pid}"
+        apply_url = f"{APPLICATIONS_PUBLIC_URL}/apply/{pid}"
         if existing_application and existing_application.get("application_id"):
             app_id = existing_application["application_id"]
-            view_url = f"http://localhost:16010/applications/{app_id}"
+            view_url = f"{APPLICATIONS_PUBLIC_URL}/applications/{app_id}"
             actions_html = (
                 '<div class="panel-actions">'
                 f'<a class="btn btn-primary" href="{view_url}" '
