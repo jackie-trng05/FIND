@@ -1,21 +1,80 @@
-Emily Johnson
+%PDF-1.4
+%“Œ‹ž ReportLab Generated PDF document (opensource)
+1 0 obj
+<<
+/F1 2 0 R /F2 3 0 R /F3 4 0 R
+>>
+endobj
+2 0 obj
+<<
+/BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font
+>>
+endobj
+3 0 obj
+<<
+/BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /Name /F2 /Subtype /Type1 /Type /Font
+>>
+endobj
+4 0 obj
+<<
+/BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding /Name /F3 /Subtype /Type1 /Type /Font
+>>
+endobj
+5 0 obj
+<<
+/Contents 9 0 R /MediaBox [ 0 0 612 792 ] /Parent 8 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 /Trans <<
 
-Senior Software Engineer
+>> 
+  /Type /Page
+>>
+endobj
+6 0 obj
+<<
+/PageMode /UseNone /Pages 8 0 R /Type /Catalog
+>>
+endobj
+7 0 obj
+<<
+/Author (\(anonymous\)) /CreationDate (D:20260826232540+10'00') /Creator (\(unspecified\)) /Keywords () /ModDate (D:20260826232540+10'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+  /Subject (\(unspecified\)) /Title (\(anonymous\)) /Trapped /False
+>>
+endobj
+8 0 obj
+<<
+/Count 1 /Kids [ 5 0 R ] /Type /Pages
+>>
+endobj
+9 0 obj
+<<
+/Filter [ /ASCII85Decode /FlateDecode ] /Length 612
+>>
+stream
+Gat='?#SFN'Re<2302f$1^OI1D_!;.SYh70quN!di"jA1G%d5A5CRWDWL-_Ii<RQ3X`McNpY6#t6:B(iQbXlaodiED,?l<`H3pnGQtF05E;1)T&7QKecbWQ<DF0_50ZdK,[jT6h>gHkI,DQoP%cc$FA6Ir^hC,GTB4R(E^,Y3Ni;OF=0^ehbqZlbg`jA$=OCE(2d&ZG#(rB7S=V2N)d;X13;'/Zf&G6Q%FePc%i+?mX,:!Z0ibB#NiF*2b$?DF**Y4NbV,FPajgt(V8Y\);`2>K=NF%aTXHelLm)r:og.Tlg)r"#HeqWVZ!mhKQ7(ssIJ6GnA_USiXe0L!,?@dRna=sT`YhZQ9=KQ#h>%,N8F&'1,e`MqBh[PqoBmn@m352K\O"uDAAp6IWnNaY<F&eC'0UJM;C#a&N3_V.>d`!e@?7RKZYH*X`GaL*=gs#4<KITe*<g@(e??0rU=cTEEk[HD1hicr*<#hC^kcjs?:7KC3k<b'&,V7^6'I<LB9^S12>hH#.-@;$n$qY>MO5XRPZ"?S+8<j-.,T?]4">e1ZMK:_,>F*]`#t"ZRIop$'eW/@qS'NAQc6][C7\]LGM,)fuc=n3rOG;[P&Y4S#~>endstream
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000061 00000 n 
+0000000112 00000 n 
+0000000219 00000 n 
+0000000331 00000 n 
+0000000446 00000 n 
+0000000639 00000 n 
+0000000707 00000 n 
+0000000987 00000 n 
+0000001046 00000 n 
+trailer
+<<
+/ID 
+[<47692f2fb1ecad1a17d3905dd1c6ffa7><47692f2fb1ecad1a17d3905dd1c6ffa7>]
+% ReportLab generated PDF document -- digest (opensource)
 
-Sydney, Australia | +61400000006 | emily.johnson@email.com
-
-Summary
-
-Backend engineer with 7 years of experience building software services.
-
-Experience
-
-Senior Software Engineer - FIND Recruitment Platform
-- Designed Python REST APIs and maintained microservices.
-- Dockerized services and supported scalable backend delivery.
-- Built reliable software in agile teams.
-
-Technical Skills
-
-5+ years backend development, Python, REST APIs, Docker, microservices
-
+/Info 7 0 R
+/Root 6 0 R
+/Size 10
+>>
+startxref
+1748
+%%EOF
