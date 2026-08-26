@@ -93,7 +93,7 @@ def _valid_link(value):
 # Session + HTMX helpers                                                       #
 # --------------------------------------------------------------------------- #
 
-def _require_session():
+def require_session():
     """Return (user, None) when authenticated, else (None, 401 response)."""
     user = get_session_user()
     if not user:
@@ -137,7 +137,7 @@ def health():
 
 @normal_ui_bp.get("/interviews")
 def list_interviews():
-    _, err = _require_session()
+    _, err = require_session()
     if err:
         return err
     staff_id = request.args.get("staff_id", "").strip()
@@ -171,7 +171,7 @@ def interviews_to_complete():
     These are the interviews a staff member must write up (all five skill
     notes) to move them to "Interview Completed".
     """
-    _, err = _require_session()
+    _, err = require_session()
     if err:
         return err
     staff_id = request.args.get("staff_id", "").strip()
@@ -198,7 +198,7 @@ def interviews_to_complete():
 
 @normal_ui_bp.get("/interviews/<int:interview_id>")
 def get_interview(interview_id):
-    _, err = _require_session()
+    _, err = require_session()
     if err:
         return err
     try:
@@ -218,7 +218,7 @@ def schedulable_applications():
     Applications come from Student 3; postings ownership from Student 2.
     Applications that already have an interview request are filtered out.
     """
-    _, err = _require_session()
+    _, err = require_session()
     if err:
         return err
     staff_id = request.args.get("staff_id", "").strip()
@@ -248,7 +248,7 @@ def _scheduled_application_ids():
 
 @normal_ui_bp.post("/interviews")
 def schedule_interview():
-    user, err = _require_session()
+    user, err = require_session()
     if err:
         return err
     data = _read_input()
@@ -311,7 +311,7 @@ def update_interview_route(interview_id):
     only things staff can update afterwards are the assessment notes (and, via
     that, the status). Date/time and link edits are rejected.
     """
-    _, err = _require_session()
+    _, err = require_session()
     if err:
         return err
     data = request.get_json(silent=True) or {}
@@ -346,7 +346,7 @@ def update_interview_route(interview_id):
 @normal_ui_bp.post("/interviews/<int:interview_id>/accept")
 def accept_interview(interview_id):
     """Applicant accepts the request -> Interview Scheduled."""
-    _, err = _require_session()
+    _, err = require_session()
     if err:
         return err
     return _apply_update(
@@ -364,7 +364,7 @@ def accept_interview(interview_id):
 @normal_ui_bp.post("/interviews/<int:interview_id>/decline")
 def decline_interview(interview_id):
     """Applicant declines the request -> application is Withdrawn."""
-    _, err = _require_session()
+    _, err = require_session()
     if err:
         return err
     data = _read_input()
@@ -389,7 +389,7 @@ def complete_interview(interview_id):
     (status "Interview Scheduled"). All five skill-area notes are required —
     saving them is what moves the interview to "Interview Completed".
     """
-    _, err = _require_session()
+    _, err = require_session()
     if err:
         return err
 
@@ -455,7 +455,7 @@ def complete_interview(interview_id):
 
 @normal_ui_bp.delete("/interviews/<int:interview_id>")
 def cancel_interview(interview_id):
-    _, err = _require_session()
+    _, err = require_session()
     if err:
         return err
     try:
@@ -514,7 +514,7 @@ def _parse_date_only(value):
 
 @normal_ui_bp.get("/ui/calendar")
 def ui_calendar():
-    user, err = _require_session()
+    user, err = require_session()
     if err:
         return err
     try:
@@ -536,7 +536,7 @@ def ui_calendar():
 
 @normal_ui_bp.get("/ui/interviews/rows")
 def ui_interview_rows():
-    user, err = _require_session()
+    user, err = require_session()
     if err:
         return err
     try:
@@ -574,7 +574,7 @@ def ui_interview_rows():
 
 @normal_ui_bp.get("/ui/applications/rows")
 def ui_applications_rows():
-    user, err = _require_session()
+    user, err = require_session()
     if err:
         return err
     if user.get("role") != "staff":
@@ -593,7 +593,7 @@ def ui_applications_rows():
 
 @normal_ui_bp.get("/ui/schedule/options")
 def ui_schedule_options():
-    user, err = _require_session()
+    user, err = require_session()
     if err:
         return err
     if user.get("role") != "staff":
@@ -606,7 +606,7 @@ def ui_schedule_options():
 
 @normal_ui_bp.get("/ui/to-complete/rows")
 def ui_to_complete_rows():
-    user, err = _require_session()
+    user, err = require_session()
     if err:
         return err
     if user.get("role") != "staff":
@@ -630,7 +630,7 @@ def ui_to_complete_rows():
 
 @normal_ui_bp.get("/ui/requests")
 def ui_requests():
-    user, err = _require_session()
+    user, err = require_session()
     if err:
         return err
     try:
@@ -642,7 +642,7 @@ def ui_requests():
 
 @normal_ui_bp.get("/ui/interviews/<int:interview_id>/detail")
 def ui_interview_detail(interview_id):
-    user, err = _require_session()
+    user, err = require_session()
     if err:
         return err
     try:

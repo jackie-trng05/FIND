@@ -16,10 +16,6 @@ ALLOWED_FILE_TYPES = {"application/pdf"}
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
-def _cookie() -> str:
-    return request.headers.get("Cookie", "")
-
-
 def _get_my_profile(user_id: int) -> dict | None:
     resp = database_api.get_profile_by_user(user_id)
     return resp.json() if resp.status_code == 200 else None
@@ -36,7 +32,7 @@ def _panel(profile_id, *, message="", kind="error"):
 
 @resume_bp.get("/resume")
 def get_resume_panel():
-    user = shared_api.get_session_user(_cookie())
+    user = shared_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
     if user["role"] == "staff":
@@ -48,7 +44,7 @@ def get_resume_panel():
 
 @resume_bp.post("/resume")
 def upload_resume():
-    user = shared_api.get_session_user(_cookie())
+    user = shared_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
     if user["role"] == "staff":
@@ -86,7 +82,7 @@ def upload_resume():
 
 @resume_bp.delete("/resume/<int:resume_id>")
 def delete_resume(resume_id):
-    user = shared_api.get_session_user(_cookie())
+    user = shared_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
     if user["role"] == "staff":
@@ -107,7 +103,7 @@ def delete_resume(resume_id):
 
 @resume_bp.get("/resume/<int:resume_id>/download")
 def download_resume(resume_id):
-    user = shared_api.get_session_user(_cookie())
+    user = shared_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
 
