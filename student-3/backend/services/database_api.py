@@ -203,6 +203,7 @@ def get_resume_metadata(resume_id, role, current_user_id=None):
     meta = _get_student1_resume_meta(resume_id)
     if not meta:
         return None
+    meta = dict(meta)
 
     if role == "staff":
         return meta
@@ -220,6 +221,7 @@ def get_resume_metadata(resume_id, role, current_user_id=None):
     profile = _get_student1_profile(profile_id)
     if not profile or profile.get("user_id") != current_user_id:
         return None
+    meta["from_profile"] = True
     return meta
 
 

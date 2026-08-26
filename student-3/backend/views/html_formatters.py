@@ -159,7 +159,8 @@ def render_apply_form(posting, user, application=None, resume=None, error=""):
         resume_summary_html = f"""
         <div class="resume-current">
             <span class="resume-current-label">Current file:</span>
-            <span class="resume-current-name">{_e(resume.get('file_name', 'resume.pdf'))}</span>
+            <a class="resume-current-name"
+               href="{FRONTEND_PUBLIC_URL}/resumes/{resume['resume_id']}/download">{_e(resume.get('file_name', 'resume.pdf'))}</a>
             {source_note}
         </div>"""
 
@@ -185,7 +186,10 @@ def render_apply_form(posting, user, application=None, resume=None, error=""):
                 <input type="hidden" name="job_posting_id" value="{_e(posting['JobPosting_Id'])}">
 
                 <fieldset class="form-section">
-                    <legend>Your details</legend>
+                    <legend>
+                        <span class="legend-title">Your details</span>
+                        <span class="legend-note">Auto-filled from your profile.</span>
+                    </legend>
                     <div class="grid grid-2">
                         <div class="form-group">
                             <label class="form-label">First name</label>
@@ -203,7 +207,10 @@ def render_apply_form(posting, user, application=None, resume=None, error=""):
                 </fieldset>
 
                 <fieldset class="form-section">
-                    <legend>Resume</legend>
+                    <legend>
+                        <span class="legend-title">Resume</span>
+                        {f'<span class="legend-note">Auto-filled from your profile.</span>' if editing and resume and resume.get('from_profile') else ''}
+                    </legend>
                     {resume_summary_html}
                     <div class="form-group">
                         <label class="form-label">
@@ -259,8 +266,8 @@ def render_application_detail(application, posting, user, resume):
         resume_block = f"""
         <div class="resume-current">
             <span class="resume-current-label">Uploaded file:</span>
-            <a class="resume-current-name" target="_blank"
-               href="{BACKEND_PUBLIC_URL}/api/resumes/{resume['resume_id']}/download">
+            <a class="resume-current-name"
+               href="{FRONTEND_PUBLIC_URL}/resumes/{resume['resume_id']}/download">
                 {_e(resume.get('file_name', 'resume.pdf'))}
             </a>
         </div>"""
@@ -330,18 +337,13 @@ def render_application_detail(application, posting, user, resume):
 
 
 def _render_status_select(application_id, current):
-    selectable = {"Shortlisted", "Rejected"}
     opts = []
     for status in VALID_STATUSES:
-        if status == "Draft":
+        if status in ("Draft", "Withdrawn"):
             continue
         attrs = []
         if status == current:
             attrs.append("selected")
-        if status not in selectable and status != current:
-            attrs.append("disabled")
-        elif status == current and status not in selectable:
-            attrs.append("disabled")
         attr_str = (" " + " ".join(attrs)) if attrs else ""
         opts.append(f'<option value="{_e(status)}"{attr_str}>{_e(status)}</option>')
     return f"""
@@ -355,29 +357,6 @@ def _render_status_select(application_id, current):
         {"".join(opts)}
     </select>
     """
-
-
-def _render_header_status_select(application_id, current):
-    selectable = ("Shortlisted", "Rejected")
-    opts = []
-    if current not in selectable:
-        opts.append(f'<option value="{_e(current)}" selected disabled>{_e(current)}</option>')
-    for status in selectable:
-        selected = " selected" if status == current else ""
-        opts.append(f'<option value="{_e(status)}"{selected}>{_e(status)}</option>')
-    return f"""
-    <select class="form-select form-select-sm status-select header-status-select"
-            data-application-id="{application_id}"
-            data-current="{_e(current)}"
-            hx-put="{BACKEND_PUBLIC_URL}/api/applications/{application_id}/status"
-            hx-vals='js:{{"application_status": event.target.value}}'
-            hx-target="#toast-area" hx-swap="none"
-            hx-trigger="change">
-        {"".join(opts)}
-    </select>
-    """
-
-
 def render_staff_applications_table(applications, postings, users):
     if not applications:
         return '<tr><td colspan="5" class="empty-state">No applications found.</td></tr>'
@@ -393,7 +372,7 @@ def render_staff_applications_table(applications, postings, users):
             or "Unknown candidate"
         )
         detail_link = f"{FRONTEND_PUBLIC_URL}/staff/applications/{aid}"
-        status_select = _render_status_select(aid, a["application_status"])
+        status_badge = _status_badge(a["application_status"])
 
         interview_btn = ""
         if a["application_status"] == "Shortlisted":
@@ -413,7 +392,7 @@ def render_staff_applications_table(applications, postings, users):
             <td class="cell-id">#{aid}</td>
             <td class="cell-title">{_e(title)}</td>
             <td>{_e(candidate_name)}</td>
-            <td class="cell-interactive">{status_select}</td>
+            <td>{status_badge}</td>
             <td class="cell-action-center cell-interactive">{actions_html}</td>
         </tr>""")
     return "".join(rows)
@@ -447,8 +426,8 @@ def _render_resume_row(resume):
     <table class="detail-table">
         <tr><th>File</th>
             <td>
-                <a class="btn btn-secondary btn-sm" target="_blank"
-                   href="{BACKEND_PUBLIC_URL}/api/resumes/{resume['resume_id']}/download">
+                <a class="btn btn-secondary btn-sm"
+                   href="{FRONTEND_PUBLIC_URL}/resumes/{resume['resume_id']}/download">
                    Download {_e(resume.get('file_name', 'resume.pdf'))}
                 </a>
             </td>
@@ -506,9 +485,33 @@ def render_ai_screening_panel(application_id, screening):
 def render_candidate_profile(application, posting, user, resume, screening):
     aid = application["application_id"]
     status = application["application_status"]
-    ai_html = render_ai_screening_panel(aid, screening)
     resume_html = _render_resume_row(resume)
-    header_status_select = _render_header_status_select(aid, status)
+    ai_section_html = ""
+    if status == "Submitted":
+        ai_html = render_ai_screening_panel(aid, screening)
+        ai_section_html = f"""
+    <section class="ai-section">
+        <h3>AI Screening</h3>
+        <div id="ai-screening-panel">{ai_html}</div>
+    </section>"""
+
+    manual_actions_html = ""
+    if status != "Rejected":
+        shortlist_button = ""
+        if status == "Submitted":
+            shortlist_button = f"""
+            <button type="button" class="btn btn-primary btn-sm"
+                    data-shortlist-application-id="{aid}">
+                Shortlist candidate
+            </button>"""
+        manual_actions_html = f"""
+        <div class="ai-manual-actions">
+            {shortlist_button}
+            <button type="button" class="btn btn-danger btn-sm"
+                    data-reject-application-id="{aid}">
+                Reject candidate
+            </button>
+        </div>"""
 
     return f"""
     <div id="profile-msg"></div>
@@ -516,8 +519,6 @@ def render_candidate_profile(application, posting, user, resume, screening):
         <div class="panel-heading">
             <h2>{_e(user.get('user_first_name', ''))} {_e(user.get('user_last_name', ''))}</h2>
             {_status_badge(status)}
-            <label class="header-status-label">Change status:</label>
-            {header_status_select}
         </div>
     </div>
 
@@ -536,8 +537,6 @@ def render_candidate_profile(application, posting, user, resume, screening):
         </section>
     </div>
 
-    <section class="ai-section">
-        <h3>AI Screening</h3>
-        <div id="ai-screening-panel">{ai_html}</div>
-    </section>
+    {ai_section_html}
+    {manual_actions_html}
     """
