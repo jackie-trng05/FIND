@@ -3,34 +3,12 @@
 {% set candidate = data.candidate %}
 {% set resume = data.resume %}
 {% set status = application.application_status %}
-{% set selectable = ['Shortlisted', 'Rejected'] %}
 
 <div id="profile-msg"></div>
 <div class="panel-head">
     <div class="panel-heading">
         <h2>{{ candidate.user_first_name or '' }} {{ candidate.user_last_name or '' }}</h2>
         <span class="badge {{ status_class.get(status, 'badge-muted') }}">{{ status }}</span>
-        <label class="header-status-label">Change status:</label>
-        <select class="form-select form-select-sm status-select header-status-select"
-                data-application-id="{{ application.application_id }}"
-                data-current="{{ status }}"
-                hx-put="{{ backend_url }}/api/applications/{{ application.application_id }}/status"
-                hx-vals='js:{"application_status": event.target.value}'
-                hx-target="#toast-area" hx-swap="none"
-                hx-trigger="change">
-            {% if status not in selectable %}
-            <option value="{{ status }}" selected disabled>{{ status }}</option>
-            {% endif %}
-            {% for item in selectable %}
-            <option value="{{ item }}"{% if item == status %} selected{% endif %}>{{ item }}</option>
-            {% endfor %}
-        </select>
-        {% if status == 'Submitted' %}
-        <button type="button" class="btn btn-primary btn-sm"
-                onclick="shortlistCandidate({{ application.application_id }})">
-            Shortlist candidate
-        </button>
-        {% endif %}
     </div>
 </div>
 
@@ -49,8 +27,7 @@
         <table class="detail-table">
             <tr><th>File</th>
                 <td>
-                    <a class="btn btn-secondary btn-sm" target="_blank"
-                       href="{{ backend_url }}/api/resumes/{{ resume.resume_id }}/download">
+                          <a class="btn btn-secondary btn-sm" href="/resumes/{{ resume.resume_id }}/download">
                        Download {{ resume.file_name or 'resume.pdf' }}
                     </a>
                 </td>
@@ -63,6 +40,7 @@
     </section>
 </div>
 
+{% if status == 'Submitted' %}
 <section class="ai-section">
     <h3>AI Screening</h3>
     <div id="ai-screening-panel">
@@ -82,3 +60,19 @@
         </div>
     </div>
 </section>
+{% endif %}
+
+{% if status != 'Rejected' %}
+<section class="ai-manual-actions">
+    {% if status == 'Submitted' %}
+    <button type="button" class="btn btn-primary btn-sm"
+            data-shortlist-application-id="{{ application.application_id }}">
+        Shortlist candidate
+    </button>
+    {% endif %}
+    <button type="button" class="btn btn-danger btn-sm"
+            data-reject-application-id="{{ application.application_id }}">
+        Reject candidate
+    </button>
+</section>
+{% endif %}

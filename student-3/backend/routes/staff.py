@@ -10,7 +10,6 @@ from flask import Blueprint, request
 from config import (
     DATABASE_SERVICE_URL,
     TIMEOUT,
-    VALID_STATUSES,
     _DB_UNAVAILABLE,
 )
 from routes.common import (
@@ -62,7 +61,6 @@ def candidate_profile_context(application_id):
         "posting": posting,
         "candidate": candidate,
         "resume": resume,
-        "valid_statuses": [status for status in VALID_STATUSES if status != "Draft"],
     })
 
 
@@ -173,8 +171,20 @@ def update_status(application_id):
     if not new_status:
         new_status = request.form.get("application_status", "").strip()
 
-    if new_status not in VALID_STATUSES:
-        return toast_response(f"Unknown status: {new_status}", "error")
+    if new_status not in ("Shortlisted", "Rejected"):
+        return toast_response("Only Shortlisted or Rejected are allowed here.", "error")
+
+    application, error = load_application(application_id)
+    if error:
+        return toast_response("Application not found.", "error")
+    current_status = application.get("application_status")
+    if new_status == "Shortlisted" and current_status != "Submitted":
+        return toast_response(
+            f"Only submitted applications can be updated here. Current status: {current_status}.",
+            "error",
+        )
+    if new_status == "Rejected" and current_status == "Rejected":
+        return toast_response("Application is already rejected.", "error")
 
     try:
         resp = requests.put(f"{DATABASE_SERVICE_URL}/applications/{application_id}",

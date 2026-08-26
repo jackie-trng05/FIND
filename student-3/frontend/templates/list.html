@@ -119,39 +119,6 @@
             if (el.name && p.has(el.name)) el.value = p.get(el.name);
         });
     }, { once: true });
-
-    /* ---- Rejection follow-up when status changed to Rejected ----------- */
-    document.body.addEventListener('change', (e) => {
-        const sel = e.target.closest('.status-select');
-        if (!sel) return;
-        const chosen = sel.value;
-        const current = sel.getAttribute('data-current');
-        if (chosen === current) return;
-        if (chosen === 'Rejected') {
-            e.stopImmediatePropagation();
-            e.preventDefault();
-            window.confirmRejection(() => {
-                const appId = sel.getAttribute('data-application-id');
-                fetch('{{ backend_url }}/api/applications/' + appId + '/status', {
-                    method: 'PUT',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ application_status: 'Rejected' })
-                }).then((r) => {
-                    if (r.ok) {
-                        window.showToast('Candidate rejected and removed from recruitment.', 'success');
-                        document.body.dispatchEvent(new Event('statusChanged'));
-                    } else {
-                        window.showToast('Failed to reject candidate.', 'error');
-                        sel.value = current;
-                    }
-                }).catch(() => { window.showToast('Network error.', 'error'); sel.value = current; });
-            });
-            sel.value = current;
-        } else {
-            setTimeout(() => document.body.dispatchEvent(new Event('statusChanged')), 300);
-        }
-    }, true);
 })();
 </script>
 {% endblock %}
