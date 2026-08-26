@@ -3,13 +3,6 @@ import os
 from openai import OpenAI
 
 
-def _truncate_words(text: str, limit: int = 60) -> str:
-    words = " ".join(text.split()).split()
-    if len(words) <= limit:
-        return " ".join(words)
-    return " ".join(words[:limit]) + " ..."
-
-
 class AIRunner:
     def __init__(self):
         self.base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
@@ -41,6 +34,6 @@ class AIRunner:
             content = (response.choices[0].message.content or "").strip()
             if not content:
                 return "No response generated.", None
-            return _truncate_words(content), None
+            return " ".join(content.split()), None
         except Exception as exc:  # noqa: BLE001 - loop must survive a missing runtime
             return None, f"Model call failed ({model_name}): {exc}"
