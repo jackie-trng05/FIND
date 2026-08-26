@@ -29,7 +29,7 @@ authenticated backend. This is the pattern used consistently across the repo:
 
 - student-2's backend → student-3-db (`APPLICATIONS_DB_URL`)
 - student-3's backend → student-1-db (`STUDENT_1_DB_URL`)
-- student-4's backend → student-3-db (`APPLICATION_DB_URL`)
+- student-4's backend → student-3-db (`APPLICATIONS_DB_URL`)
 - student-5's backend → student-3-db and student-4-db
 
 Each Database API service performs **no authentication or authorization** —

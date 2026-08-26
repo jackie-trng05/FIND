@@ -4,8 +4,8 @@ Interviews are linked to applications owned by Student 3. To keep services
 independent, this module talks to the other students' *database containers*
 directly over HTTP (never their backends):
 
-  * Applications  -> Student 3 DB  (APPLICATION_DB_URL)
-  * Job postings  -> Student 2 DB  (JOB_POSTING_DB_URL)
+  * Applications  -> Student 3 DB  (APPLICATIONS_DB_URL)
+  * Job postings  -> Student 2 DB  (POSTINGS_DB_URL)
   * Users         -> shared DB     (SHARED_DB_URL)
 
 It provides batch lookups used to enrich raw interview rows with applicant and
@@ -18,8 +18,8 @@ import os
 import requests
 from flask import request
 
-APPLICATION_DB_URL = os.getenv("APPLICATION_DB_URL", "http://student-3-db:6003")
-JOB_POSTING_DB_URL = os.getenv("JOB_POSTING_DB_URL", "http://student-2-db:6002")
+APPLICATIONS_DB_URL = os.getenv("APPLICATIONS_DB_URL", "http://student-3-db:6003")
+POSTINGS_DB_URL = os.getenv("POSTINGS_DB_URL", "http://student-2-db:6002")
 SHARED_DB_URL = os.getenv("SHARED_DB_URL", "http://find-shared-db:6000")
 SHARED_API_URL = os.getenv("SHARED_API_URL", "http://find-shared-api:5000")
 
@@ -62,7 +62,7 @@ def list_applications(status=None):
     try:
         params = {"status": status} if status else {}
         resp = requests.get(
-            f"{APPLICATION_DB_URL}/applications", params=params, timeout=TIMEOUT
+            f"{APPLICATIONS_DB_URL}/applications", params=params, timeout=TIMEOUT
         )
         resp.raise_for_status()
         return resp.json()
@@ -74,7 +74,7 @@ def get_application(application_id):
     """A single application, or None if unavailable."""
     try:
         resp = requests.get(
-            f"{APPLICATION_DB_URL}/applications/{application_id}", timeout=TIMEOUT
+            f"{APPLICATIONS_DB_URL}/applications/{application_id}", timeout=TIMEOUT
         )
         if resp.status_code == 404:
             return None
@@ -88,7 +88,7 @@ def set_application_status(application_id, status):
     """Sync the linked application's status. Returns True on success."""
     try:
         resp = requests.put(
-            f"{APPLICATION_DB_URL}/applications/{application_id}",
+            f"{APPLICATIONS_DB_URL}/applications/{application_id}",
             json={"application_status": status},
             timeout=TIMEOUT,
         )
@@ -104,7 +104,7 @@ def set_application_status(application_id, status):
 
 def _postings_by_id():
     try:
-        resp = requests.get(f"{JOB_POSTING_DB_URL}/job-postings", timeout=TIMEOUT)
+        resp = requests.get(f"{POSTINGS_DB_URL}/job-postings", timeout=TIMEOUT)
         resp.raise_for_status()
         return {str(p.get("JobPosting_Id")): p for p in resp.json()}
     except requests.RequestException:

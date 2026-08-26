@@ -251,8 +251,8 @@ services:
       - "16014:5004"
     environment:
       DATABASE_SERVICE_URL: http://student-4-db:6004
-      APPLICATION_DB_URL: http://student-3-db:6003
-      JOB_POSTING_DB_URL: http://student-2-db:6002
+      APPLICATIONS_DB_URL: http://student-3-db:6003
+      POSTINGS_DB_URL: http://student-2-db:6002
       SHARED_DB_URL: http://find-shared-db:6000
       SHARED_API_URL: http://find-shared-api:5000
       FRONTEND_PUBLIC_URL: http://localhost:16013
