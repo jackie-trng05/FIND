@@ -52,123 +52,48 @@
 </footer>
 
 <script>
-(function () {
-    const SHARED_API_URL = '{{ shared_api_public_url }}';
-    const LOGIN_URL = '{{ login_url }}';
-    const LOGOUT_URL = '{{ logout_url }}';
-    window.__findLoginUrl = LOGIN_URL;
-    window.__findLogoutUrl = LOGOUT_URL;
+    // Shared FIND runtime: session auth guard, navbar, toasts, htmx.config,
+    // 401->login, HX-Redirect and the themed confirm dialog all live here.
+    window.__FIND_CONFIG = {
+        sharedApiUrl: '{{ shared_api_public_url }}',
+        loginUrl: '{{ login_url }}',
+        logoutUrl: '{{ logout_url }}'
+    };
+</script>
+<script src="/js/find-app.js"></script>
 
-    /* ---- Themed confirmation modal ------------------------------------- */
-    const overlay = document.getElementById('confirm-modal');
-    const message = document.getElementById('confirm-message');
-    const okBtn = document.getElementById('confirm-ok');
-    const cancelBtn = document.getElementById('confirm-cancel');
-    let pending = null;
-
-    function closeConfirm() { overlay.hidden = true; pending = null; }
-
-    cancelBtn.addEventListener('click', closeConfirm);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeConfirm(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.hidden) closeConfirm(); });
-    okBtn.addEventListener('click', () => {
-        const run = pending;
-        closeConfirm();
-        if (run) run();
-    });
-
-    document.body.addEventListener('htmx:confirm', (e) => {
-        if (!e.detail.question) return;
-        e.preventDefault();
-        message.textContent = e.detail.question;
-        const isDelete = e.detail.question.toLowerCase().indexOf('delete') !== -1;
-        okBtn.className = isDelete ? 'btn btn-danger' : 'btn btn-primary';
-        okBtn.textContent = isDelete ? 'Delete' : 'Confirm';
-        pending = () => e.detail.issueRequest(true);
-        overlay.hidden = false;
-    });
-
-    /* ---- Toast notifications -------------------------------------------- */
-    function showToast(text, kind) {
-        const area = document.getElementById('toast-area');
-        if (!area) return;
-        const div = document.createElement('div');
-        div.className = kind === 'error' ? 'alert alert-error toast' : 'alert alert-success toast';
-        div.textContent = text;
-        area.appendChild(div);
-        setTimeout(() => {
-            div.classList.add('toast-hide');
-            setTimeout(() => div.remove(), 400);
-        }, 4000);
-    }
-    window.showToast = showToast;
-
-    document.body.addEventListener('showToast', (e) => showToast(e.detail.value || 'Done', 'success'));
-    document.body.addEventListener('showErrorToast', (e) => showToast(e.detail.value || 'Something went wrong.', 'error'));
-
-    /* ---- Auto-dismiss inline fragment messages (profile/resume/user forms) */
-    document.body.addEventListener('htmx:afterSwap', () => {
-        ['profile-msg', 'resume-msg', 'user-details-msg'].forEach((id) => {
-            const el = document.getElementById(id);
-            if (el && el.innerHTML.trim()) {
-                setTimeout(() => { el.innerHTML = ''; }, 5000);
+<script>
+    // Student-1-specific behaviour layered on top of the shared runtime.
+    (function () {
+        // Extra upload/error toasts (the shared runtime already redirects on 401).
+        document.body.addEventListener('htmx:responseError', function (e) {
+            var status = e.detail && e.detail.xhr && e.detail.xhr.status;
+            if (status === 401) return;
+            if (status === 413) {
+                window.showToast('File is too large. Max 5MB.', 'error');
+            } else {
+                window.showToast('Something went wrong. Please try again.', 'error');
             }
         });
-    });
 
-    /* ---- Global HTMX config ---------------------------------------------- */
-    if (window.htmx) {
-        window.htmx.config.withCredentials = true;
-    }
-    document.body.addEventListener('htmx:responseError', (e) => {
-        const status = e.detail && e.detail.xhr && e.detail.xhr.status;
-        if (status === 401) {
-            window.location.href = LOGIN_URL;
-        } else if (status === 413) {
-            showToast('File is too large. Max 5MB.', 'error');
-        } else {
-            showToast('Something went wrong. Please try again.', 'error');
-        }
-    });
+        // Auto-dismiss inline fragment messages (profile/resume/user forms).
+        document.body.addEventListener('htmx:afterSwap', function () {
+            ['profile-msg', 'resume-msg', 'user-details-msg'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el && el.innerHTML.trim()) {
+                    setTimeout(function () { el.innerHTML = ''; }, 5000);
+                }
+            });
+        });
 
-    /* ---- Navbar user info (via shared-api session cookie) ---------------- */
-    function applyUser(user) {
-        const nameEl = document.getElementById('nav-user-name');
-        const badgeEl = document.getElementById('nav-role-badge');
-        const logoutBtn = document.getElementById('nav-logout-btn');
-        if (nameEl) nameEl.textContent = user.first_name + ' ' + user.last_name;
-        if (badgeEl) badgeEl.textContent = user.role === 'staff' ? 'Staff' : 'Applicant';
-        if (logoutBtn) logoutBtn.style.display = '';
-    }
-
-    // Fired by the backend (HX-Trigger) after a successful /user save, since the
-    // navbar name lives outside the user-details-panel's own swap target.
-    document.body.addEventListener('userUpdated', (e) => {
-        const nameEl = document.getElementById('nav-user-name');
-        if (nameEl && e.detail && e.detail.first_name) {
-            nameEl.textContent = e.detail.first_name + ' ' + (e.detail.last_name || '');
-        }
-    });
-
-    fetch(SHARED_API_URL + '/api/auth/session', { credentials: 'include' })
-        .then((resp) => {
-            if (!resp.ok) { window.location.href = LOGIN_URL; return null; }
-            return resp.json();
-        })
-        .then((data) => {
-            if (!data || !data.user) return;
-            applyUser(data.user);
-            window.__findUser = data.user;
-            document.body.dispatchEvent(new Event('authReady'));
-        })
-        .catch(() => { window.location.href = LOGIN_URL; });
-})();
-
-function handleLogout() {
-    fetch(window.__findLogoutUrl, { method: 'POST', credentials: 'include' })
-        .catch(() => {})
-        .then(() => { window.location.href = window.__findLoginUrl; });
-}
+        // Keep the navbar name in sync after a successful /user save (HX-Trigger).
+        document.body.addEventListener('userUpdated', function (e) {
+            var nameEl = document.getElementById('nav-user-name');
+            if (nameEl && e.detail && e.detail.first_name) {
+                nameEl.textContent = e.detail.first_name + ' ' + (e.detail.last_name || '');
+            }
+        });
+    })();
 </script>
 </body>
 </html>

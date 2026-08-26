@@ -50,6 +50,11 @@ def serve_css(filename):
     return send_from_directory("/app/shared-css", filename)
 
 
+@app.get("/js/<path:filename>")
+def serve_js(filename):
+    return send_from_directory("/app/shared-js", filename)
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT, debug=True)
 
