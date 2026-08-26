@@ -2,7 +2,7 @@ import os
 
 import requests
 
-DATABASE_SERVICE_URL = os.getenv("DATABASE_SERVICE_URL", "http://student-4-db:5002")
+DATABASE_SERVICE_URL = os.getenv("DATABASE_SERVICE_URL", "http://student-4-db:6004")
 
 TIMEOUT = 5
 

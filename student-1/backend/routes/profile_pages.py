@@ -15,10 +15,6 @@ BACKEND_PUBLIC_URL = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:16005")
 EDITABLE_FIELDS = ("phone", "location", "professional_title", "summary", "interests")
 
 
-def _cookie() -> str:
-    return request.headers.get("Cookie", "")
-
-
 def _payload_from_form() -> dict:
     return {field: request.form.get(field, "").strip() for field in EDITABLE_FIELDS}
 
@@ -43,7 +39,7 @@ def _panel_response(profile, role, *, message="", kind="error", toast=None, prof
 
 @profile_bp.get("/profile")
 def get_profile_panel():
-    user = shared_api.get_session_user(_cookie())
+    user = shared_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
     profile = _get_my_profile(user["user_id"])
@@ -52,7 +48,7 @@ def get_profile_panel():
 
 @profile_bp.post("/profile")
 def create_profile():
-    user = shared_api.get_session_user(_cookie())
+    user = shared_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
 
@@ -72,7 +68,7 @@ def create_profile():
 
 @profile_bp.put("/profile/<int:profile_id>")
 def update_profile(profile_id):
-    user = shared_api.get_session_user(_cookie())
+    user = shared_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
 
@@ -96,7 +92,7 @@ def update_profile(profile_id):
 
 @profile_bp.delete("/profile/<int:profile_id>")
 def delete_profile(profile_id):
-    user = shared_api.get_session_user(_cookie())
+    user = shared_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
 

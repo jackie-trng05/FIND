@@ -20,7 +20,7 @@ create/edit form.
 
 ```bash
 pip install -r requirements.txt
-python server.py            # serves on http://localhost:3002
+python app.py                # serves on http://localhost:3002
 ```
 
 Environment variables:

@@ -12,7 +12,7 @@ DB_SERVICE_URL = os.environ.get("DATABASE_SERVICE_URL", "http://find-student-5-d
 APPLICATIONS_DB_URL = os.environ.get("APPLICATIONS_DB_URL", "http://student-3-db:6003")
 POSTINGS_DB_URL = os.environ.get("POSTINGS_DB_URL", "http://student-2-db:6002")
 SHARED_DB_URL = os.environ.get("SHARED_DB_URL", "http://find-shared-db:6000")
-INTERVIEWS_DB_URL = os.environ.get("INTERVIEWS_DB_URL", "http://student-4-db:5002")
+INTERVIEWS_DB_URL = os.environ.get("INTERVIEWS_DB_URL", "http://student-4-db:6004")
 
 # Browser-facing URL of this backend, used when rendering HTMX fragments so the
 # hx-* attributes point at an address the browser can reach (not the in-network

@@ -34,9 +34,6 @@ job_postings_bp = Blueprint("job_postings", __name__)
 BACKEND_PUBLIC_URL = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:16008")
 FRONTEND_PUBLIC_URL = os.getenv("FRONTEND_PUBLIC_URL", "http://localhost:16007")
 
-# Internal URL for the shared-api service used to validate the session cookie.
-SHARED_API_URL = os.getenv("SHARED_API_URL", "http://find-shared-api:5000")
-
 # Internal URL for the student-3 (applications) database service. Used to
 # check whether the current applicant already has an application for a posting
 # so the Apply button on the applicant panel can be disabled.
@@ -82,29 +79,11 @@ def _missing_required(payload: dict) -> str | None:
 
 def _get_role() -> str:
     """Return 'staff' or 'applicant' based on the session cookie."""
-    user = _get_session_user()
+    user = database_api.get_session_user()
     if user is None:
         return "applicant"
     role = (user.get("role") or "").strip().lower()
     return "staff" if role == "staff" else "applicant"
-
-
-def _get_session_user() -> dict | None:
-    """Return the currently logged-in user dict, or None if unauthenticated."""
-    cookie = request.headers.get("Cookie", "")
-    if not cookie:
-        return None
-    try:
-        resp = requests.get(
-            f"{SHARED_API_URL}/api/auth/session",
-            headers={"Cookie": cookie},
-            timeout=5,
-        )
-    except requests.RequestException:
-        return None
-    if resp.status_code != 200:
-        return None
-    return resp.json().get("user")
 
 
 def _get_existing_application(user_id: int, posting_id: int) -> dict | None:
@@ -209,7 +188,7 @@ def get_posting(posting_id: int):
     posting, error = _load_posting(posting_id)
     if error:
         return error
-    user = _get_session_user()
+    user = database_api.get_session_user()
     role = "staff" if (user and (user.get("role") or "").lower() == "staff") else "applicant"
     # Applicants may only view Published postings.
     if role == "applicant" and posting.get("JobPosting_Status") != "Published":

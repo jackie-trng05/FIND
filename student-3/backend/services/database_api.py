@@ -103,7 +103,7 @@ def get_application(application_id):
 #
 # Calls student-1's database microservice directly (frontend -> own backend ->
 # other student's DB is the convention used throughout this repo - see
-# student-2's APPLICATIONS_DB_URL, student-4/5's APPLICATION_DB_URL). The DB
+# student-2/4/5's APPLICATIONS_DB_URL). The DB
 # service does no authentication itself, so ownership checks below are
 # reimplemented here rather than delegated to student-1.
 

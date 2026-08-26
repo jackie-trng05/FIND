@@ -369,4 +369,4 @@ def send_notification(evaluation_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5005, debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5005")), debug=True)

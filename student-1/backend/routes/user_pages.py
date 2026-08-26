@@ -19,7 +19,7 @@ def _cookie() -> str:
 
 @user_bp.get("/user")
 def get_user_details():
-    user = shared_api.get_session_user(_cookie())
+    user = shared_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
     return render_user_details_panel(user, backend_url=BACKEND_PUBLIC_URL), 200
@@ -27,7 +27,7 @@ def get_user_details():
 
 @user_bp.put("/user")
 def update_user_details():
-    user = shared_api.get_session_user(_cookie())
+    user = shared_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
 

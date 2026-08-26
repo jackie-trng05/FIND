@@ -178,7 +178,7 @@ The following links provide quick access to the services for testing when the Do
 - **Student 5 Backend:** http://localhost:16017
 - **Student 5 Database:** http://localhost:16018
 
-> **Note:** Student 2–5 links will only be available once their corresponding Docker containers have been implemented and added to `docker-compose.yml`.
+> **Note:** Once a student's frontend, backend, and database containers are added to `docker-compose.yml`, their Quick Links above become reachable.
 
 ---
 
@@ -196,18 +196,18 @@ The port mappings follow the course-provided architecture and should not be chan
 | Student 1  | Frontend      |   `16004` |         `3000` |           Y           |
 | Student 1  | Backend       |   `16005` |         `5001` |           Y           |
 | Student 1  | Database      |   `16006` |         `6001` |           Y           |
-| Student 2  | Frontend      |   `16007` |         `3002` |           N           |
-| Student 2  | Backend       |   `16008` |         `5002` |           N           |
-| Student 2  | Database      |   `16009` |         `6002` |           N           |
-| Student 3  | Frontend      |   `16010` |         `3003` |           N           |
-| Student 3  | Backend       |   `16011` |         `5003` |           N           |
-| Student 3  | Database      |   `16012` |         `6003` |           N           |
-| Student 4  | Frontend      |   `16013` |         `3004` |           N           |
-| Student 4  | Backend       |   `16014` |         `5004` |           N           |
-| Student 4  | Database      |   `16015` |         `6004` |           N           |
-| Student 5  | Frontend      |   `16016` |         `3005` |           N           |
-| Student 5  | Backend       |   `16017` |         `5005` |           N           |
-| Student 5  | Database      |   `16018` |         `6005` |           N           |
+| Student 2  | Frontend      |   `16007` |         `3002` |           Y           |
+| Student 2  | Backend       |   `16008` |         `5002` |           Y           |
+| Student 2  | Database      |   `16009` |         `6002` |           Y           |
+| Student 3  | Frontend      |   `16010` |         `3003` |           Y           |
+| Student 3  | Backend       |   `16011` |         `5003` |           Y           |
+| Student 3  | Database      |   `16012` |         `6003` |           Y           |
+| Student 4  | Frontend      |   `16013` |         `3004` |           Y           |
+| Student 4  | Backend       |   `16014` |         `5004` |           Y           |
+| Student 4  | Database      |   `16015` |         `6004` |           Y           |
+| Student 5  | Frontend      |   `16016` |         `3005` |           Y           |
+| Student 5  | Backend       |   `16017` |         `5005` |           Y           |
+| Student 5  | Database      |   `16018` |         `6005` |           Y           |
 
 ---
 

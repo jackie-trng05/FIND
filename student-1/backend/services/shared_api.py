@@ -3,13 +3,15 @@
 import os
 
 import requests
+from flask import request
 
 SHARED_API_URL = os.environ["SHARED_API_URL"]
 TIMEOUT = 5
 
 
-def get_session_user(cookie: str) -> dict | None:
+def get_session_user() -> dict | None:
     """Return the currently logged-in user dict, or None if unauthenticated."""
+    cookie = request.headers.get("Cookie", "")
     if not cookie:
         return None
     try:
