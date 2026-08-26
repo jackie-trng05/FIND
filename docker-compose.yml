@@ -283,9 +283,7 @@ services:
     environment:
       PORT: 6004
     networks:
-      find-network:
-        aliases:
-          - student-4-db
+      - find-network
     restart: unless-stopped
 
   student-5-frontend:
