@@ -56,7 +56,7 @@ def _ai_profile_section(backend_url: str) -> str:
     Reuses the shared theme's .card/.htmx-indicator/.spinner styling rather
     than introducing new CSS classes."""
     return f"""
-        <div class="card" style="margin-top:1rem;padding:1rem;">
+        <div class="card" style="margin-top:1rem;margin-bottom:1rem;padding:1rem;">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
                 <span style="font-weight:600;font-size:0.9rem;">AI Assistant</span>
                 <div style="display:flex;align-items:center;gap:0.5rem;">
