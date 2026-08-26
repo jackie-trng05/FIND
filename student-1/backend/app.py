@@ -15,6 +15,7 @@ from flask_cors import CORS
 from routes.profile_pages import profile_bp
 from routes.resume_pages import resume_bp
 from routes.user_pages import user_bp
+from routes.ai_mode import ai_mode_bp
 
 
 def create_app() -> Flask:
@@ -32,6 +33,7 @@ def create_app() -> Flask:
     app.register_blueprint(user_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(resume_bp)
+    app.register_blueprint(ai_mode_bp)
 
     @app.get("/health")
     def health():

@@ -50,6 +50,31 @@ def render_user_details_panel(user: dict, *, backend_url: str, error: str = "") 
 # Profile (create/view/edit + delete)                                         #
 # --------------------------------------------------------------------------- #
 
+def _ai_profile_section(backend_url: str) -> str:
+    """AI helper rendered inside the profile form: suggests fields from the
+    applicant's stored resume (professional title, summary, interests).
+    Reuses the shared theme's .card/.htmx-indicator/.spinner styling rather
+    than introducing new CSS classes."""
+    return f"""
+        <div class="card" style="margin-top:1rem;padding:1rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+                <span style="font-weight:600;font-size:0.9rem;">AI Assistant</span>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <button type="button" id="ai-profile-btn" class="btn btn-accent btn-sm"
+                            hx-post="{backend_url}/profile/ai-suggestions"
+                            hx-target="#ai-profile-suggestions" hx-swap="innerHTML"
+                            hx-indicator="#ai-profile-spinner" hx-disabled-elt="this">
+                        Suggest from my resume
+                    </button>
+                    <span id="ai-profile-spinner" class="htmx-indicator" style="font-size:0.85rem;color:var(--text-muted);">
+                        <span class="spinner" style="vertical-align:middle;margin-right:0.35rem;"></span>Thinking…
+                    </span>
+                </div>
+            </div>
+            <div id="ai-profile-suggestions" style="margin-top:0.75rem;"></div>
+        </div>"""
+
+
 def render_profile_panel(profile: dict | None, *, backend_url: str, role: str = "applicant", message: str = "", kind: str = "error") -> str:
     """Full profile card: create-prompt + form if no profile, else the
     pre-filled update form and delete button. Nests the resume panel
@@ -79,11 +104,13 @@ def render_profile_panel(profile: dict | None, *, backend_url: str, role: str = 
 
     profile = profile or {}
     resume_section = ""
+    ai_section = ""
     if role != "staff":
         resume_section = """
         <div style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);">
             <div id="resume-panel" hx-get="%s/resume" hx-trigger="load, profileChanged from:body" hx-swap="innerHTML"></div>
         </div>""" % backend_url
+        ai_section = _ai_profile_section(backend_url)
 
     return f"""
     <h2 style="margin-bottom:1rem;">User Profile</h2>
@@ -115,6 +142,7 @@ def render_profile_panel(profile: dict | None, *, backend_url: str, role: str = 
             <input class="form-input" type="text" id="interests" name="interests"
                    placeholder="Comma-separated interests" value="{_e(profile.get('interests', ''))}">
         </div>
+        {ai_section}
         <button type="submit" class="btn btn-primary">{submit_label}</button>
         <div id="profile-msg">{message_html}</div>
     </form>
@@ -183,3 +211,50 @@ def render_resume_panel(profile_id: int | None, resumes: list, *, backend_url: s
         </table>
     </div>
     {upload_section}"""
+
+
+# --------------------------------------------------------------------------- #
+# AI suggestions (profile autofill from resume)                               #
+# --------------------------------------------------------------------------- #
+
+def render_profile_suggestions(parsed: dict) -> str:
+    """Render the AI's suggested profile fields, each with an Apply button.
+
+    ``parsed`` is the dict returned by ``llm_client.parse_profile_suggestions``
+    (professional_title, summary, interests, note). A non-empty ``note`` is
+    shown as a caution banner (e.g. when the resume was unreadable and the
+    suggestions are generic rather than tailored).
+    """
+    note = (parsed.get("note") or "").strip()
+    note_html = f'<div class="alert alert-warning">{_e(note)}</div>' if note else ""
+
+    field_targets = (
+        ("professional_title", "Professional Title"),
+        ("summary", "Summary"),
+        ("interests", "Interests"),
+    )
+    rows = []
+    for field_id, label in field_targets:
+        value = (parsed.get(field_id) or "").strip()
+        if not value:
+            continue
+        rows.append(f"""
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.9rem;">
+            <div><strong>{_e(label)}:</strong> <span>{_e(value)}</span></div>
+            <button type="button" class="btn btn-secondary btn-sm"
+                    data-target="{field_id}" data-value="{_e(value)}"
+                    onclick="applyProfileSuggestion(this)">Apply</button>
+        </div>""")
+
+    if not rows:
+        return note_html + '<p class="text-sm">The AI did not return any suggestions. Try again.</p>'
+
+    return f"""
+    <div>
+        {note_html}
+        {''.join(rows)}
+        <div style="margin-top:0.75rem;">
+            <button type="button" class="btn btn-secondary btn-sm"
+                    onclick="document.getElementById('ai-profile-suggestions').innerHTML=''">Dismiss</button>
+        </div>
+    </div>"""

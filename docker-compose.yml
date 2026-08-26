@@ -88,6 +88,10 @@ services:
       DATABASE_SERVICE_URL: http://find-student-1-db:6001
       BACKEND_PUBLIC_URL: http://localhost:16005
       FRONTEND_PUBLIC_URL: http://localhost:16004
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
+      OLLAMA_MODEL: llama3.1:8b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - student-1-db
     networks:

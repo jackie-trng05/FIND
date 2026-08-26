@@ -9,6 +9,7 @@ COPY app.py .
 COPY services/ ./services/
 COPY views/ ./views/
 COPY routes/ ./routes/
+COPY prompts/ ./prompts/
 
 EXPOSE 5001
 

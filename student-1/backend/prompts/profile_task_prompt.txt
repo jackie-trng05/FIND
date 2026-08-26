@@ -1,0 +1,6 @@
+Resume text:
+"""
+{resume_text}
+"""
+
+Based only on the resume text above, provide the four labeled lines exactly as instructed.
