@@ -82,7 +82,7 @@ services:
     environment:
       PORT: 5001
       SHARED_API_URL: http://find-shared-api:5000
-      DB_SERVICE_URL: http://find-student-1-db:6001
+      DATABASE_SERVICE_URL: http://find-student-1-db:6001
       BACKEND_PUBLIC_URL: http://localhost:16005
       FRONTEND_PUBLIC_URL: http://localhost:16004
     depends_on:

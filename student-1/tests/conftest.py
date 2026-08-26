@@ -10,7 +10,7 @@ TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
 STUDENT1_DIR = os.path.dirname(TESTS_DIR)
 
 SHARED_API_URL = "http://shared-api.test"
-DB_SERVICE_URL = "http://db-service.test"
+DATABASE_SERVICE_URL = "http://db-service.test"
 BACKEND_PUBLIC_URL = "http://backend-service.test"
 FRONTEND_PUBLIC_URL = "http://frontend-service.test"
 SHARED_API_PUBLIC_URL = "http://shared-api-public.test"
@@ -22,7 +22,7 @@ FIND_HOME_URL = "http://frontend.test/dashboard"
 # than per-test — the backend/frontend routes/services modules read them via
 # os.environ at import time, and are only ever imported once per process.
 os.environ.setdefault("SHARED_API_URL", SHARED_API_URL)
-os.environ.setdefault("DB_SERVICE_URL", DB_SERVICE_URL)
+os.environ.setdefault("DATABASE_SERVICE_URL", DATABASE_SERVICE_URL)
 os.environ.setdefault("BACKEND_PUBLIC_URL", BACKEND_PUBLIC_URL)
 os.environ.setdefault("FRONTEND_PUBLIC_URL", FRONTEND_PUBLIC_URL)
 os.environ.setdefault("SHARED_API_PUBLIC_URL", SHARED_API_PUBLIC_URL)
