@@ -84,11 +84,11 @@ def ai_recommendation():
             app_data = app_resp.json()
             application_info = json.dumps(app_data, indent=2)
 
-            posting_resp = http_requests.get(f"{POSTINGS_DB_URL}/job-postings/{app_data.get('JobPosting_Id')}", timeout=5)
+            posting_resp = http_requests.get(f"{POSTINGS_DB_URL}/job-postings/{app_data.get('job_posting_id')}", timeout=5)
             if posting_resp.status_code == 200:
                 job_info = json.dumps(posting_resp.json(), indent=2)
 
-            user_resp = http_requests.get(f"{SHARED_DB_URL}/users/{app_data.get('User_Id')}", timeout=5)
+            user_resp = http_requests.get(f"{SHARED_DB_URL}/users/{app_data.get('user_id')}", timeout=5)
             if user_resp.status_code == 200:
                 applicant_info = json.dumps(user_resp.json(), indent=2)
     except Exception:
