@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS resumes (
     resume_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    profile_id INTEGER NOT NULL,
+    profile_id INTEGER UNIQUE,
     file_name TEXT NOT NULL,
     file_type TEXT NOT NULL,
     file_data BLOB NOT NULL,
@@ -63,23 +63,18 @@ INSERT INTO profiles (user_id, phone, location, professional_title, summary, int
 VALUES (?, ?, ?, ?, ?, ?)
 """, seed_profiles)
 
-# Seed resumes from real PDF/DOCX files committed under seed_data/resumes (see seed_data/README.md);
-# odd profile ids are PDF, even are DOCX, alternating to cover both supported file types.
+# Seed resumes from real PDF files committed under seed_data/resumes (see seed_data/README.md).
 SEED_RESUME_DIR = os.path.join(os.path.dirname(__file__), "seed_data", "resumes")
-MIME_TYPES = {
-    ".pdf": "application/pdf",
-    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-}
+PDF_MIME_TYPE = "application/pdf"
 
 for i in range(1, 11):
-    extension = ".pdf" if i % 2 == 1 else ".docx"
-    file_name = f"resume_profile_{i}{extension}"
+    file_name = f"resume_profile_{i}.pdf"
     with open(os.path.join(SEED_RESUME_DIR, file_name), "rb") as f:
         content = f.read()
     cursor.execute("""
     INSERT INTO resumes (profile_id, file_name, file_type, file_data)
     VALUES (?, ?, ?, ?)
-    """, (i, file_name, MIME_TYPES[extension], content))
+    """, (i, file_name, PDF_MIME_TYPE, content))
 
 conn.commit()
 conn.close()

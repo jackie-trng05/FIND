@@ -56,10 +56,8 @@ EVALUATIONS_URL = os.getenv("EVALUATIONS_PUBLIC_URL", "http://localhost:16016")
 MAX_RESUME_BYTES = 5 * 1024 * 1024
 ALLOWED_RESUME_MIME = {
     "application/pdf": "PDF",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOCX",
-    "application/msword": "DOC",
 }
-ALLOWED_RESUME_EXTS = (".pdf", ".docx", ".doc")
+ALLOWED_RESUME_EXTS = (".pdf",)
 
 VALID_STATUSES = (
     "Draft", "Submitted", "Shortlisted", "Interview Requested",
@@ -146,6 +144,12 @@ def get_postings_map(job_posting_ids):
 # --------------------------------------------------------------------------- #
 # Student-1 resume integration                                                #
 # --------------------------------------------------------------------------- #
+#
+# Calls student-1's database microservice directly (frontend -> own backend ->
+# other student's DB is the convention used throughout this repo - see
+# student-2's APPLICATIONS_DB_URL, student-4/5's APPLICATION_DB_URL). The DB
+# service does no authentication itself, so ownership checks below are
+# reimplemented here rather than delegated to student-1.
 
 def _get_student1_profile_by_user_id(user_id):
     try:
@@ -178,11 +182,10 @@ def _get_student1_resume_meta(resume_id):
 
 
 def get_latest_profile_resume(user_id):
-    """Latest resume metadata from the applicant's student-1 profile."""
+    """The applicant's single stored resume from their student-1 profile, if any."""
     profile = _get_student1_profile_by_user_id(user_id)
     if not profile:
         return None
-
     profile_id = profile.get("profile_id")
     if not profile_id:
         return None
@@ -194,11 +197,10 @@ def get_latest_profile_resume(user_id):
     if resp.status_code != 200:
         return None
 
-    body = resp.json() or {}
-    if not isinstance(body, list) or not body:
+    resumes = resp.json() or []
+    if not resumes:
         return None
-
-    latest = max(body, key=lambda r: r.get("uploaded_at") or "")
+    latest = resumes[0]  # one resume per profile, enforced by student-1's UNIQUE constraint
     return {
         "resume_id": latest.get("resume_id"),
         "file_name": latest.get("file_name", "resume.pdf"),
@@ -208,29 +210,35 @@ def get_latest_profile_resume(user_id):
     }
 
 
-def upload_profile_resume(user_id, filename, mimetype, raw_bytes):
-    """Upload a resume to the current applicant's student-1 profile.
-    Returns the new resume_id or None on failure."""
-    profile = _get_student1_profile_by_user_id(user_id)
-    if not profile:
-        return None
-    profile_id = profile.get("profile_id")
-    if not profile_id:
-        return None
-
+def upload_application_resume(filename, mimetype, raw_bytes):
+    """Upload a one-off resume for this application only - NOT the applicant's
+    profile default resume. profile_id is left NULL on student-1's side;
+    ownership is tracked via applications.user_id on this side instead."""
     payload = {
         "file_name": filename,
         "file_type": mimetype,
         "file_data": base64.b64encode(raw_bytes).decode("utf-8"),
     }
     try:
-        resp = requests.post(f"{STUDENT_1_DB_URL}/profiles/{profile_id}/resumes",
-                             json=payload, timeout=15)
+        resp = requests.post(f"{STUDENT_1_DB_URL}/resumes", json=payload, timeout=15)
     except requests.RequestException:
         return None
     if resp.status_code != 201:
         return None
     return (resp.json() or {}).get("resume_id")
+
+
+def _user_owns_application_resume(user_id, resume_id):
+    """True if resume_id is attached to one of user_id's own applications
+    (covers application-only resumes, which have no profile_id to check)."""
+    if user_id is None:
+        return False
+    try:
+        resp = requests.get(f"{DATABASE_SERVICE_URL}/applications", params={"user_id": user_id}, timeout=TIMEOUT)
+        resp.raise_for_status()
+    except requests.RequestException:
+        return False
+    return any(a.get("resume_id") == resume_id for a in (resp.json() or []))
 
 
 def get_resume_metadata(resume_id, role, current_user_id=None):
@@ -243,10 +251,15 @@ def get_resume_metadata(resume_id, role, current_user_id=None):
     if role == "staff":
         return meta
 
-    if current_user_id is None:
-        return None
     profile_id = meta.get("profile_id")
-    if not profile_id:
+    if profile_id is None:
+        # Application-only resume (not linked to a profile): verify it belongs
+        # to one of the caller's own applications instead of trusting the caller.
+        if not _user_owns_application_resume(current_user_id, resume_id):
+            return None
+        return meta
+
+    if current_user_id is None:
         return None
     profile = _get_student1_profile(profile_id)
     if not profile or profile.get("user_id") != current_user_id:
@@ -520,8 +533,8 @@ def render_apply_form(posting, user, application=None, resume=None, error=""):
                             {"Replace resume" if resume else f"Upload resume {_REQ}"}
                         </label>
                         <input class="form-input" type="file" name="resume_file"
-                               accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
-                        <p class="form-help">PDF or DOCX, maximum 5 MB.</p>
+                               accept=".pdf,application/pdf">
+                        <p class="form-help">PDF only, maximum 5 MB.</p>
                     </div>
                 </fieldset>
 
@@ -895,11 +908,11 @@ def parse_screening_response(text):
 def validate_resume(file_storage):
     filename = (file_storage.filename or "").lower()
     if not any(filename.endswith(ext) for ext in ALLOWED_RESUME_EXTS):
-        return "Resume must be a PDF or DOCX file."
+        return "Resume must be a PDF file."
     mimetype = (file_storage.mimetype or "").lower()
     if mimetype and mimetype not in ALLOWED_RESUME_MIME:
         if not any(filename.endswith(ext) for ext in ALLOWED_RESUME_EXTS):
-            return "Resume must be a PDF or DOCX file."
+            return "Resume must be a PDF file."
     try:
         file_storage.stream.seek(0, 2)
         size = file_storage.stream.tell()
@@ -1169,8 +1182,7 @@ def _save_or_submit(action, application_id):
         if error:
             return render_message(error, "error"), 200
         raw = resume_file.read()
-        resume_id_new = upload_profile_resume(
-            user.get("user_id"),
+        resume_id_new = upload_application_resume(
             resume_file.filename, resume_file.mimetype or "application/pdf", raw,
         )
         if resume_id_new is None:

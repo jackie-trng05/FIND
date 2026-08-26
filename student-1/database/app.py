@@ -13,8 +13,6 @@ DATABASE_NAME = os.path.join(DATA_DIR, "student1.db")
 
 ALLOWED_FILE_TYPES = {
     "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 MAX_FILE_SIZE = 5 * 1024 * 1024
 
@@ -149,29 +147,39 @@ def get_resumes(profile_id):
     return jsonify([dict(r) for r in rows])
 
 
+def _validate_resume_payload(data):
+    """Validate a resume upload payload. Returns (file_name, file_type, file_bytes, None)
+    on success, or (None, None, None, (response_json, status_code)) on failure."""
+    file_name = data.get("file_name", "")
+    file_type = data.get("file_type", "")
+    file_data_b64 = data.get("file_data", "")
+
+    if not file_name or not file_type or not file_data_b64:
+        return None, None, None, ({"error": "file_name, file_type, and file_data are required"}, 400)
+
+    if file_type not in ALLOWED_FILE_TYPES:
+        return None, None, None, ({"error": "Only PDF files are allowed"}, 400)
+
+    try:
+        file_bytes = base64.b64decode(file_data_b64)
+    except Exception:
+        return None, None, None, ({"error": "Invalid base64 file_data"}, 400)
+
+    if len(file_bytes) > MAX_FILE_SIZE:
+        return None, None, None, ({"error": "File exceeds 5MB limit"}, 400)
+
+    return file_name, file_type, file_bytes, None
+
+
 @app.post("/profiles/<int:profile_id>/resumes")
 def upload_resume(profile_id):
     data = request.get_json()
     if not data:
         return jsonify({"error": "JSON body required"}), 400
 
-    file_name = data.get("file_name", "")
-    file_type = data.get("file_type", "")
-    file_data_b64 = data.get("file_data", "")
-
-    if not file_name or not file_type or not file_data_b64:
-        return jsonify({"error": "file_name, file_type, and file_data are required"}), 400
-
-    if file_type not in ALLOWED_FILE_TYPES:
-        return jsonify({"error": "Only PDF, DOC, and DOCX files are allowed"}), 400
-
-    try:
-        file_bytes = base64.b64decode(file_data_b64)
-    except Exception:
-        return jsonify({"error": "Invalid base64 file_data"}), 400
-
-    if len(file_bytes) > MAX_FILE_SIZE:
-        return jsonify({"error": "File exceeds 5MB limit"}), 400
+    file_name, file_type, file_bytes, error = _validate_resume_payload(data)
+    if error:
+        return jsonify(error[0]), error[1]
 
     conn = get_db()
     profile = conn.execute("SELECT profile_id FROM profiles WHERE profile_id = ?", (profile_id,)).fetchone()
@@ -180,10 +188,41 @@ def upload_resume(profile_id):
         return jsonify({"error": "Profile not found"}), 404
 
     now = datetime.utcnow().isoformat()
+    try:
+        cursor = conn.execute("""
+            INSERT INTO resumes (profile_id, file_name, file_type, file_data, uploaded_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (profile_id, file_name, file_type, file_bytes, now, now))
+    except sqlite3.IntegrityError:
+        conn.close()
+        # UNIQUE(profile_id) violation: this profile already has a resume.
+        return jsonify({"error": "This profile already has a resume. Delete the existing resume before uploading a new one."}), 409
+    conn.commit()
+    resume_id = cursor.lastrowid
+    conn.close()
+    return jsonify({"resume_id": resume_id, "file_name": file_name, "file_type": file_type, "uploaded_at": now}), 201
+
+
+@app.post("/resumes")
+def upload_unlinked_resume():
+    """Create a resume with no profile_id (application-only upload).
+
+    Ownership is tracked by the caller (student-3's applications.user_id FK), not here.
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "JSON body required"}), 400
+
+    file_name, file_type, file_bytes, error = _validate_resume_payload(data)
+    if error:
+        return jsonify(error[0]), error[1]
+
+    conn = get_db()
+    now = datetime.utcnow().isoformat()
     cursor = conn.execute("""
         INSERT INTO resumes (profile_id, file_name, file_type, file_data, uploaded_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (profile_id, file_name, file_type, file_bytes, now, now))
+        VALUES (NULL, ?, ?, ?, ?, ?)
+    """, (file_name, file_type, file_bytes, now, now))
     conn.commit()
     resume_id = cursor.lastrowid
     conn.close()

@@ -20,4 +20,40 @@ Notes
 - Cross-service data access must go through the exposed Database APIs.
 - Docker Compose is expected to orchestrate all services for local integration testing.
 
+## Cross-service calling convention and trust boundary
+
+When one student's feature needs data owned by another student, the call goes
+**frontend → own backend → other student's Database API**, calling the other
+student's raw DB service directly rather than routing through that student's
+authenticated backend. This is the pattern used consistently across the repo:
+
+- student-2's backend → student-3-db (`APPLICATIONS_DB_URL`)
+- student-3's backend → student-1-db (`STUDENT_1_DB_URL`)
+- student-4's backend → student-3-db (`APPLICATION_DB_URL`)
+- student-5's backend → student-3-db and student-4-db
+
+Each Database API service performs **no authentication or authorization** —
+it trusts its caller completely. This is a deliberate choice, not an oversight:
+Database services are only reachable over the internal Docker network
+(`find-network`) from other containers, never exposed directly to end users.
+The host port mappings in `docker-compose.yml` are a local-dev convenience for
+inspecting/debugging each DB in isolation, not a production access path.
+
+The **actual trust boundary is each student's own backend**. Whichever
+backend a request enters through is responsible for:
+1. Validating the caller's session (via the shared-api `/api/auth/session`
+   check), and
+2. Enforcing ownership/role checks (e.g. "does this resume belong to this
+   user's profile?", "is this caller staff?") **before** it reads/writes
+   another student's DB.
+
+Concretely, when student-3's backend fetches or uploads a resume that lives in
+student-1's database, student-3 re-implements the ownership check locally
+(see `_get_student1_profile*`/`get_resume_metadata` in
+`student-3/backend/app.py`) rather than delegating that check to student-1's
+backend. Student-1's own backend additionally exposes fully authenticated
+resume endpoints for its own frontend/UI use; those are not currently called
+by other students, but remain available if the team later decides to route
+cross-service calls through authenticated backends instead of raw DBs.
+
 This repository contains minimal placeholders for the shared microservices and Student 1 to validate the architecture and setup. Update this document with diagrams and exact service contracts as the setup progresses.

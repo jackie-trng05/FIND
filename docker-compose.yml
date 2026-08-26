@@ -53,8 +53,12 @@ services:
     ports:
       - "16004:3000"
     environment:
-      STUDENT1_BACKEND_URL: http://find-student-1-backend:5001
-      COOKIE_DOMAIN: localhost
+      PORT: 3000
+      BACKEND_PUBLIC_URL: http://localhost:16005
+      SHARED_API_PUBLIC_URL: http://localhost:16002
+      LOGIN_URL: http://localhost:16001/login
+      LOGOUT_URL: http://localhost:16002/api/auth/logout
+      FIND_HOME_URL: http://localhost:16001/dashboard
     volumes:
       - ./shared/css:/app/shared-css:ro
     depends_on:
@@ -70,8 +74,11 @@ services:
     ports:
       - "16005:5001"
     environment:
+      PORT: 5001
       SHARED_API_URL: http://find-shared-api:5000
       DB_SERVICE_URL: http://find-student-1-db:6001
+      BACKEND_PUBLIC_URL: http://localhost:16005
+      FRONTEND_PUBLIC_URL: http://localhost:16004
     depends_on:
       - student-1-db
     networks:

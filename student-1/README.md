@@ -5,7 +5,7 @@ Applicant profile CRUD and resume storage for the FIND HR application.
 ## Feature scope (Release 0, AI to be implemented)
 
 - Create / View / Edit / Delete user profile (applicant self-service)
-- Upload / View / Download / Delete resume (PDF, DOC, DOCX; 5MB max)
+- Upload / View / Download / Delete resume (PDF only; 5MB max)
 - Cross-service session via shared HttpOnly cookie (`session_token`)
 
 ## Services
@@ -29,19 +29,21 @@ docker compose up --build
 
 Session is shared via an HttpOnly `session_token` cookie with `domain=localhost`.
 The cookie is set on login by shared-api and automatically sent by the browser to all
-localhost services. The frontend proxies API calls server-side, forwarding the cookie.
+localhost services. The browser calls `student-1-backend` directly via HTMX
+(`hx-get`/`hx-post`/etc.) using that cookie — the frontend is a thin template
+shell and does not proxy any calls (same convention as student-2/3).
 
 ## Database seeding
 
 `init_db.py` seeds 10 profiles (mapped to shared-db user IDs 1–10) and 10 realistic
-resumes (5 PDF, 5 DOCX) from files committed under `database/seed_data/resumes/`.
+resumes (PDF only) from files committed under `database/seed_data/resumes/`.
 
 ## Known deviations from the registration form
 
 - Identity fields (first/last name) live on the shared `users` table, not on `profiles`.
 - Resumes are stored as a `BLOB` in SQLite (`file_data`), not as a `Resume_FilePath`.
-- Resume-level routes are `/api/resumes/{resumeId}` rather than nested under
-  `/api/profiles/{id}/resumes/{resumeId}`; ownership is still checked server-side.
+- Resume-level routes are `/resume/{resumeId}` rather than nested under
+  `/profile/{id}/resume/{resumeId}`; ownership is still checked server-side.
 
 ## AI feature status
 
