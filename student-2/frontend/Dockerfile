@@ -5,11 +5,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY server.py .
+COPY app.py .
 COPY templates/ templates/
 COPY css/ css/
 
 ENV PORT=3002
 EXPOSE 3002
 
-CMD ["python", "server.py"]
+CMD ["python", "app.py"]
