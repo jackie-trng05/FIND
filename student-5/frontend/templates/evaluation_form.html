@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Evaluation Form — FIND</title>
   <link rel="stylesheet" href="/css/theme.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <style>
     .eval-form { max-width: 720px; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -24,12 +25,6 @@
     .ai-rec-box h4 { margin-bottom: 0.5rem; font-size: 0.9rem; }
     .ai-rec-box p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
     .form-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
-    .notify-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
-    .notify-section h3 { margin-bottom: 0.75rem; font-size: 1rem; }
-    .notify-actions { display: flex; gap: 0.75rem; }
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .modal-box { background: var(--surface); border-radius: var(--radius-lg); padding: 2rem; max-width: 420px; width: 90%; box-shadow: var(--shadow-lg); }
-    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
     .toast { position: fixed; top: 1rem; right: 1rem; z-index: 2000; animation: fadeIn 0.3s; }
     .toast-hide { opacity: 0; transition: opacity 0.4s; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
@@ -77,16 +72,18 @@
         </div>
 
         <form id="eval-form" onsubmit="return false;">
+          <input type="hidden" name="Application_Id" id="application-id-field" value="{{ application_id if application_id else '' }}">
+
           <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
             <h2 style="font-size:1rem;margin-bottom:1rem;">HR Staff Details</h2>
             <div class="form-grid">
               <div class="form-group">
                 <label for="hr-name">HR Staff Name</label>
-                <input type="text" id="hr-name" required placeholder="Enter full name" readonly style="background:var(--primary-light);cursor:default;">
+                <input type="text" id="hr-name" name="HR_Staff_Name" required placeholder="Enter full name" readonly style="background:var(--primary-light);cursor:default;">
               </div>
               <div class="form-group">
                 <label for="hr-number">HR Staff Number</label>
-                <input type="text" id="hr-number" required placeholder="e.g. HR-001" readonly style="background:var(--primary-light);cursor:default;">
+                <input type="text" id="hr-number" name="HR_Staff_Number" required placeholder="e.g. HR-001" readonly style="background:var(--primary-light);cursor:default;">
               </div>
             </div>
           </div>
@@ -96,31 +93,31 @@
             <div class="score-row">
               <div class="score-item">
                 <label>Technical Knowledge</label>
-                <select id="score-tech" onchange="updateOverall()" required>
+                <select id="score-tech" name="Evaluation_TechnicalScore" onchange="updateOverall()" required>
                   <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
                 </select>
               </div>
               <div class="score-item">
                 <label>Education / Training</label>
-                <select id="score-edu" onchange="updateOverall()" required>
+                <select id="score-edu" name="Evaluation_EducationScore" onchange="updateOverall()" required>
                   <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
                 </select>
               </div>
               <div class="score-item">
                 <label>Communication</label>
-                <select id="score-comm" onchange="updateOverall()" required>
+                <select id="score-comm" name="Evaluation_CommunicationScore" onchange="updateOverall()" required>
                   <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
                 </select>
               </div>
               <div class="score-item">
                 <label>Problem Solving</label>
-                <select id="score-ps" onchange="updateOverall()" required>
+                <select id="score-ps" name="Evaluation_ProblemSolvingScore" onchange="updateOverall()" required>
                   <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
                 </select>
               </div>
               <div class="score-item">
                 <label>Professionalism</label>
-                <select id="score-prof" onchange="updateOverall()" required>
+                <select id="score-prof" name="Evaluation_ProfessionalismScore" onchange="updateOverall()" required>
                   <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
                 </select>
               </div>
@@ -148,7 +145,7 @@
             <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Select your hiring decision. This will update the application status when submitted.</p>
             <div class="form-group">
               <label for="final-rec">Decision *</label>
-              <select id="final-rec" required>
+              <select id="final-rec" name="Evaluation_FinalRecommendation" required>
                 <option value="">— Select —</option>
                 <option value="Hire">Hire</option>
                 <option value="Reject">Reject</option>
@@ -157,8 +154,15 @@
           </div>
 
           <div class="form-actions" id="form-actions">
-            <button type="button" class="btn btn-ghost" onclick="saveEvaluation('Draft')">Save as Draft</button>
-            <button type="button" class="btn btn-primary" onclick="confirmSubmit()">Submit Evaluation</button>
+            <button type="button" class="btn btn-ghost"
+                    {% if evaluation_id %}hx-put="{{ backend_url }}/api/evaluations/{{ evaluation_id }}"{% else %}hx-post="{{ backend_url }}/api/evaluations"{% endif %}
+                    hx-include="#eval-form" hx-swap="none"
+                    hx-vals='{"Evaluation_Status": "Draft"}'>Save as Draft</button>
+            <button type="button" class="btn btn-primary"
+                    {% if evaluation_id %}hx-put="{{ backend_url }}/api/evaluations/{{ evaluation_id }}"{% else %}hx-post="{{ backend_url }}/api/evaluations"{% endif %}
+                    hx-include="#eval-form" hx-swap="none"
+                    hx-vals='{"Evaluation_Status": "Completed"}'
+                    hx-confirm="Submit this evaluation? A notification email will be sent to the applicant and the application status will be updated.">Submit Evaluation</button>
             <a href="/" class="btn btn-ghost">Cancel</a>
           </div>
 
@@ -177,25 +181,26 @@
     </footer>
   </div>
 
-  <div id="modal-container"></div>
   <div id="toast-area" style="position:fixed;top:1rem;right:1rem;z-index:2000;"></div>
 
   <script>
+    window.__FIND_CONFIG = {
+      sharedApiUrl: '{{ shared_api_url }}',
+      loginUrl: '{{ login_url }}',
+      homeUrl: '/',
+      requireRole: 'staff'
+    };
+  </script>
+  <script src="/js/find-app.js"></script>
+
+  <script>
+    // Reactive form behaviour that stays client-side by design: the live
+    // overall-score calculator and the "Apply AI Scores" helper. Persisting the
+    // evaluation (save/submit) is handled by HTMX on the form buttons.
     const BACKEND = '{{ backend_url }}';
-    const API = 'http://localhost:16002';
     let applicationId = {{ application_id if application_id else 'null' }};
     let evaluationId = {{ evaluation_id if evaluation_id is defined and evaluation_id else 'null' }};
     let aiRecommendation = null;
-
-    function showToast(msg, type) {
-      const area = document.getElementById('toast-area');
-      if (!area) return;
-      const div = document.createElement('div');
-      div.className = type === 'error' ? 'alert alert-error toast' : 'alert alert-success toast';
-      div.textContent = msg;
-      area.appendChild(div);
-      setTimeout(() => { div.classList.add('toast-hide'); setTimeout(() => div.remove(), 400); }, 4000);
-    }
 
     function updateOverall() {
       const vals = [
@@ -217,7 +222,7 @@
 
     async function getAIScores() {
       const appId = applicationId;
-      if (!appId) { showToast('No application linked', 'error'); return; }
+      if (!appId) { window.showToast('No application linked', 'error'); return; }
 
       const btn = document.getElementById('ai-btn');
       btn.disabled = true;
@@ -261,148 +266,19 @@
       document.getElementById('score-ps').value = aiRecommendation.problem_solving;
       document.getElementById('score-prof').value = aiRecommendation.professionalism;
       updateOverall();
-      showToast('AI scores applied — you can adjust them', 'success');
-    }
-
-    async function saveEvaluation(status) {
-      const hrName = document.getElementById('hr-name').value.trim();
-      const hrNumber = document.getElementById('hr-number').value.trim();
-      const finalRec = document.getElementById('final-rec').value;
-
-      if (!hrName) { showToast('HR Staff Name is required', 'error'); return; }
-      if (!hrNumber) { showToast('HR Staff Number is required', 'error'); return; }
-
-      var scoreIds = ['score-tech', 'score-edu', 'score-comm', 'score-ps', 'score-prof'];
-      for (var i = 0; i < scoreIds.length; i++) {
-        if (document.getElementById(scoreIds[i]).value === '') {
-          showToast('All candidate scores are required', 'error'); return;
-        }
-      }
-
-      if (!finalRec) { showToast('Please select Hire or Reject', 'error'); return; }
-
-      const payload = {
-        Application_Id: applicationId,
-        HR_Staff_Name: hrName,
-        HR_Staff_Number: hrNumber,
-        Evaluation_TechnicalScore: parseInt(document.getElementById('score-tech').value),
-        Evaluation_EducationScore: parseInt(document.getElementById('score-edu').value),
-        Evaluation_CommunicationScore: parseInt(document.getElementById('score-comm').value),
-        Evaluation_ProblemSolvingScore: parseInt(document.getElementById('score-ps').value),
-        Evaluation_ProfessionalismScore: parseInt(document.getElementById('score-prof').value),
-        Evaluation_FinalRecommendation: finalRec,
-        Evaluation_Status: status
-      };
-
-      try {
-        let resp;
-        if (evaluationId) {
-          resp = await fetch(BACKEND + '/api/evaluations/' + evaluationId, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(payload)
-          });
-        } else {
-          resp = await fetch(BACKEND + '/api/evaluations', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(payload)
-          });
-        }
-        const data = await resp.json();
-        if (resp.ok) {
-          if (!evaluationId && data.Evaluation_Id) {
-            evaluationId = data.Evaluation_Id;
-          }
-          if (status === 'Completed' && finalRec) {
-            await fetch(BACKEND + '/api/evaluations/' + evaluationId + '/notify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({ action: finalRec === 'Hire' ? 'Hired' : 'Rejected' })
-            }).catch(function() {});
-            window.location.href = '/?toast=' + encodeURIComponent('Evaluation completed. Applicant has been notified via email (' + (finalRec === 'Hire' ? 'Hired' : 'Rejected') + ').');
-          } else {
-            window.location.href = '/?toast=' + encodeURIComponent('Evaluation saved as draft.');
-          }
-        } else {
-          showToast(data.error || 'Failed to save', 'error');
-        }
-      } catch {
-        showToast('Server error', 'error');
-      }
-    }
-
-    function confirmSubmit() {
-      const finalRec = document.getElementById('final-rec').value;
-      if (!finalRec) { showToast('Please select Hire or Reject', 'error'); return; }
-
-      var scoreIds = ['score-tech', 'score-edu', 'score-comm', 'score-ps', 'score-prof'];
-      for (var i = 0; i < scoreIds.length; i++) {
-        if (document.getElementById(scoreIds[i]).value === '') {
-          showToast('All candidate scores are required', 'error'); return;
-        }
-      }
-
-      const action = finalRec === 'Hire' ? 'hire' : 'reject';
-      document.getElementById('modal-container').innerHTML = `
-        <div class="modal-overlay" onclick="closeModal()">
-          <div class="modal-box" onclick="event.stopPropagation()">
-            <h3>Submit Evaluation — ${finalRec} Applicant</h3>
-            <p>This will submit the evaluation and <strong>${action}</strong> the applicant. A notification email will be sent to the applicant and the application status will be updated to <strong>${finalRec === 'Hire' ? 'Hired' : 'Rejected'}</strong>.</p>
-            <p style="margin-top:0.75rem;font-size:0.85rem;color:var(--text-muted);">This action cannot be undone.</p>
-            <div class="modal-actions">
-              <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
-              <button class="btn ${finalRec === 'Hire' ? 'btn-primary' : 'btn-danger'} btn-sm" onclick="closeModal(); saveEvaluation('Completed')">Yes, Submit & ${finalRec}</button>
-            </div>
-          </div>
-        </div>`;
-    }
-
-    function confirmNotify(action) {
-      const verb = action === 'Hired' ? 'hire' : 'reject';
-      document.getElementById('modal-container').innerHTML = `
-        <div class="modal-overlay" onclick="closeModal()">
-          <div class="modal-box" onclick="event.stopPropagation()">
-            <h3>${action === 'Hired' ? 'Hire' : 'Reject'} Applicant</h3>
-            <p>Are you sure you want to ${verb} this applicant? An email notification will be sent and the application status will be updated.</p>
-            <div class="modal-actions">
-              <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
-              <button class="btn ${action === 'Hired' ? 'btn-primary' : 'btn-danger'} btn-sm" onclick="doNotify('${action}')">Yes, ${action === 'Hired' ? 'Hire' : 'Reject'}</button>
-            </div>
-          </div>
-        </div>`;
-    }
-
-    function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
-
-    async function doNotify(action) {
-      closeModal();
-      try {
-        const resp = await fetch(BACKEND + '/api/evaluations/' + evaluationId + '/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ action })
-        });
-        const data = await resp.json();
-        showToast(data.message || 'Notification sent', 'success');
-      } catch {
-        showToast('Failed to send notification', 'error');
-      }
+      window.showToast('AI scores applied — you can adjust them', 'success');
     }
 
     async function loadExisting() {
       if (!evaluationId) return;
       try {
         const resp = await fetch(BACKEND + '/api/evaluations/' + evaluationId, { credentials: 'include' });
-        if (!resp.ok) { showToast('Evaluation not found', 'error'); return; }
-        const ev = resp.json ? await resp.json() : null;
+        if (!resp.ok) { window.showToast('Evaluation not found', 'error'); return; }
+        const ev = await resp.json();
         if (!ev) return;
 
         applicationId = ev.Application_Id;
+        document.getElementById('application-id-field').value = ev.Application_Id;
         document.getElementById('form-title').textContent = 'Edit Evaluation #' + ev.Evaluation_Id;
         document.getElementById('hr-name').value = ev.HR_Staff_Name || '';
         document.getElementById('hr-number').value = ev.HR_Staff_Number || '';
@@ -415,7 +291,6 @@
         updateOverall();
 
         if (ev.Evaluation_Status === 'Completed') {
-          // Lock the form for completed evaluations
           document.querySelectorAll('#eval-form select, #eval-form input').forEach(el => { el.disabled = true; });
           document.getElementById('form-actions').style.display = 'none';
           document.getElementById('ai-btn').style.display = 'none';
@@ -430,28 +305,28 @@
         if (ev.job_title) {
           document.getElementById('candidate-job').value = ev.job_title;
         }
-        var appLink = document.getElementById('application-link');
-        appLink.href = 'http://localhost:16010/staff/applications/' + ev.Application_Id;
+        const appLink = document.getElementById('application-link');
+        appLink.href = '{{ applications_public_url }}/staff/applications/' + ev.Application_Id;
         document.getElementById('application-link-row').style.display = 'flex';
       } catch (e) {
-        showToast('Failed to load evaluation', 'error');
+        window.showToast('Failed to load evaluation', 'error');
       }
     }
 
     async function loadCandidateInfo(appId) {
       try {
-        var resp = await fetch(BACKEND + '/api/eligible-applications', { credentials: 'include' });
-        var apps = await resp.json();
-        var app = apps.find(function(a) { return a.Application_Id === appId; });
+        const resp = await fetch(BACKEND + '/api/eligible-applications', { credentials: 'include' });
+        const apps = await resp.json();
+        const app = apps.find(function(a) { return a.application_id === appId; });
         if (app) {
-          document.getElementById('candidate-name').value = app.applicant_name || 'Applicant #' + app.User_Id;
+          document.getElementById('candidate-name').value = app.applicant_name || 'Applicant #' + app.user_id;
           document.getElementById('candidate-job').value = app.job_title || '—';
         } else {
           document.getElementById('candidate-name').value = 'Application #' + appId;
           document.getElementById('candidate-job').value = '—';
         }
-        var appLink = document.getElementById('application-link');
-        appLink.href = 'http://localhost:16010/staff/applications/' + appId;
+        const appLink = document.getElementById('application-link');
+        appLink.href = '{{ applications_public_url }}/staff/applications/' + appId;
         document.getElementById('application-link-row').style.display = 'flex';
       } catch {
         document.getElementById('candidate-name').value = 'Application #' + appId;
@@ -459,32 +334,22 @@
       }
     }
 
-    async function init() {
-      try {
-        const resp = await fetch(API + '/api/auth/session', { credentials: 'include' });
-        if (!resp.ok) { window.location.href = 'http://localhost:16001/login'; return; }
-        const data = await resp.json();
-        const u = data.user;
-        if (u.role !== 'staff') { window.location.href = '/'; return; }
-        document.getElementById('user-name').textContent = u.first_name + ' ' + u.last_name;
-        document.getElementById('user-role-badge').textContent = 'Staff';      document.getElementById('nav-logout-btn').style.display = '';        document.getElementById('page-wrapper').style.display = '';
-        if (!evaluationId) {
-          document.getElementById('hr-name').value = u.first_name + ' ' + u.last_name;
-          document.getElementById('hr-number').value = 'HR-' + String(u.user_id).padStart(3, '0');
-        }
-        await loadExisting();
-        if (!evaluationId && applicationId) {
-          await loadCandidateInfo(applicationId);
-        }
-        updateOverall();
-      } catch { window.location.href = 'http://localhost:16001/login'; }
-    }
-    init();
-
-    async function handleLogout() {
-      await fetch(API + '/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
-      window.location.href = 'http://localhost:16001/login';
-    }
+    // find-app.js validates the session and reveals the page, then fires
+    // `authReady` with the current user on `window.__findUser`.
+    document.body.addEventListener('authReady', async function () {
+      const u = window.__findUser;
+      if (!u) return;
+      if (!evaluationId) {
+        document.getElementById('hr-name').value = u.first_name + ' ' + u.last_name;
+        document.getElementById('hr-number').value = 'HR-' + String(u.user_id).padStart(3, '0');
+        document.getElementById('application-id-field').value = applicationId || '';
+      }
+      await loadExisting();
+      if (!evaluationId && applicationId) {
+        await loadCandidateInfo(applicationId);
+      }
+      updateOverall();
+    });
   </script>
 </body>
 </html>
