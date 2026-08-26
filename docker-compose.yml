@@ -61,6 +61,7 @@ services:
       FIND_HOME_URL: http://localhost:16001/dashboard
     volumes:
       - ./shared/css:/app/shared-css:ro
+      - ./shared/frontend/static/js:/app/shared-js:ro
     depends_on:
       - student-1-backend
     networks:
@@ -104,6 +105,11 @@ services:
     environment:
       PORT: 3002
       BACKEND_PUBLIC_URL: http://localhost:16008
+      SHARED_API_PUBLIC_URL: http://localhost:16002
+      LOGIN_URL: http://localhost:16001/login
+    volumes:
+      - ./shared/css:/app/shared-css:ro
+      - ./shared/frontend/static/js:/app/shared-js:ro
     depends_on:
       - student-2-backend
     networks:
@@ -123,6 +129,7 @@ services:
       FRONTEND_PUBLIC_URL: http://localhost:16007
       SHARED_API_URL: http://find-shared-api:5000
       APPLICATIONS_DB_URL: http://student-3-db:6003
+      APPLICATIONS_PUBLIC_URL: http://localhost:16010
       OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
       OLLAMA_MODEL: qwen2.5:0.5b
     extra_hosts:
@@ -161,6 +168,9 @@ services:
       LOGOUT_URL: http://localhost:16002/api/auth/logout
       FIND_HOME_URL: http://localhost:16001/dashboard
       JOB_POSTINGS_URL: http://localhost:16007
+    volumes:
+      - ./shared/css:/app/shared-css:ro
+      - ./shared/frontend/static/js:/app/shared-js:ro
     depends_on:
       - student-3-backend
     networks:
@@ -213,7 +223,15 @@ services:
       context: ./student-4/frontend
     container_name: find-student-4-frontend
     ports:
-      - "16013:80"
+      - "16013:3004"
+    environment:
+      BACKEND_PUBLIC_URL: http://localhost:16014
+      SHARED_API_PUBLIC_URL: http://localhost:16002
+      LOGIN_URL: http://localhost:16001/login
+      FIND_HOME_URL: http://localhost:16001/dashboard
+    volumes:
+      - ./shared/css:/app/shared-css:ro
+      - ./shared/frontend/static/js:/app/shared-js:ro
     depends_on:
       - student-4-backend
     networks:
@@ -231,12 +249,16 @@ services:
       APPLICATION_DB_URL: http://student-3-db:6003
       JOB_POSTING_DB_URL: http://student-2-db:6002
       SHARED_DB_URL: http://find-shared-db:6000
+      SHARED_API_URL: http://find-shared-api:5000
+      FRONTEND_PUBLIC_URL: http://localhost:16013
+      BACKEND_PUBLIC_URL: http://localhost:16014
       OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
       OLLAMA_MODEL: qwen2.5:0.5b
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       - student-4-db
+      - shared-api
     networks:
       - find-network
     restart: unless-stopped
@@ -262,8 +284,12 @@ services:
     environment:
       BACKEND_PUBLIC_URL: http://localhost:16017
       FIND_HOME_URL: http://localhost:16001/dashboard
+      SHARED_API_PUBLIC_URL: http://localhost:16002
+      LOGIN_URL: http://localhost:16001/login
+      APPLICATIONS_PUBLIC_URL: http://localhost:16010
     volumes:
       - ./shared/css:/app/shared-css:ro
+      - ./shared/frontend/static/js:/app/shared-js:ro
     depends_on:
       - student-5-backend
     networks:
@@ -284,6 +310,7 @@ services:
       POSTINGS_DB_URL: http://student-2-db:6002
       INTERVIEWS_DB_URL: http://student-4-db:5002
       FRONTEND_PUBLIC_URL: http://localhost:16016
+      BACKEND_PUBLIC_URL: http://localhost:16017
       OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
       OLLAMA_MODEL: llama3.1:8b
     extra_hosts:
