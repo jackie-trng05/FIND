@@ -66,7 +66,6 @@ services:
       BACKEND_PUBLIC_URL: http://localhost:16005
       SHARED_API_PUBLIC_URL: http://localhost:16002
       LOGIN_URL: http://localhost:16001/login
-      LOGOUT_URL: http://localhost:16002/api/auth/logout
       FIND_HOME_URL: http://localhost:16001/dashboard
     volumes:
       - ./shared/css:/app/shared-css:ro
@@ -176,7 +175,6 @@ services:
       BACKEND_PUBLIC_URL: http://localhost:16011
       SHARED_API_PUBLIC_URL: http://localhost:16002
       LOGIN_URL: http://localhost:16001/login
-      LOGOUT_URL: http://localhost:16002/api/auth/logout
       FIND_HOME_URL: http://localhost:16001/dashboard
       JOB_POSTINGS_URL: http://localhost:16007
     volumes:

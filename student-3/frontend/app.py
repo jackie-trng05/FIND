@@ -43,7 +43,6 @@ def serve_js(filename):
 BACKEND_PUBLIC_URL = os.environ["BACKEND_PUBLIC_URL"]
 SHARED_API_PUBLIC_URL = os.environ["SHARED_API_PUBLIC_URL"]
 LOGIN_URL = os.environ["LOGIN_URL"]
-LOGOUT_URL = os.environ["LOGOUT_URL"]
 HOME_URL = os.environ["FIND_HOME_URL"]
 JOB_POSTINGS_URL = os.environ["JOB_POSTINGS_URL"]
 
@@ -112,7 +111,6 @@ def _context(**extra):
         "backend_url": BACKEND_PUBLIC_URL,
         "shared_api_public_url": SHARED_API_PUBLIC_URL,
         "login_url": LOGIN_URL,
-        "logout_url": LOGOUT_URL,
         "home_url": HOME_URL,
         "job_postings_url": JOB_POSTINGS_URL,
     }

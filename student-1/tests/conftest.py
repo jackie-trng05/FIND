@@ -15,7 +15,6 @@ BACKEND_PUBLIC_URL = "http://backend-service.test"
 FRONTEND_PUBLIC_URL = "http://frontend-service.test"
 SHARED_API_PUBLIC_URL = "http://shared-api-public.test"
 LOGIN_URL = "http://frontend.test/login"
-LOGOUT_URL = "http://shared-api-public.test/api/auth/logout"
 FIND_HOME_URL = "http://frontend.test/dashboard"
 
 # These URLs are constant for the whole test run, so set them once here rather
@@ -27,7 +26,6 @@ os.environ.setdefault("BACKEND_PUBLIC_URL", BACKEND_PUBLIC_URL)
 os.environ.setdefault("FRONTEND_PUBLIC_URL", FRONTEND_PUBLIC_URL)
 os.environ.setdefault("SHARED_API_PUBLIC_URL", SHARED_API_PUBLIC_URL)
 os.environ.setdefault("LOGIN_URL", LOGIN_URL)
-os.environ.setdefault("LOGOUT_URL", LOGOUT_URL)
 os.environ.setdefault("FIND_HOME_URL", FIND_HOME_URL)
 
 # Lets `import services`, `import views`, `import routes.*` resolve when
