@@ -258,7 +258,7 @@ def render_application_detail(application, posting, user, resume):
     if status in INTERVIEW_ACTION_STATUSES:
         actions.append(
             f'<a class="btn btn-secondary" target="_blank" rel="noopener"'
-            f' href="{INTERVIEWS_URL}/?application={aid}">Schedule Interview</a>'
+            f' href="{INTERVIEWS_URL}/schedule?application_id={aid}">Schedule Interview</a>'
         )
     actions_html = f'<div class="panel-actions">{"".join(actions)}</div>' if actions else ""
 
@@ -378,7 +378,7 @@ def render_staff_applications_table(applications, postings, users):
         if a["application_status"] == "Shortlisted":
             interview_btn = (
                 f'<a class="btn btn-accent btn-sm" target="_blank" rel="noopener"'
-                f' href="{INTERVIEWS_URL}/?application={aid}">Interview</a>'
+                f' href="{INTERVIEWS_URL}/schedule?application_id={aid}">Interview</a>'
             )
         evaluate_btn = ""
         if a["application_status"] == "Interview Completed":
