@@ -299,6 +299,34 @@ def render_schedule_options(applications):
     return opts
 
 
+def render_time_suggestions(slots, note=""):
+    """Selectable AI-suggested interview time chips (all in the future).
+
+    Each ``slot`` is a "YYYY-MM-DD HH:MM" string. The schedule page wires a
+    click on a chip to fill the date & time field via ``data-datetime``.
+    """
+    if not slots:
+        return (
+            '<div class="empty-state">No suitable future times could be suggested. '
+            'Try describing your availability above.</div>'
+        )
+    chips = ""
+    for dt in slots:
+        chips += (
+            f'<button type="button" class="suggest-chip" data-datetime="{escape(str(dt))}">'
+            f'{escape(_fmt_dt(dt))}</button>'
+        )
+    hint = f'<p class="form-hint">{escape(note)}</p>' if note else ""
+    return (
+        '<div class="ai-result">'
+        '<div class="ai-result-head"><span class="ai-result-title">Suggested times</span></div>'
+        f'<div class="suggest-chips">{chips}</div>'
+        f'{hint}'
+        '</div>'
+    )
+
+
+
 # ---- To-complete ---------------------------------------------------------- #
 
 def render_to_complete_rows(interviews):
