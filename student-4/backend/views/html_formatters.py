@@ -93,7 +93,7 @@ _INTERVIEW_BADGE = {
     "shortlisted": "badge-warning",
     "interview requested": "badge-warning",
     "interview scheduled": "badge-info",
-    "interview completed": "badge-success",
+    "interview completed": "badge-accent",
     "withdrawn": "badge-danger",
 }
 

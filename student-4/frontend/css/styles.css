@@ -811,7 +811,7 @@ textarea.invalid:focus {
 .cal-event.cal-requested { background: var(--warning-bg); color: var(--warning); }
 .cal-event.cal-scheduled { background: #eff6ff; color: #1d4ed8; }
 .cal-event.cal-reschedule { background: var(--warning-bg); color: var(--warning); }
-.cal-event.cal-completed { background: var(--success-bg); color: var(--success); }
+.cal-event.cal-completed { background: #ccfbf1; color: var(--accent-dark); }
 .cal-event.cal-withdrawn { background: var(--error-bg); color: var(--error); }
 
 .loading {
