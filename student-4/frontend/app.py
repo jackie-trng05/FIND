@@ -34,6 +34,14 @@ def inject_urls():
     }
 
 
+@app.after_request
+def no_cache_html(response):
+    # Pages embed the shared runtime config; never serve a stale copy.
+    if response.mimetype == "text/html":
+        response.headers["Cache-Control"] = "no-store, must-revalidate"
+    return response
+
+
 @app.get("/css/<path:filename>")
 def serve_css(filename):
     # Student-4-specific styles come from this service; the shared theme.css is
