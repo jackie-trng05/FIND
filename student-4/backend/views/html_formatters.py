@@ -166,6 +166,7 @@ def render_interview_rows(interviews, role="staff", sort="datetime", direction="
 
     head = (
         "<thead><tr>"
+        + "<th>Application</th>"
         + _th("person", person_head)
         + _th("posting", "Job Posting")
         + _th("datetime", "Date &amp; Time")
@@ -176,7 +177,7 @@ def render_interview_rows(interviews, role="staff", sort="datetime", direction="
     if not rows:
         return (
             f'<table class="data-table">{head}<tbody>'
-            '<tr><td colspan="5" class="empty-state">No interviews match your filters.</td></tr>'
+            '<tr><td colspan="6" class="empty-state">No interviews match your filters.</td></tr>'
             "</tbody></table>"
         )
 
@@ -186,7 +187,8 @@ def render_interview_rows(interviews, role="staff", sort="datetime", direction="
         link = f"/interview/{escape(str(it.get('interview_id')))}?from=list"
         body += f"""
         <tr class="clickable application-row" data-href="{link}">
-            <td>{escape(str(person))}<div class="meta">Application #{escape(str(it.get('application_id')))}</div></td>
+            <td>#{escape(str(it.get('application_id')))}</td>
+            <td>{escape(str(person))}</td>
             <td>{escape(str(it.get('job_posting_title') or '—'))}</td>
             <td>{_fmt_dt(it.get('interview_datetime'))}</td>
             <td>{_interview_badge(it.get('interview_status'))}</td>
