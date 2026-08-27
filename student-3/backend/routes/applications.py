@@ -11,6 +11,7 @@ from flask import Blueprint, make_response, request
 
 from config import (
     DATABASE_SERVICE_URL,
+    INTERVIEWS_DB_URL,
     INTERVIEWS_URL,
     INTERVIEW_ACTION_STATUSES,
     TIMEOUT,
@@ -331,6 +332,25 @@ def submit_existing_draft(application_id):
 # Applicant: withdraw / delete                                                #
 # --------------------------------------------------------------------------- #
 
+def _remove_linked_interviews(application_id):
+    """Withdrawing an application removes any interview booked against it."""
+    try:
+        resp = requests.get(f"{INTERVIEWS_DB_URL}/interviews", timeout=TIMEOUT)
+        resp.raise_for_status()
+        interviews = resp.json()
+    except (requests.RequestException, ValueError):
+        return
+    for row in interviews:
+        if str(row.get("application_id")) != str(application_id):
+            continue
+        try:
+            requests.delete(
+                f"{INTERVIEWS_DB_URL}/interviews/{row.get('interview_id')}", timeout=TIMEOUT
+            )
+        except requests.RequestException:
+            continue
+
+
 @applications_bp.put("/api/applications/<int:application_id>/withdraw")
 def withdraw(application_id):
     user = get_session_user()
@@ -352,6 +372,8 @@ def withdraw(application_id):
             return render_message(resp.json().get("error", "Cannot withdraw."), "error"), 200
     except requests.RequestException:
         return render_message(_DB_UNAVAILABLE, "error"), 200
+
+    _remove_linked_interviews(application_id)
 
     resp_out = make_response("", 200)
     resp_out.headers["HX-Trigger"] = json.dumps({
