@@ -13,9 +13,11 @@ nested under /profile/{id}/resume/{resumeId}. The backend renders HTML
 fragments for an HTMX frontend (no JSON API), matching student-2/3's pattern.
 
 The AI resume-autofill capability (suggest professional title/summary/interests from
-an uploaded resume, with review/accept/discard) is not yet implemented in this
-release; it is blocked on the shared ai-services/ai-mode service, which is currently
-a team-wide placeholder.
+an uploaded resume, with review/accept/discard via per-field Apply buttons) is
+implemented in this release. It is a self-contained AI-Mode integration owned by
+this feature (routes/ai_mode.py, services/llm_client.py, prompts/), calling Ollama
+directly (llama3.1:8b) the same way student-2/3/4/5 each own their own AI-Mode --
+it does not depend on the shared ai-services/ai-mode placeholder.
 
 Use the evidence below to identify:
 - responsibilities and ownership boundaries for this feature's services

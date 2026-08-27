@@ -93,6 +93,12 @@
             }
         });
     })();
+
+    function applyProfileSuggestion(btn) {
+        var targetId = btn.dataset.target;
+        var input = document.getElementById(targetId);
+        if (input) input.value = btn.dataset.value;
+    }
 </script>
 </body>
 </html>
