@@ -64,8 +64,8 @@
     window.__FIND_CONFIG = {
         sharedApiUrl: '{{ shared_api_url }}',
         loginUrl: '{{ login_url }}',
-        homeUrl: '{{ home_url }}'{% if require_role %},
-        requireRole: '{{ require_role }}'{% endif %}
+        homeUrl: '{{ home_url }}',
+        requireRole: '{{ require_role|default("") }}'
     };
 </script>
 <script src="/js/find-app.js"></script>

@@ -955,51 +955,8 @@ textarea.invalid:focus {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== Confirm dialog ===== */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1100;
-    padding: 1rem;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.modal-overlay.show {
-    opacity: 1;
-}
-
-.modal {
-    background: var(--surface);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    max-width: 420px;
-    width: 100%;
-    box-shadow: var(--shadow-lg);
-}
-
-.modal-title {
-    margin: 0 0 0.5rem;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-.modal-message {
-    margin: 0 0 1.25rem;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-}
-
+/* Confirm-dialog styling lives in shared/css/theme.css (.modal-overlay /
+   .modal-card). Do not redefine it here. */
 
 @media (max-width: 900px) {
     .form-grid {
