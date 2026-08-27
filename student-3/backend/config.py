@@ -22,6 +22,7 @@ SHARED_API_URL = os.environ["SHARED_API_URL"]
 SHARED_DB_URL = os.environ["SHARED_DB_URL"]
 POSTINGS_DB_URL = os.environ["POSTINGS_DB_URL"]
 STUDENT_1_DB_URL = os.environ["STUDENT_1_DB_URL"]
+INTERVIEWS_DB_URL = os.getenv("INTERVIEWS_DB_URL", "http://student-4-db:6004")
 
 PORT = int(os.getenv("PORT", "5003"))
 TIMEOUT = 5

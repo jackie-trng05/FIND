@@ -33,7 +33,7 @@
             {% endif %}
             {% if status in interview_action_statuses %}
             <a class="btn btn-secondary" target="_blank" rel="noopener"
-               href="{{ data.interviews_url }}/?application={{ application.application_id }}">Schedule Interview</a>
+               href="{{ data.interviews_url }}/schedule?application_id={{ application.application_id }}">Schedule Interview</a>
             {% endif %}
         </div>
     </div>

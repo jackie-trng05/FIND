@@ -236,14 +236,21 @@ def schedulable_applications():
 
 
 def _scheduled_application_ids():
-    """Application IDs that already have an interview request."""
+    """Application IDs that already have a live interview request.
+
+    Declined (withdrawn) interviews are ignored so staff can invite the
+    applicant again.
+    """
     try:
         response = get_interviews_response({})
         response.raise_for_status()
         interviews = response.json()
     except requests.RequestException:
         return set()
-    return {str(row.get("application_id")) for row in interviews}
+    return {
+        str(row.get("application_id")) for row in interviews
+        if row.get("interview_status") != STATUS_WITHDRAWN
+    }
 
 
 @normal_ui_bp.post("/interviews")
@@ -353,31 +360,34 @@ def accept_interview(interview_id):
         interview_id,
         {"interview_status": STATUS_SCHEDULED},
         app_status=STATUS_SCHEDULED,
-        hx_success={"triggers": {
-            "showToast": "Interview accepted.",
-            "interviewChanged": True,
-            "requestsChanged": True,
-        }},
+        hx_success={"redirect": f"{FRONTEND_ORIGIN}/requests?toast={quote('Interview accepted.')}"},
     )
 
 
 @normal_ui_bp.post("/interviews/<int:interview_id>/decline")
 def decline_interview(interview_id):
-    """Applicant declines the request -> application is Withdrawn."""
+    """Applicant declines the request -> interview removed, application Shortlisted."""
     _, err = require_session()
     if err:
         return err
-    data = _read_input()
-    notes = str(data.get("reason", "")).strip()
-    payload = {"interview_status": STATUS_WITHDRAWN}
-    if notes:
-        payload["interview_notes"] = notes
-    return _apply_update(
-        interview_id,
-        payload,
-        app_status=STATUS_WITHDRAWN,
-        hx_success={"redirect": f"{FRONTEND_ORIGIN}/requests?toast={quote('Interview declined. Application withdrawn.')}"},
-    )
+    try:
+        response = get_interview_response(interview_id)
+        if response.status_code == 404:
+            return jsonify({"error": "Interview not found."}), 404
+        response.raise_for_status()
+        application_id = response.json().get("application_id")
+
+        deleted = delete_interview(interview_id)
+        deleted.raise_for_status()
+    except requests.RequestException as exc:
+        return _db_error(exc)
+
+    integration_api.set_application_status(application_id, STATUS_SHORTLISTED)
+    if _wants_hx():
+        return _hx_response(
+            redirect=f"{FRONTEND_ORIGIN}/requests?toast={quote('Interview declined.')}"
+        )
+    return jsonify({"declined": interview_id}), 200
 
 
 @normal_ui_bp.post("/interviews/<int:interview_id>/complete")

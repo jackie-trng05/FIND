@@ -6,55 +6,86 @@
         <h1>Schedule Interview</h1>
         <p>Send an interview invitation to a shortlisted applicant.</p>
     </div>
-    <a class="btn btn-secondary btn-sm" href="/applications">&#8592; Applications</a>
 </div>
 
-<section class="card">
-    <form id="schedule-form"
-          hx-post="{{ backend_url }}/interviews"
-          hx-swap="none">
-        <input type="hidden" name="staff_id" id="sched-staff-id" value="">
-        <input type="hidden" name="interview_datetime" id="sched-datetime" value="">
+<div class="split">
+    <section class="card">
+        <form id="schedule-form"
+              hx-post="{{ backend_url }}/interviews"
+              hx-swap="none">
+            <input type="hidden" name="staff_id" id="sched-staff-id" value="">
+            <input type="hidden" name="interview_datetime" id="sched-datetime" value="">
 
-        <div class="field">
-            <label for="sched-app">Application</label>
-            <select id="sched-app" name="application_id" required
-                    hx-get="{{ backend_url }}/ui/schedule/options"
-                    hx-trigger="load"
-                    hx-target="this"
-                    hx-swap="innerHTML">
-                <option value="">Loading…</option>
-            </select>
-        </div>
+            <div class="field">
+                <label for="sched-app">Application</label>
+                <select id="sched-app" name="application_id" required
+                        hx-get="{{ backend_url }}/ui/schedule/options"
+                        hx-trigger="load"
+                        hx-target="this"
+                        hx-swap="innerHTML">
+                    <option value="">Loading…</option>
+                </select>
+            </div>
 
-        <div id="sched-summary" class="summary-box" style="display:none;">
-            <div><strong>Applicant:</strong> <span id="sum-applicant">—</span></div>
-            <div><strong>Position:</strong> <span id="sum-posting">—</span></div>
-        </div>
+            <div class="field">
+                <label for="sched-applicant">Applicant name</label>
+                <input type="text" id="sched-applicant" placeholder="Filled in from the selected application" readonly>
+            </div>
 
-        <div class="field">
-            <label for="sched-dt-picker">Date &amp; time</label>
-            <input type="datetime-local" id="sched-dt-picker" required>
-            <small class="muted">The applicant will be invited to confirm this time.</small>
-        </div>
+            <div class="field">
+                <label for="sched-posting">Job posting</label>
+                <input type="text" id="sched-posting" placeholder="Filled in from the selected application" readonly>
+            </div>
 
-        <div class="field">
-            <label for="sched-link">Meeting link</label>
-            <input type="url" id="sched-link" name="interview_link" placeholder="https://…" required>
-        </div>
+            <div class="field">
+                <label for="sched-dt-picker">Date &amp; time</label>
+                <input type="datetime-local" id="sched-dt-picker" required>
+                <small class="muted">The applicant will be invited to confirm this time.</small>
+            </div>
 
-        <div class="field">
-            <label for="sched-notes">Notes for the applicant (optional)</label>
-            <textarea id="sched-notes" name="interview_notes" rows="3"
-                      placeholder="Anything the applicant should know before the interview."></textarea>
-        </div>
+            <div class="field">
+                <label for="sched-link">Meeting link</label>
+                <input type="url" id="sched-link" name="interview_link" placeholder="https://…" required>
+            </div>
 
-        <div class="btn-row">
-            <button type="submit" class="btn btn-primary">Send interview invitation</button>
-            <a href="/applications" class="btn btn-secondary">Cancel</a>
+            <div class="field">
+                <label for="sched-notes">Notes for the applicant (optional)</label>
+                <textarea id="sched-notes" name="interview_notes" rows="3"
+                          placeholder="Anything the applicant should know before the interview."></textarea>
+            </div>
+
+            <div class="btn-row">
+                <button type="submit" class="btn btn-primary">Send interview invitation</button>
+                <a href="{{ applications_url }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </section>
+
+    <section class="card">
+        <div class="ai-panel">
+            <div class="ai-panel-head">
+                <span class="ai-panel-title">AI Mode — Suggested times</span>
+                <div class="ai-actions">
+                    <button type="button" id="ai-btn" class="btn btn-accent btn-sm"
+                            hx-post="{{ backend_url }}/suggest-times"
+                            hx-include="#ai-preferences"
+                            hx-target="#ai-suggestions" hx-swap="innerHTML"
+                            hx-indicator="#ai-spinner" hx-disabled-elt="this">Suggest times</button>
+                    <span id="ai-spinner" class="htmx-indicator ai-spinner">
+                        <span class="spinner"></span> Thinking…
+                    </span>
+                </div>
+            </div>
+            <p class="form-hint">Optionally describe staff availability or the applicant's preferences, then let the
+                assistant propose conflict-free future slots. Click a suggestion to fill in the date &amp; time.</p>
+            <div class="field">
+                <textarea id="ai-preferences" name="preferences" rows="3"
+                          placeholder="e.g. Weekday mornings, avoid Fridays, prefer next week."></textarea>
+            </div>
+            <div id="ai-suggestions"></div>
         </div>
-    </form>
-</section>
+    </section>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -69,22 +100,23 @@
             }
         });
 
+        var picker = document.getElementById('sched-dt-picker');
+        var hidden = document.getElementById('sched-datetime');
+
         // Convert the datetime-local value (YYYY-MM-DDTHH:MM) to the backend
         // format (YYYY-MM-DD HH:MM) whenever it changes.
-        var picker = document.getElementById('sched-dt-picker');
         picker.addEventListener('change', function () {
-            document.getElementById('sched-datetime').value = picker.value.replace('T', ' ');
+            hidden.value = picker.value.replace('T', ' ');
         });
 
         var select = document.getElementById('sched-app');
-        var summary = document.getElementById('sched-summary');
 
         function updateSummary() {
             var opt = select.options[select.selectedIndex];
-            if (!opt || !opt.value) { summary.style.display = 'none'; return; }
-            document.getElementById('sum-applicant').textContent = opt.getAttribute('data-applicant-name') || '—';
-            document.getElementById('sum-posting').textContent = opt.getAttribute('data-posting-title') || '—';
-            summary.style.display = '';
+            var name = (opt && opt.getAttribute('data-applicant-name')) || '';
+            var posting = (opt && opt.getAttribute('data-posting-title')) || '';
+            document.getElementById('sched-applicant').value = name;
+            document.getElementById('sched-posting').value = posting;
         }
         select.addEventListener('change', updateSummary);
 
@@ -92,6 +124,16 @@
         select.addEventListener('htmx:afterSwap', function () {
             if (preselect) { select.value = preselect; }
             updateSummary();
+        });
+
+        // Clicking an AI-suggested time chip fills the date & time field.
+        document.getElementById('ai-suggestions').addEventListener('click', function (e) {
+            var chip = e.target.closest('.suggest-chip');
+            if (!chip) return;
+            var dt = chip.getAttribute('data-datetime') || '';
+            if (!dt) return;
+            picker.value = dt.replace(' ', 'T');
+            hidden.value = dt;
         });
     })();
 </script>

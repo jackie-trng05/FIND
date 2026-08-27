@@ -93,7 +93,7 @@ _INTERVIEW_BADGE = {
     "shortlisted": "badge-warning",
     "interview requested": "badge-warning",
     "interview scheduled": "badge-info",
-    "interview completed": "badge-success",
+    "interview completed": "badge-accent",
     "withdrawn": "badge-danger",
 }
 
@@ -166,6 +166,7 @@ def render_interview_rows(interviews, role="staff", sort="datetime", direction="
 
     head = (
         "<thead><tr>"
+        + "<th>Application</th>"
         + _th("person", person_head)
         + _th("posting", "Job Posting")
         + _th("datetime", "Date &amp; Time")
@@ -176,7 +177,7 @@ def render_interview_rows(interviews, role="staff", sort="datetime", direction="
     if not rows:
         return (
             f'<table class="data-table">{head}<tbody>'
-            '<tr><td colspan="5" class="empty-state">No interviews match your filters.</td></tr>'
+            '<tr><td colspan="6" class="empty-state">No interviews match your filters.</td></tr>'
             "</tbody></table>"
         )
 
@@ -186,7 +187,8 @@ def render_interview_rows(interviews, role="staff", sort="datetime", direction="
         link = f"/interview/{escape(str(it.get('interview_id')))}?from=list"
         body += f"""
         <tr class="clickable application-row" data-href="{link}">
-            <td>{escape(str(person))}<div class="meta">Application #{escape(str(it.get('application_id')))}</div></td>
+            <td>#{escape(str(it.get('application_id')))}</td>
+            <td>{escape(str(person))}</td>
             <td>{escape(str(it.get('job_posting_title') or '—'))}</td>
             <td>{_fmt_dt(it.get('interview_datetime'))}</td>
             <td>{_interview_badge(it.get('interview_status'))}</td>
@@ -299,6 +301,34 @@ def render_schedule_options(applications):
     return opts
 
 
+def render_time_suggestions(slots, note=""):
+    """Selectable AI-suggested interview time chips (all in the future).
+
+    Each ``slot`` is a "YYYY-MM-DD HH:MM" string. The schedule page wires a
+    click on a chip to fill the date & time field via ``data-datetime``.
+    """
+    if not slots:
+        return (
+            '<div class="empty-state">No suitable future times could be suggested. '
+            'Try describing your availability above.</div>'
+        )
+    chips = ""
+    for dt in slots:
+        chips += (
+            f'<button type="button" class="suggest-chip" data-datetime="{escape(str(dt))}">'
+            f'{escape(_fmt_dt(dt))}</button>'
+        )
+    hint = f'<p class="form-hint">{escape(note)}</p>' if note else ""
+    return (
+        '<div class="ai-result">'
+        '<div class="ai-result-head"><span class="ai-result-title">Suggested times</span></div>'
+        f'<div class="suggest-chips">{chips}</div>'
+        f'{hint}'
+        '</div>'
+    )
+
+
+
 # ---- To-complete ---------------------------------------------------------- #
 
 def render_to_complete_rows(interviews):
@@ -355,18 +385,9 @@ def render_requests(interviews, backend_url=""):
                         hx-confirm="Accept this interview? Your application will move to Interview Scheduled."
                         hx-swap="none">Accept</button>
                 <button class="btn btn-danger btn-sm" type="button"
-                        onclick="this.closest('section').querySelector('.decline-box').style.display='block'">Decline</button>
-            </div>
-            <div class="decline-box" style="display:none;margin-top:0.75rem;">
-                <label>Reason for declining (optional)</label>
-                <textarea name="reason" rows="2" placeholder="Let the recruiter know why"></textarea>
-                <div class="btn-row" style="margin-top:0.5rem;">
-                    <button class="btn btn-danger btn-sm" type="button"
-                            hx-post="{backend_url}/interviews/{iid}/decline"
-                            hx-include="closest .decline-box"
-                            hx-confirm="Decline this interview? Declining withdraws your application."
-                            hx-swap="none">Decline Interview</button>
-                </div>
+                        hx-post="{backend_url}/interviews/{iid}/decline"
+                        hx-confirm="Decline this interview request? Your application stays active, but this interview will not go ahead."
+                        hx-swap="none">Decline</button>
             </div>
         </section>"""
     return cards
@@ -432,7 +453,7 @@ def render_interview_detail(interview, role, backend_url="", is_past=False):
     """Detail card with role/status-appropriate HTMX actions."""
     is_staff = role == "staff"
     status = interview.get("interview_status")
-    iid = escape(str(interview.get("interview_id")))
+    interview_id = escape(str(interview.get("interview_id")))
 
     actions = ""
     extra = ""
@@ -441,9 +462,9 @@ def render_interview_detail(interview, role, backend_url="", is_past=False):
             actions = f"""
             <div class="btn-row" style="margin-top:1.25rem;">
                 <button class="btn btn-danger" type="button"
-                        hx-delete="{backend_url}/interviews/{iid}"
-                        hx-confirm="Cancel this interview? This removes the interview request."
-                        hx-swap="none">Cancel Interview</button>
+                        hx-delete="{backend_url}/interviews/{interview_id}"
+                        hx-confirm="Cancel this interview? This deletes the interview.">
+                        Cancel Interview</button>
             </div>"""
         if status == "Interview Completed":
             extra = f'<div style="margin-top:1.5rem;"><h2>Interview notes</h2>{_notes_view(interview.get("interview_notes"))}</div>'
@@ -452,11 +473,11 @@ def render_interview_detail(interview, role, backend_url="", is_past=False):
             <div style="margin-top:1.5rem;">
                 <h2>Complete Interview</h2>
                 <p class="form-hint">Write up all five skill areas to mark this interview complete.</p>
-                <form hx-post="{backend_url}/interviews/{iid}/complete" hx-swap="none">
+                <form hx-post="{backend_url}/interviews/{interview_id}/complete" hx-swap="none"
+                      hx-confirm="Complete this interview? The notes will be saved and the interview marked Interview Completed.">
                     {_notes_form(interview.get("interview_notes"))}
                     <div class="btn-row" style="margin-top:0.75rem;">
-                        <button class="btn btn-primary" type="submit"
-                                hx-confirm="Complete this interview? The notes will be saved and the interview marked Interview Completed.">Complete Interview</button>
+                        <button class="btn btn-primary" type="submit">Complete Interview</button>
                     </div>
                 </form>
             </div>"""
@@ -469,22 +490,13 @@ def render_interview_detail(interview, role, backend_url="", is_past=False):
         actions = f"""
         <div class="btn-row" style="margin-top:1.25rem;">
             <button class="btn btn-primary" type="button"
-                    hx-post="{backend_url}/interviews/{iid}/accept"
+                    hx-post="{backend_url}/interviews/{interview_id}/accept"
                     hx-confirm="Accept this interview? Your application will move to Interview Scheduled."
                     hx-swap="none">Accept Interview</button>
             <button class="btn btn-danger" type="button"
-                    onclick="document.getElementById('decline-area').style.display='block'">Decline Interview</button>
-        </div>
-        <div id="decline-area" style="display:none;margin-top:1.25rem;">
-            <label for="decline_reason">Reason for declining (optional)</label>
-            <textarea id="decline_reason" name="reason" rows="2" placeholder="Let the recruiter know why"></textarea>
-            <div class="btn-row" style="margin-top:0.75rem;">
-                <button class="btn btn-danger" type="button"
-                        hx-post="{backend_url}/interviews/{iid}/decline"
-                        hx-include="#decline_reason"
-                        hx-confirm="Decline this interview? Declining withdraws your application."
-                        hx-swap="none">Decline Interview</button>
-            </div>
+                    hx-post="{backend_url}/interviews/{interview_id}/decline"
+                    hx-confirm="Decline this interview request? Your application stays active, but this interview will not go ahead."
+                    hx-swap="none">Decline Interview</button>
         </div>"""
 
     return f"""

@@ -203,6 +203,7 @@ services:
       SHARED_API_URL: http://find-shared-api:5000
       SHARED_DB_URL: http://find-shared-db:6000
       STUDENT_1_DB_URL: http://find-student-1-db:6001
+      INTERVIEWS_DB_URL: http://student-4-db:6004
       BACKEND_PUBLIC_URL: http://localhost:16011
       FRONTEND_PUBLIC_URL: http://localhost:16010
       INTERVIEWS_PUBLIC_URL: http://localhost:16013
@@ -243,6 +244,7 @@ services:
       SHARED_API_PUBLIC_URL: http://localhost:16002
       LOGIN_URL: http://localhost:16001/login
       FIND_HOME_URL: http://localhost:16001/dashboard
+      APPLICATIONS_PUBLIC_URL: http://localhost:16010
     volumes:
       - ./shared/css:/app/shared-css:ro
       - ./shared/frontend/static/js:/app/shared-js:ro

@@ -19,6 +19,8 @@ BACKEND_PUBLIC_URL = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:16014")
 SHARED_API_PUBLIC_URL = os.getenv("SHARED_API_PUBLIC_URL", "http://localhost:16002")
 LOGIN_URL = os.getenv("LOGIN_URL", "http://localhost:16001/login")
 HOME_URL = os.getenv("FIND_HOME_URL", "http://localhost:16001/dashboard")
+# The Applications management screen lives in the Application service (Student 3).
+APPLICATIONS_PUBLIC_URL = os.getenv("APPLICATIONS_PUBLIC_URL", "http://localhost:16010")
 
 
 @app.context_processor
@@ -28,7 +30,16 @@ def inject_urls():
         "shared_api_url": SHARED_API_PUBLIC_URL,
         "login_url": LOGIN_URL,
         "home_url": HOME_URL,
+        "applications_url": APPLICATIONS_PUBLIC_URL,
     }
+
+
+@app.after_request
+def no_cache_html(response):
+    # Pages embed the shared runtime config; never serve a stale copy.
+    if response.mimetype == "text/html":
+        response.headers["Cache-Control"] = "no-store, must-revalidate"
+    return response
 
 
 @app.get("/css/<path:filename>")

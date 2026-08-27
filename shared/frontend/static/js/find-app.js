@@ -100,10 +100,13 @@
         e.preventDefault();
         message.textContent = e.detail.question;
         var q = e.detail.question.toLowerCase();
-        var isDelete = q.indexOf("delete") !== -1;
-        var isWithdraw = q.indexOf("withdraw") !== -1;
-        okBtn.className = (isDelete || isWithdraw) ? "btn btn-danger" : "btn btn-primary";
-        okBtn.textContent = isDelete ? "Delete" : (isWithdraw ? "Withdraw" : "Confirm");
+        var label = "";
+        if (q.indexOf("delete") !== -1) label = "Delete";
+        else if (q.indexOf("withdraw") !== -1) label = "Withdraw";
+        else if (q.indexOf("decline") !== -1) label = "Decline";
+        var destructive = label !== "" || q.indexOf("cancel") !== -1;
+        okBtn.className = destructive ? "btn btn-danger" : "btn btn-primary";
+        okBtn.textContent = label || "Confirm";
         pending = function () { e.detail.issueRequest(true); };
         confirmOverlay.hidden = false;
     });
