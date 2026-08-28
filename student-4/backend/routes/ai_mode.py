@@ -178,8 +178,7 @@ def _existing_schedule_context():
         return "None."
 
     lines = [
-        f"- {item.get('interview_datetime')} "
-        f"(staff {item.get('staff_id')}, status {item.get('interview_status')})"
+        f"- {item.get('interview_datetime')} (staff {item.get('user_id')})"
         for item in interviews
     ]
     return "\n".join(lines)
