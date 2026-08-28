@@ -41,8 +41,8 @@ APPLICATIONS_DB_URL = os.getenv(
     "APPLICATIONS_DB_URL", "http://student-3-db:6003"
 )
 
-# Staff ID is assigned automatically (no auth layer in this service).
-DEFAULT_STAFF_ID = os.getenv("DEFAULT_STAFF_ID", "101")
+# Fallback owner id if a posting is somehow created without a session user.
+DEFAULT_USER_ID = os.getenv("DEFAULT_USER_ID", "1")
 
 EDITABLE_FIELDS = (
     "Job_Title",
@@ -261,8 +261,9 @@ def create_posting():
     error = _missing_required(payload) or _validate_deadline(payload)
     if error:
         return render_message(error, "error"), 200
-    # Staff ID is assigned automatically.
-    payload["Staff_Id"] = DEFAULT_STAFF_ID
+    # Owner is the logged-in staff member creating the posting.
+    user = database_api.get_session_user()
+    payload["User_Id"] = (user or {}).get("user_id") or DEFAULT_USER_ID
 
     try:
         response = database_api.create_job_posting(payload)
