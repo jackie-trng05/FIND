@@ -85,7 +85,7 @@ def render_evaluations_rows(evaluations):
             f'<td><span class="score-badge {_score_class(overall)}">{_e(overall)}</span></td>'
             f'<td><span class="status-badge" style="{_rec_style(rec)}">{_e(rec)}</span></td>'
             f'<td><span class="status-badge status-{_e(status.lower())}">{_e(status)}</span></td>'
-            f"<td>{_e(ev.get('HR_Staff_Name'))}</td>"
+            f"<td>{_e(ev.get('evaluator_name'))}</td>"
             f"<td>{_short_date(ev.get('updated_at'))}</td>"
             f"<td>{actions}</td>"
             "</tr>"
