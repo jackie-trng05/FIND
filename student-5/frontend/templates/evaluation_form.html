@@ -75,15 +75,15 @@
           <input type="hidden" name="Application_Id" id="application-id-field" value="{{ application_id if application_id else '' }}">
 
           <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
-            <h2 style="font-size:1rem;margin-bottom:1rem;">HR Staff Details</h2>
+            <h2 style="font-size:1rem;margin-bottom:1rem;">Evaluator</h2>
             <div class="form-grid">
               <div class="form-group">
-                <label for="hr-name">HR Staff Name</label>
-                <input type="text" id="hr-name" name="HR_Staff_Name" required placeholder="Enter full name" readonly style="background:var(--primary-light);cursor:default;">
+                <label>Name</label>
+                <input type="text" id="hr-name" readonly style="background:var(--primary-light);cursor:default;">
               </div>
               <div class="form-group">
-                <label for="hr-number">HR Staff Number</label>
-                <input type="text" id="hr-number" name="HR_Staff_Number" required placeholder="e.g. HR-001" readonly style="background:var(--primary-light);cursor:default;">
+                <label>Staff Number</label>
+                <input type="text" id="hr-number" readonly style="background:var(--primary-light);cursor:default;">
               </div>
             </div>
           </div>
@@ -280,8 +280,8 @@
         applicationId = ev.Application_Id;
         document.getElementById('application-id-field').value = ev.Application_Id;
         document.getElementById('form-title').textContent = 'Edit Evaluation #' + ev.Evaluation_Id;
-        document.getElementById('hr-name').value = ev.HR_Staff_Name || '';
-        document.getElementById('hr-number').value = ev.HR_Staff_Number || '';
+        document.getElementById('hr-name').value = ev.evaluator_name || '';
+        document.getElementById('hr-number').value = ev.evaluator_number || '';
         document.getElementById('score-tech').value = ev.Evaluation_TechnicalScore;
         document.getElementById('score-edu').value = ev.Evaluation_EducationScore;
         document.getElementById('score-comm').value = ev.Evaluation_CommunicationScore;
