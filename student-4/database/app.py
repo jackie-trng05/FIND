@@ -7,8 +7,8 @@ app = Flask(__name__)
 DATABASE_NAME = "/app/data/interview.db"
 
 INTERVIEW_COLUMNS = (
-    "interview_id, application_id, staff_id, interview_datetime, "
-    "interview_link, interview_status, interview_notes"
+    "interview_id, application_id, user_id, interview_datetime, "
+    "interview_link, interview_notes"
 )
 
 
@@ -33,27 +33,6 @@ def get_interviews():
     return jsonify([dict(row) for row in interviews])
 
 
-@app.get("/interviews/by-status")
-def get_interviews_by_status():
-    status = request.args.get("status", "").strip()
-
-    if not status:
-        return jsonify({"error": "status required"}), 400
-
-    conn = get_db_connection()
-    interviews = conn.execute(
-        f"SELECT {INTERVIEW_COLUMNS} FROM interviews "
-        "WHERE interview_status = ? COLLATE NOCASE ORDER BY interview_datetime",
-        (status,),
-    ).fetchall()
-    conn.close()
-
-    if not interviews:
-        return jsonify({"error": "No interviews found"}), 404
-
-    return jsonify([dict(row) for row in interviews])
-
-
 @app.get("/interviews/<int:interview_id>")
 def get_interview(interview_id):
     conn = get_db_connection()
@@ -73,7 +52,7 @@ def get_interview(interview_id):
 def create_interview():
     data = request.get_json(silent=True) or {}
 
-    required = ["application_id", "staff_id", "interview_datetime"]
+    required = ["application_id", "user_id", "interview_datetime"]
     missing = [field for field in required if not str(data.get(field, "")).strip()]
     if missing:
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
@@ -82,17 +61,16 @@ def create_interview():
     cursor = conn.execute(
         """
         INSERT INTO interviews (
-            application_id, staff_id, interview_datetime,
-            interview_link, interview_status, interview_notes
+            application_id, user_id, interview_datetime,
+            interview_link, interview_notes
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
         """,
         (
             data["application_id"],
-            data["staff_id"],
+            data["user_id"],
             data["interview_datetime"],
             data.get("interview_link", ""),
-            data.get("interview_status", "Scheduled"),
             data.get("interview_notes", ""),
         ),
     )
@@ -124,10 +102,9 @@ def update_interview(interview_id):
     existing = dict(existing)
     updated = {
         "application_id": data.get("application_id", existing["application_id"]),
-        "staff_id": data.get("staff_id", existing["staff_id"]),
+        "user_id": data.get("user_id", existing["user_id"]),
         "interview_datetime": data.get("interview_datetime", existing["interview_datetime"]),
         "interview_link": data.get("interview_link", existing["interview_link"]),
-        "interview_status": data.get("interview_status", existing["interview_status"]),
         "interview_notes": data.get("interview_notes", existing["interview_notes"]),
     }
 
@@ -135,19 +112,17 @@ def update_interview(interview_id):
         """
         UPDATE interviews SET
             application_id = ?,
-            staff_id = ?,
+            user_id = ?,
             interview_datetime = ?,
             interview_link = ?,
-            interview_status = ?,
             interview_notes = ?
         WHERE interview_id = ?
         """,
         (
             updated["application_id"],
-            updated["staff_id"],
+            updated["user_id"],
             updated["interview_datetime"],
             updated["interview_link"],
-            updated["interview_status"],
             updated["interview_notes"],
             interview_id,
         ),
