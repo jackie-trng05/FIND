@@ -31,13 +31,9 @@ STATUS_SCHEDULED = "Interview Scheduled"           # applicant accepted
 STATUS_COMPLETED = "Interview Completed"           # staff marked complete
 STATUS_WITHDRAWN = "Withdrawn"                     # applicant declined
 
-VALID_STATUSES = {
-    STATUS_SHORTLISTED,
-    STATUS_REQUESTED,
-    STATUS_SCHEDULED,
-    STATUS_COMPLETED,
-    STATUS_WITHDRAWN,
-}
+# Interviews shown on the calendar and "All Interviews" list: only those whose
+# linked application is an active part of the interview lifecycle.
+VISIBLE_INTERVIEW_STATUSES = (STATUS_REQUESTED, STATUS_SCHEDULED, STATUS_COMPLETED)
 
 # Skill areas a staff member must assess before completing an interview.
 NOTE_SECTIONS = (
@@ -89,6 +85,19 @@ def _valid_link(value):
     return value == "" or value.startswith("http://") or value.startswith("https://")
 
 
+def _can_cancel(interview):
+    """An interview can only be cancelled while it is still upcoming.
+
+    That means an outstanding request (Interview Requested), or a scheduled
+    interview whose date/time is still in the future. A scheduled interview
+    that has already taken place is completed, not cancelled.
+    """
+    status = interview.get("application_status")
+    if status == STATUS_REQUESTED:
+        return True
+    return status == STATUS_SCHEDULED and _is_future(interview.get("interview_datetime"))
+
+
 # --------------------------------------------------------------------------- #
 # Session + HTMX helpers                                                       #
 # --------------------------------------------------------------------------- #
@@ -114,9 +123,9 @@ def _read_input():
 
 
 def _scope_to_user(interviews, user):
-    """Staff see every interview; applicants only their own."""
+    """Staff see every interview; applicants only see their own."""
     if user.get("role") == "staff":
-        return interviews
+        return list(interviews)
     uid = str(user.get("user_id"))
     return [i for i in interviews if str(i.get("applicant_id")) == uid]
 
@@ -140,7 +149,7 @@ def list_interviews():
     _, err = require_session()
     if err:
         return err
-    staff_id = request.args.get("staff_id", "").strip()
+    user_id = request.args.get("user_id", "").strip()
     applicant_id = request.args.get("applicant_id", "").strip()
     status = request.args.get("status", "").strip()
 
@@ -154,12 +163,12 @@ def list_interviews():
     interviews = integration_api.enrich_interviews(interviews)
 
     # Ownership + status filtering happens here so the DB stays a thin store.
-    if staff_id:
-        interviews = [i for i in interviews if str(i.get("staff_id")) == staff_id]
+    if user_id:
+        interviews = [i for i in interviews if str(i.get("user_id")) == user_id]
     if applicant_id:
         interviews = [i for i in interviews if str(i.get("applicant_id")) == applicant_id]
     if status:
-        interviews = [i for i in interviews if str(i.get("interview_status")) == status]
+        interviews = [i for i in interviews if str(i.get("application_status")) == status]
 
     return jsonify(interviews), 200
 
@@ -174,7 +183,7 @@ def interviews_to_complete():
     _, err = require_session()
     if err:
         return err
-    staff_id = request.args.get("staff_id", "").strip()
+    user_id = request.args.get("user_id", "").strip()
 
     try:
         response = get_interviews_response({})
@@ -183,15 +192,15 @@ def interviews_to_complete():
     except requests.RequestException as exc:
         return _db_error(exc)
 
+    interviews = integration_api.enrich_interviews(interviews)
     interviews = [
         i for i in interviews
-        if str(i.get("interview_status")) == STATUS_SCHEDULED
+        if str(i.get("application_status")) == STATUS_SCHEDULED
         and _is_past(i.get("interview_datetime"))
     ]
-    interviews = integration_api.enrich_interviews(interviews)
 
-    if staff_id:
-        interviews = [i for i in interviews if str(i.get("staff_id")) == staff_id]
+    if user_id:
+        interviews = [i for i in interviews if str(i.get("user_id")) == user_id]
 
     return jsonify(interviews), 200
 
@@ -221,11 +230,11 @@ def schedulable_applications():
     _, err = require_session()
     if err:
         return err
-    staff_id = request.args.get("staff_id", "").strip()
-    if not _positive_int(staff_id):
-        return jsonify({"error": "A valid staff_id is required."}), 400
+    user_id = request.args.get("user_id", "").strip()
+    if not _positive_int(user_id):
+        return jsonify({"error": "A valid user_id is required."}), 400
 
-    applications = integration_api.shortlisted_for_staff(staff_id)
+    applications = integration_api.shortlisted_for_staff(user_id)
 
     scheduled = _scheduled_application_ids()
     applications = [
@@ -238,8 +247,8 @@ def schedulable_applications():
 def _scheduled_application_ids():
     """Application IDs that already have a live interview request.
 
-    Declined (withdrawn) interviews are ignored so staff can invite the
-    applicant again.
+    Declined interviews are deleted outright, so every remaining row here is
+    live and there's no withdrawn status to filter out.
     """
     try:
         response = get_interviews_response({})
@@ -247,10 +256,7 @@ def _scheduled_application_ids():
         interviews = response.json()
     except requests.RequestException:
         return set()
-    return {
-        str(row.get("application_id")) for row in interviews
-        if row.get("interview_status") != STATUS_WITHDRAWN
-    }
+    return {str(row.get("application_id")) for row in interviews}
 
 
 @normal_ui_bp.post("/interviews")
@@ -262,35 +268,41 @@ def schedule_interview():
 
     errors = {}
     application_id = str(data.get("application_id", "")).strip()
-    staff_id = str(data.get("staff_id", "")).strip()
+    user_id = str(data.get("user_id", "")).strip()
     interview_datetime = str(data.get("interview_datetime", "")).strip()
     interview_link = str(data.get("interview_link", "")).strip()
     interview_notes = str(data.get("interview_notes", "")).strip()
 
     if not _positive_int(application_id):
         errors["application_id"] = "Application ID must be a positive number."
-    if not _positive_int(staff_id):
-        errors["staff_id"] = "Staff ID is required."
+    if not _positive_int(user_id):
+        errors["user_id"] = "Staff ID is required."
     if not _valid_datetime(interview_datetime):
-        errors["interview_datetime"] = "Use the format YYYY-MM-DD HH:MM."
+        errors["interview_datetime"] = "Enter the interview date and time using the picker."
     elif not _is_future(interview_datetime):
-        errors["interview_datetime"] = "Interview date/time must be in the future."
+        errors["interview_datetime"] = (
+            "The interview date and time can't be in the past — please choose a future date and time."
+        )
     if not _valid_link(interview_link):
         errors["interview_link"] = "Link must start with http:// or https://."
 
     if errors:
         if _wants_hx():
-            return _hx_response(triggers={
-                "showErrorToast": "Please check the form and try again."
-            })
+            message = (
+                errors.get("interview_datetime")
+                or errors.get("interview_link")
+                or errors.get("application_id")
+                or errors.get("user_id")
+                or "Please check the form and try again."
+            )
+            return _hx_response(triggers={"showErrorToast": message})
         return jsonify({"errors": errors}), 400
 
     payload = {
         "application_id": application_id,
-        "staff_id": staff_id,
+        "user_id": user_id,
         "interview_datetime": interview_datetime,
         "interview_link": interview_link,
-        "interview_status": STATUS_REQUESTED,
         "interview_notes": interview_notes,
     }
 
@@ -314,9 +326,10 @@ def schedule_interview():
 def update_interview_route(interview_id):
     """Update mutable interview fields.
 
-    Interview *details* (date/time, meeting link) are fixed once created — the
-    only things staff can update afterwards are the assessment notes (and, via
-    that, the status). Date/time and link edits are rejected.
+    Interview *details* (date/time, meeting link) are fixed once created —
+    the only thing staff can update through this route is the assessment
+    notes. Status transitions go through the dedicated accept/decline/complete
+    endpoints, which sync the linked application's status instead.
     """
     _, err = require_session()
     if err:
@@ -330,15 +343,6 @@ def update_interview_route(interview_id):
             "Interview details cannot be changed after the interview is created."
         )
 
-    new_status = None
-    if "interview_status" in data:
-        value = str(data["interview_status"]).strip()
-        if value and value not in VALID_STATUSES:
-            errors["interview_status"] = "Unknown status."
-        elif value:
-            payload["interview_status"] = value
-            new_status = value
-
     if "interview_notes" in data:
         payload["interview_notes"] = str(data["interview_notes"]).strip()
 
@@ -347,7 +351,7 @@ def update_interview_route(interview_id):
     if not payload:
         return jsonify({"error": "No update details provided."}), 400
 
-    return _apply_update(interview_id, payload, app_status=new_status)
+    return _apply_update(interview_id, payload)
 
 
 @normal_ui_bp.post("/interviews/<int:interview_id>/accept")
@@ -358,7 +362,6 @@ def accept_interview(interview_id):
         return err
     return _apply_update(
         interview_id,
-        {"interview_status": STATUS_SCHEDULED},
         app_status=STATUS_SCHEDULED,
         hx_success={"redirect": f"{FRONTEND_ORIGIN}/requests?toast={quote('Interview accepted.')}"},
     )
@@ -431,11 +434,11 @@ def complete_interview(interview_id):
         if response.status_code == 404:
             return jsonify({"error": "Interview not found."}), 404
         response.raise_for_status()
-        interview = response.json()
+        interview = integration_api.enrich_one(response.json())
     except requests.RequestException as exc:
         return _db_error(exc)
 
-    if interview.get("interview_status") != STATUS_SCHEDULED:
+    if interview.get("application_status") != STATUS_SCHEDULED:
         if _wants_hx():
             return _hx_response(triggers={"showErrorToast": "Only a scheduled interview can be completed."})
         return jsonify({
@@ -449,7 +452,6 @@ def complete_interview(interview_id):
         }), 400
 
     payload = {
-        "interview_status": STATUS_COMPLETED,
         "interview_notes": json.dumps(cleaned),
     }
     return _apply_update(
@@ -468,6 +470,22 @@ def cancel_interview(interview_id):
     _, err = require_session()
     if err:
         return err
+
+    try:
+        current = get_interview_response(interview_id)
+        if current.status_code == 404:
+            return jsonify({"error": "Interview not found."}), 404
+        current.raise_for_status()
+        interview = integration_api.enrich_one(current.json())
+    except requests.RequestException as exc:
+        return _db_error(exc)
+
+    if not _can_cancel(interview):
+        message = "This interview can no longer be cancelled."
+        if _wants_hx():
+            return _hx_response(triggers={"showErrorToast": message})
+        return jsonify({"error": message}), 400
+
     try:
         response = delete_interview(interview_id)
         if response.status_code == 404:
@@ -483,9 +501,12 @@ def cancel_interview(interview_id):
     return jsonify({"cancelled": interview_id}), 200
 
 
-def _apply_update(interview_id, payload, app_status=None, hx_success=None):
+def _apply_update(interview_id, payload=None, app_status=None, hx_success=None):
     try:
-        response = update_interview(interview_id, payload)
+        if payload:
+            response = update_interview(interview_id, payload)
+        else:
+            response = get_interview_response(interview_id)
         if response.status_code == 404:
             return jsonify({"error": "Interview not found."}), 404
         response.raise_for_status()
@@ -531,16 +552,16 @@ def ui_calendar():
         interviews = _scope_to_user(_all_enriched(), user)
     except requests.RequestException:
         interviews = []
+    interviews = [
+        i for i in interviews
+        if i.get("application_status") in VISIBLE_INTERVIEW_STATUSES
+    ]
 
     now = datetime.now()
     year = request.args.get("year", type=int)
     month = request.args.get("month", type=int)
     if not year or not month:
-        dts = sorted(
-            d for d in (fmt._parse_dt(i.get("interview_datetime")) for i in interviews) if d
-        )
-        anchor = next((d for d in dts if d >= now), None) or (dts[0] if dts else now)
-        year, month = anchor.year, anchor.month
+        year, month = now.year, now.month
     return fmt.render_calendar(interviews, year, month, backend_url=BACKEND_PUBLIC_URL), 200
 
 
@@ -553,6 +574,10 @@ def ui_interview_rows():
         interviews = _scope_to_user(_all_enriched(), user)
     except requests.RequestException:
         return '<div class="alert alert-error">Failed to load interviews.</div>', 200
+    interviews = [
+        i for i in interviews
+        if i.get("application_status") in VISIBLE_INTERVIEW_STATUSES
+    ]
 
     status = request.args.get("status", "").strip()
     job_posting = request.args.get("job_posting", "").strip()
@@ -563,7 +588,7 @@ def ui_interview_rows():
     direction = request.args.get("dir", "asc")
 
     def _keep(it):
-        if status and str(it.get("interview_status")).lower() != status.lower():
+        if status and str(it.get("application_status")).lower() != status.lower():
             return False
         if job_posting and str(it.get("job_posting_id") or "") != job_posting:
             return False
@@ -627,7 +652,7 @@ def ui_to_complete_rows():
         return '<div class="alert alert-error">Failed to load interviews.</div>', 200
     interviews = [
         i for i in interviews
-        if i.get("interview_status") == STATUS_SCHEDULED and _is_past(i.get("interview_datetime"))
+        if i.get("application_status") == STATUS_SCHEDULED and _is_past(i.get("interview_datetime"))
     ]
     search = request.args.get("search", "").strip().lower()
     if search:
