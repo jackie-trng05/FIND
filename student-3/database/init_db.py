@@ -26,6 +26,9 @@ CREATE TABLE IF NOT EXISTS applications (
 """)
 
 cursor.execute("DELETE FROM applications")
+# Reset AUTOINCREMENT so seeded application_ids stay 1..n; student-4's
+# interviews and student-5's evaluations reference them by number.
+cursor.execute("DELETE FROM sqlite_sequence WHERE name = 'applications'")
 
 # resume_id is a soft cross-service foreign key to student-1's resumes.resume_id.
 # It is not enforced by SQLite (SQLite databases are per-service); the API layer
@@ -45,20 +48,35 @@ def _past(days):
 
 # (user_id, job_posting_id, resume_id, application_status,
 #  availability_date, declaration_accepted, submitted_at)
+#
+# Status decides what the other services may do with an application:
+#   Shortlisted        -> an interview can be scheduled (must have no interview)
+#   Interview Requested / Scheduled / Completed -> a matching interview exists
+#   Interview Completed / Hired / Rejected -> an evaluation can exist
+#   Hired / Rejected   -> a final outcome; any interview is deleted, and an
+#                         applicant can only be Hired for one application
+
 seed_applications = [
     (6,  1, 6, "Submitted",            _future(14), 1, _past(5)),
-    (6,  3, 6, "Interview Completed",  _future(21), 1, _past(10)),
-    (6,  7, 6, "Draft",                _future(30), 0, None),
-    (6, 11, 6, "Shortlisted",          _future(20), 1, _past(8)),
-    (7,  2, 7, "Interview Completed",  _future(10), 1, _past(12)),
-    (7,  5, 7, "Interview Completed",  _future(28), 1, _past(3)),
-    (8,  4, 8, "Rejected",             _future(14), 1, _past(15)),
-    (8,  6, 8, "Interview Completed",  _future(21), 1, _past(20)),
-    (8,  8, 8, "Draft",                _future(45), 0, None),
-    (9,  1, 9, "Interview Completed",  _future(35), 1, _past(18)),
-    (9,  5, 9, "Hired",                _future(20), 1, _past(40)),
-    (10, 2, 10, "Interview Completed", _future(14), 1, _past(25)),
-    (10, 7, 10, "Submitted",           _future(28), 1, _past(1)),
+    (6,  3, 6, "Submitted",            _future(25), 1, _past(2)),
+    (6,  7, 6, "Draft",                _future(20), 1, _past(6)),
+    (6, 11, 6, "Interview Completed",  _future(15), 1, _past(20)),
+    (7,  2, 7, "Interview Requested",  _future(18), 1, _past(9)),
+    (6,  5, 6, "Interview Scheduled",  _future(12), 1, _past(11)),
+    (7,  8, 7, "Interview Completed",  _future(22), 1, _past(24)),
+    (8,  4, 8, "Interview Requested",  _future(14), 1, _past(7)),
+    (8,  6, 8, "Interview Scheduled",  _future(19), 1, _past(10)),
+    (8,  9, 8, "Interview Completed",  _future(16), 1, _past(18)),
+    (9,  1, 9, "Interview Completed",  _future(21), 1, _past(19)),
+    (9,  5, 9, "Interview Completed",  _future(28), 1, _past(13)),
+    (9, 10, 9, "Hired",                _future(20), 1, _past(40)),
+    (10, 9, 10, "Interview Completed", _future(14), 1, _past(16)),
+    (10, 2, 10, "Rejected",            _future(30), 1, _past(15)),
+    (10, 7, 10, "Rejected",            _future(16), 1, _past(26)),
+    (10, 11, 10, "Hired",              _future(23), 1, _past(38)),
+    (6, 12, 6, "Shortlisted",          _future(25), 1, _past(5)),
+    (9,  3, 9, "Rejected",             _future(17), 1, _past(21)),
+    (6,  4, 6, "Shortlisted",          _future(22), 1, _past(4)),
 ]
 
 cursor.executemany("""
@@ -70,4 +88,4 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
 conn.commit()
 conn.close()
 
-print("Student-3 database initialized with applications table (13 seed records).")
+print(f"Student-3 database initialized with applications table ({len(seed_applications)} seed records).")
