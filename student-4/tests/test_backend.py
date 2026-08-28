@@ -88,9 +88,9 @@ def test_format_interviews_html_empty():
 def test_format_interviews_html_renders_rows():
     out = fmt.format_interviews_html([
         {
-            "interview_id": 1, "application_id": 4, "staff_id": 1,
+            "interview_id": 1, "application_id": 4, "user_id": 1,
             "interview_datetime": "2026-09-10 10:00",
-            "interview_status": "Scheduled", "interview_notes": "Round 1",
+            "application_status": "Scheduled", "interview_notes": "Round 1",
         }
     ])
     assert "data-table" in out
@@ -160,8 +160,8 @@ def test_valid_link():
 
 def test_list_interviews_filters_by_status(client, monkeypatch):
     rows = [
-        {"interview_id": 1, "staff_id": 1, "applicant_id": 4, "interview_status": "Interview Scheduled"},
-        {"interview_id": 2, "staff_id": 1, "applicant_id": 5, "interview_status": "Interview Completed"},
+        {"interview_id": 1, "user_id": 1, "applicant_id": 4, "application_status": "Interview Scheduled"},
+        {"interview_id": 2, "user_id": 1, "applicant_id": 5, "application_status": "Interview Completed"},
     ]
     monkeypatch.setattr(normal_ui, "get_interviews_response", lambda f: _FakeResponse(rows))
 
@@ -174,12 +174,12 @@ def test_list_interviews_filters_by_status(client, monkeypatch):
 
 def test_list_interviews_filters_by_staff(client, monkeypatch):
     rows = [
-        {"interview_id": 1, "staff_id": 1, "applicant_id": 4},
-        {"interview_id": 2, "staff_id": 2, "applicant_id": 5},
+        {"interview_id": 1, "user_id": 1, "applicant_id": 4},
+        {"interview_id": 2, "user_id": 2, "applicant_id": 5},
     ]
     monkeypatch.setattr(normal_ui, "get_interviews_response", lambda f: _FakeResponse(rows))
 
-    body = client.get("/interviews?staff_id=2").get_json()
+    body = client.get("/interviews?user_id=2").get_json()
     assert [r["interview_id"] for r in body] == [2]
 
 
@@ -208,19 +208,19 @@ def test_get_interview_not_found(client, monkeypatch):
 def test_schedule_interview_validation_errors(client):
     resp = client.post("/interviews", json={
         "application_id": "0",
-        "staff_id": "",
+        "user_id": "",
         "interview_datetime": "bad",
         "interview_link": "ftp://nope",
     })
     assert resp.status_code == 400
     errors = resp.get_json()["errors"]
-    assert set(errors) >= {"application_id", "staff_id", "interview_datetime", "interview_link"}
+    assert set(errors) >= {"application_id", "user_id", "interview_datetime", "interview_link"}
 
 
 def test_schedule_interview_rejects_past_datetime(client):
     resp = client.post("/interviews", json={
         "application_id": "4",
-        "staff_id": "1",
+        "user_id": "1",
         "interview_datetime": _past_dt(),
     })
     assert resp.status_code == 400
@@ -243,12 +243,12 @@ def test_schedule_interview_success(client, monkeypatch):
 
     resp = client.post("/interviews", json={
         "application_id": "4",
-        "staff_id": "1",
+        "user_id": "1",
         "interview_datetime": _future_dt(),
     })
     assert resp.status_code == 201
-    # New interviews are created as "Interview Requested".
-    assert captured["interview_status"] == "Interview Requested"
+    # Interview creation does not carry a status; the linked application does.
+    assert "interview_status" not in captured
     assert captured["status_synced"] == ("4", "Interview Requested")
 
 
@@ -259,11 +259,10 @@ def test_schedule_interview_success(client, monkeypatch):
 def test_accept_interview_sets_scheduled(client, monkeypatch):
     seen = {}
 
-    def _update(interview_id, payload):
-        seen["payload"] = payload
-        return _FakeResponse({"interview_id": interview_id, "application_id": 4, **payload})
-
-    monkeypatch.setattr(normal_ui, "update_interview", _update)
+    monkeypatch.setattr(
+        normal_ui, "get_interview_response",
+        lambda i: _FakeResponse({"interview_id": i, "application_id": 4}),
+    )
     monkeypatch.setattr(
         integration_api, "set_application_status",
         lambda app_id, status: seen.setdefault("synced", (app_id, status)),
@@ -271,7 +270,6 @@ def test_accept_interview_sets_scheduled(client, monkeypatch):
 
     resp = client.post("/interviews/1/accept")
     assert resp.status_code == 200
-    assert seen["payload"]["interview_status"] == "Interview Scheduled"
     assert seen["synced"] == (4, "Interview Scheduled")
 
 
@@ -291,7 +289,7 @@ def test_complete_interview_saves_notes_and_completes(client, monkeypatch):
         normal_ui, "get_interview_response",
         lambda i: _FakeResponse({
             "interview_id": i, "application_id": 4,
-            "interview_status": "Interview Scheduled",
+            "application_status": "Interview Scheduled",
             "interview_datetime": _past_dt(),
         }),
     )
@@ -309,7 +307,7 @@ def test_complete_interview_saves_notes_and_completes(client, monkeypatch):
     resp = client.post("/interviews/1/complete", json={"interview_notes": _full_notes()})
     assert resp.status_code == 200
     assert seen["synced"] == (4, "Interview Completed")
-    assert seen["payload"]["interview_status"] == "Interview Completed"
+    assert "interview_status" not in seen["payload"]
     # Notes are persisted as a JSON string containing all five sections.
     assert '"Technical"' in seen["payload"]["interview_notes"]
 
@@ -334,7 +332,7 @@ def test_complete_rejects_future_interview(client, monkeypatch):
         normal_ui, "get_interview_response",
         lambda i: _FakeResponse({
             "interview_id": i, "application_id": 4,
-            "interview_status": "Interview Scheduled",
+            "application_status": "Interview Scheduled",
             "interview_datetime": _future_dt(),
         }),
     )
@@ -348,19 +346,13 @@ def test_complete_rejects_non_scheduled_interview(client, monkeypatch):
         normal_ui, "get_interview_response",
         lambda i: _FakeResponse({
             "interview_id": i, "application_id": 4,
-            "interview_status": "Interview Requested",
+            "application_status": "Interview Requested",
             "interview_datetime": _past_dt(),
         }),
     )
     resp = client.post("/interviews/1/complete", json={"interview_notes": _full_notes()})
     assert resp.status_code == 400
     assert "scheduled" in resp.get_json()["error"].lower()
-
-
-def test_update_rejects_unknown_status(client):
-    resp = client.put("/interviews/1", json={"interview_status": "Bogus"})
-    assert resp.status_code == 400
-    assert "interview_status" in resp.get_json()["errors"]
 
 
 def test_update_requires_some_payload(client):
@@ -378,13 +370,17 @@ def test_update_rejects_detail_edits(client):
 
 def test_cancel_interview_not_found(client, monkeypatch):
     monkeypatch.setattr(
-        normal_ui, "delete_interview", lambda i: _FakeResponse(status_code=404)
+        normal_ui, "get_interview_response", lambda i: _FakeResponse(status_code=404)
     )
     resp = client.delete("/interviews/999")
     assert resp.status_code == 404
 
 
 def test_cancel_interview_success(client, monkeypatch):
+    monkeypatch.setattr(
+        normal_ui, "get_interview_response",
+        lambda i: _FakeResponse({"interview_id": i, "application_status": "Interview Requested"}),
+    )
     monkeypatch.setattr(
         normal_ui, "delete_interview", lambda i: _FakeResponse({"deleted": i})
     )
@@ -393,12 +389,26 @@ def test_cancel_interview_success(client, monkeypatch):
     assert resp.get_json()["cancelled"] == 1
 
 
+def test_cancel_interview_rejects_past_scheduled(client, monkeypatch):
+    # A scheduled interview that has already happened is completed, not cancelled.
+    monkeypatch.setattr(
+        normal_ui, "get_interview_response",
+        lambda i: _FakeResponse({
+            "interview_id": i,
+            "application_status": "Interview Scheduled",
+            "interview_datetime": _past_dt(),
+        }),
+    )
+    resp = client.delete("/interviews/1")
+    assert resp.status_code == 400
+
+
 # --------------------------------------------------------------------------- #
 # Routes: schedulable applications                                             #
 # --------------------------------------------------------------------------- #
 
-def test_schedulable_requires_valid_staff_id(client):
-    resp = client.get("/schedulable-applications?staff_id=abc")
+def test_schedulable_requires_valid_user_id(client):
+    resp = client.get("/schedulable-applications?user_id=abc")
     assert resp.status_code == 400
 
 
@@ -412,6 +422,6 @@ def test_schedulable_excludes_already_scheduled(client, monkeypatch):
         lambda f: _FakeResponse([{"application_id": 4}]),
     )
 
-    body = client.get("/schedulable-applications?staff_id=1").get_json()
+    body = client.get("/schedulable-applications?user_id=1").get_json()
     ids = [a["application_id"] for a in body["applications"]]
     assert ids == [7]
