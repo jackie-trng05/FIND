@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Evaluations — FIND</title>
   <link rel="stylesheet" href="/css/theme.css">
-  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <style>
     .eval-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem; }
     @media (max-width: 640px) { .eval-filters { grid-template-columns: 1fr; } }
@@ -17,6 +16,10 @@
     .status-draft { background: #e5e7eb; color: #374151; }
     .status-completed { background: #dbeafe; color: #1e40af; }
     .actions-cell { display: flex; gap: 0.5rem; min-width: 130px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-box { background: var(--surface); border-radius: var(--radius-lg); padding: 2rem; max-width: 420px; width: 90%; box-shadow: var(--shadow-lg); }
+    .modal-box h3 { margin-bottom: 1rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
     .toast { position: fixed; top: 1rem; right: 1rem; z-index: 2000; animation: fadeIn 0.3s; }
     .toast-hide { opacity: 0; transition: opacity 0.4s; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
@@ -45,8 +48,6 @@
           <h1 class="page-title">Evaluations</h1>
         </div>
 
-        <div id="toast-area"></div>
-
         <!-- Eligible applications panel -->
         <div id="eligible-panel" class="card" style="margin-bottom:1.5rem;">
           <h2 style="font-size:1rem;margin-bottom:0.5rem;">Applications Ready for Evaluation</h2>
@@ -56,11 +57,7 @@
               <thead>
                 <tr><th>App ID</th><th>Applicant</th><th>Job Title</th><th>Status</th><th class="col-actions"></th></tr>
               </thead>
-              <tbody id="eligible-tbody"
-                     hx-get="{{ backend_url }}/api/eligible-applications/rows"
-                     hx-trigger="load, evaluationsChanged from:body"
-                     hx-target="this"
-                     hx-swap="innerHTML">
+              <tbody id="eligible-tbody">
                 <tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Loading...</td></tr>
               </tbody>
             </table>
@@ -69,22 +66,12 @@
 
         <div class="card">
           <div class="eval-filters">
-            <select class="form-select" id="filter-status" name="status"
-                    hx-get="{{ backend_url }}/api/evaluations/rows"
-                    hx-target="#eval-tbody"
-                    hx-swap="innerHTML"
-                    hx-include="#filter-status, #filter-rec"
-                    hx-trigger="change">
+            <select class="form-select" id="filter-status" onchange="loadEvaluations()">
               <option value="">All statuses</option>
-              <option value="Draft">Draft</option>
-              <option value="Completed">Completed</option>
+              <option value="in_progress">Evaluation In Progress</option>
+              <option value="decided">Completed</option>
             </select>
-            <select class="form-select" id="filter-rec" name="recommendation"
-                    hx-get="{{ backend_url }}/api/evaluations/rows"
-                    hx-target="#eval-tbody"
-                    hx-swap="innerHTML"
-                    hx-include="#filter-status, #filter-rec"
-                    hx-trigger="change">
+            <select class="form-select" id="filter-rec" onchange="loadEvaluations()">
               <option value="">All decisions</option>
               <option value="Hire">Hire</option>
               <option value="Reject">Reject</option>
@@ -106,12 +93,7 @@
                   <th class="col-actions">Actions</th>
                 </tr>
               </thead>
-              <tbody id="eval-tbody"
-                     hx-get="{{ backend_url }}/api/evaluations/rows"
-                     hx-trigger="load, evaluationsChanged from:body"
-                     hx-include="#filter-status, #filter-rec"
-                     hx-target="this"
-                     hx-swap="innerHTML">
+              <tbody id="eval-tbody">
                 <tr><td colspan="9" style="text-align:center;color:var(--text-muted);">Loading...</td></tr>
               </tbody>
             </table>
@@ -128,14 +110,163 @@
     </footer>
   </div>
 
+  <div id="modal-container"></div>
+  <div id="toast-area" style="position:fixed;top:1rem;right:1rem;z-index:2000;"></div>
+
   <script>
-    window.__FIND_CONFIG = {
-      sharedApiUrl: '{{ shared_api_url }}',
-      loginUrl: '{{ login_url }}',
-      homeUrl: '{{ home_url }}',
-      requireRole: 'staff'
-    };
+    const BACKEND = '{{ backend_url }}';
+    const API = 'http://localhost:16002';
+
+    function showToast(msg, type) {
+      const area = document.getElementById('toast-area');
+      if (!area) return;
+      const div = document.createElement('div');
+      div.className = type === 'error' ? 'alert alert-error toast' : 'alert alert-success toast';
+      div.textContent = msg;
+      area.appendChild(div);
+      setTimeout(() => { div.classList.add('toast-hide'); setTimeout(() => div.remove(), 400); }, 4000);
+    }
+
+    function scoreClass(score) {
+      if (score >= 4) return 'score-high';
+      if (score >= 3) return 'score-mid';
+      return 'score-low';
+    }
+
+    function recBadgeColor(rec) {
+      switch (rec) {
+        case 'Hire': return 'background:#d1fae5;color:#065f46;';
+        case 'Shortlist': return 'background:#fef3c7;color:#92400e;';
+        case 'Hold': return 'background:#fef3c7;color:#92400e;';
+        case 'Reject': return 'background:#fde8e8;color:#991b1b;';
+        default: return '';
+      }
+    }
+
+    async function loadEvaluations() {
+      const status = document.getElementById('filter-status').value;
+      const rec = document.getElementById('filter-rec').value;
+      let url = BACKEND + '/api/evaluations?';
+      if (status) url += 'status=' + encodeURIComponent(status) + '&';
+      if (rec) url += 'recommendation=' + encodeURIComponent(rec) + '&';
+
+      try {
+        const resp = await fetch(url, { credentials: 'include' });
+        if (resp.status === 401) { window.location.href = 'http://localhost:16001/login'; return; }
+        if (resp.status === 403) { document.getElementById('eval-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">Staff access only</td></tr>'; return; }
+        const evals = await resp.json();
+        const tbody = document.getElementById('eval-tbody');
+        if (!evals.length) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">No evaluations found</td></tr>';
+          return;
+        }
+        tbody.innerHTML = evals.map(ev => {
+          const decided = !!ev.Evaluation_FinalRecommendation;
+          const statusLabel = decided ? 'Completed' : 'Evaluation In Progress';
+          const statusClass = decided ? 'status-completed' : 'status-draft';
+          const overall = ev.Evaluation_OverallScore != null ? ev.Evaluation_OverallScore : '\u2014';
+          const decision = ev.Evaluation_FinalRecommendation || '\u2014';
+          return `
+          <tr>
+            <td>${ev.Evaluation_Id}</td>
+            <td>${ev.applicant_name || 'App #' + ev.Application_Id}</td>
+            <td>${ev.job_title || '—'}</td>
+            <td><span class="score-badge ${scoreClass(ev.Evaluation_OverallScore)}">${overall}</span></td>
+            <td><span class="status-badge" style="${recBadgeColor(ev.Evaluation_FinalRecommendation)}">${decision}</span></td>
+            <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+            <td>${ev.HR_Staff_Name}</td>
+            <td>${new Date(ev.updated_at).toLocaleDateString()}</td>
+            <td>${!decided
+              ? '<div class="actions-cell"><button class="btn btn-danger btn-sm" onclick="confirmDelete(' + ev.Evaluation_Id + ')">Delete</button><a href="/edit/' + ev.Evaluation_Id + '" class="btn btn-ghost btn-sm">Edit</a></div>'
+              : '<div class="actions-cell"><a href="/edit/' + ev.Evaluation_Id + '" class="btn btn-ghost btn-sm">View</a></div>'}</td>
+          </tr>
+        `;
+        }).join('');
+      } catch (e) {
+        document.getElementById('eval-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:#dc2626;">Failed to load evaluations</td></tr>';
+      }
+    }
+
+    function confirmDelete(id) {
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-overlay" onclick="closeModal()">
+          <div class="modal-box" onclick="event.stopPropagation()">
+            <h3>Delete Evaluation</h3>
+            <p>Are you sure you want to delete this evaluation? This action cannot be undone.</p>
+            <div class="modal-actions">
+              <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
+              <button class="btn btn-danger btn-sm" onclick="doDelete(${id})">Yes, Delete</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
+
+    async function loadEligible() {
+      const tbody = document.getElementById('eligible-tbody');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Loading...</td></tr>';
+      try {
+        const resp = await fetch(BACKEND + '/api/eligible-applications', { credentials: 'include' });
+        const apps = await resp.json();
+        if (!apps.length) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No applications ready for evaluation</td></tr>';
+          return;
+        }
+        tbody.innerHTML = apps.map(a => `
+          <tr>
+            <td>${a.application_id}</td>
+            <td>${a.applicant_name || 'User #' + a.user_id}</td>
+            <td>${a.job_title || '—'}</td>
+            <td><span class="status-badge" style="background:#dbeafe;color:#1e40af;">${a.application_status}</span></td>
+            <td><a href="/evaluate/${a.application_id}" class="btn btn-accent btn-sm" style="color:#fff;">Evaluate</a></td>
+          </tr>
+        `).join('');
+      } catch {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#dc2626;">Failed to load applications</td></tr>';
+      }
+    }
+
+    async function doDelete(id) {
+      closeModal();
+      const resp = await fetch(BACKEND + '/api/evaluations/' + id, { method: 'DELETE', credentials: 'include' });
+      if (resp.ok) { showToast('Evaluation deleted', 'success'); loadEvaluations(); loadEligible(); }
+      else { showToast('Failed to delete', 'error'); }
+    }
+
+    async function init() {
+      try {
+        const resp = await fetch(API + '/api/auth/session', { credentials: 'include' });
+        if (!resp.ok) { window.location.href = 'http://localhost:16001/login'; return; }
+        const data = await resp.json();
+        const u = data.user;
+        document.getElementById('user-name').textContent = u.first_name + ' ' + u.last_name;
+        document.getElementById('user-role-badge').textContent = u.role === 'staff' ? 'Staff' : 'Applicant';
+        document.getElementById('nav-logout-btn').style.display = '';
+        document.getElementById('page-wrapper').style.display = '';
+        if (u.role !== 'staff') {
+          document.querySelector('.main-content .container').innerHTML = '<h1>Access Denied</h1><p>Evaluations are only available to staff members.</p>';
+          return;
+        }
+        loadEvaluations();
+        loadEligible();
+        // Show toast from query param after redirect
+        const params = new URLSearchParams(window.location.search);
+        const toastMsg = params.get('toast');
+        if (toastMsg) {
+          showToast(toastMsg, 'success');
+          params.delete('toast');
+          const clean = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+          window.history.replaceState({}, '', clean);
+        }
+      } catch { window.location.href = 'http://localhost:16001/login'; }
+    }
+    init();
+
+    async function handleLogout() {
+      await fetch(API + '/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+      window.location.href = 'http://localhost:16001/login';
+    }
   </script>
-  <script src="/js/find-app.js"></script>
 </body>
 </html>
