@@ -17,7 +17,7 @@ VALID_STATUSES = {
     "Interview Requested",
     "Interview Scheduled",
     "Interview Completed",
-    "Evaluation Completed",
+    "Evaluation In Progress",
     "Hired",
     "Rejected",
     "Withdrawn",
@@ -38,7 +38,7 @@ WITHDRAWABLE_STATUSES = {
     "Interview Requested",
     "Interview Scheduled",
     "Interview Completed",
-    "Evaluation Completed",
+    "Evaluation In Progress",
 }
 
 

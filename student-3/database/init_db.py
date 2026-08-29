@@ -46,19 +46,25 @@ def _past(days):
 # (user_id, job_posting_id, resume_id, application_status,
 #  availability_date, declaration_accepted, submitted_at)
 seed_applications = [
-    (6,  1, 6, "Submitted",            _future(14), 1, _past(5)),
-    (6,  3, 6, "Interview Completed",  _future(21), 1, _past(10)),
-    (6,  7, 6, "Draft",                _future(30), 0, None),
-    (6, 11, 6, "Shortlisted",          _future(20), 1, _past(8)),
-    (7,  2, 7, "Interview Completed",  _future(10), 1, _past(12)),
-    (7,  5, 7, "Interview Completed",  _future(28), 1, _past(3)),
-    (8,  4, 8, "Rejected",             _future(14), 1, _past(15)),
-    (8,  6, 8, "Interview Completed",  _future(21), 1, _past(20)),
-    (8,  8, 8, "Draft",                _future(45), 0, None),
-    (9,  1, 9, "Interview Completed",  _future(35), 1, _past(18)),
-    (9,  5, 9, "Hired",                _future(20), 1, _past(40)),
-    (10, 2, 10, "Interview Completed", _future(14), 1, _past(25)),
-    (10, 7, 10, "Submitted",           _future(28), 1, _past(1)),
+    (6,  1, 6, "Submitted",              _future(14), 1, _past(5)),
+    (6,  3, 6, "Hired",                  _future(21), 1, _past(10)),
+    (6,  7, 6, "Draft",                  _future(30), 0, None),
+    (6, 11, 6, "Shortlisted",            _future(20), 1, _past(8)),
+    (7,  2, 7, "Rejected",               _future(10), 1, _past(12)),
+    (7,  5, 7, "Hired",                  _future(28), 1, _past(3)),
+    (8,  4, 8, "Rejected",               _future(14), 1, _past(15)),
+    (8,  6, 8, "Rejected",               _future(21), 1, _past(20)),
+    (8,  8, 8, "Draft",                  _future(45), 0, None),
+    (9,  1, 9, "Hired",                  _future(35), 1, _past(18)),
+    (9,  5, 9, "Hired",                  _future(20), 1, _past(40)),
+    (10, 2, 10, "Hired",                 _future(14), 1, _past(25)),
+    (10, 7, 10, "Submitted",             _future(28), 1, _past(1)),
+    (6,  9, 6, "Evaluation In Progress", _future(25), 1, _past(6)),
+    (8, 10, 8, "Evaluation In Progress", _future(30), 1, _past(7)),
+    (10, 4, 10, "Hired",                 _future(18), 1, _past(14)),
+    (9,  8, 9, "Rejected",               _future(22), 1, _past(9)),
+    (7, 11, 7, "Interview Completed",    _future(20), 1, _past(4)),
+    (10, 12, 10, "Interview Completed",  _future(15), 1, _past(2)),
 ]
 
 cursor.executemany("""
@@ -70,4 +76,4 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
 conn.commit()
 conn.close()
 
-print("Student-3 database initialized with applications table (13 seed records).")
+print("Student-3 database initialized with applications table (19 seed records).")

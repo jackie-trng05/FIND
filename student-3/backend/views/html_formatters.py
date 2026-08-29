@@ -28,7 +28,7 @@ def _status_badge(status):
         "Draft": "badge-warning", "Submitted": "badge-info",
         "Shortlisted": "badge-accent", "Interview Requested": "badge-warning",
         "Interview Scheduled": "badge-info", "Interview Completed": "badge-accent",
-        "Evaluation Completed": "badge-accent", "Hired": "badge-success",
+        "Evaluation In Progress": "badge-warning", "Hired": "badge-success",
         "Rejected": "badge-danger", "Withdrawn": "badge-muted",
     }
     return f'<span class="badge {css_map.get(status, "badge-muted")}">{_e(status)}</span>'
@@ -386,6 +386,11 @@ def render_staff_applications_table(applications, postings, users):
                 f'<a class="btn btn-primary btn-sm" target="_blank" rel="noopener"'
                 f' href="{EVALUATIONS_URL}/evaluate/{aid}">Evaluate</a>'
             )
+        elif a["application_status"] == "Evaluation In Progress":
+            evaluate_btn = (
+                f'<a class="btn btn-accent btn-sm" target="_blank" rel="noopener"'
+                f' href="{EVALUATIONS_URL}/evaluate/{aid}">Continue Evaluation</a>'
+            )
         actions_html = interview_btn + evaluate_btn
         rows.append(f"""
         <tr class="application-row" data-href="{detail_link}">
@@ -401,7 +406,8 @@ def render_staff_applications_table(applications, postings, users):
 def render_pending_interviews_bar(applications):
     to_schedule = [a for a in applications if a["application_status"] == "Shortlisted"]
     to_evaluate = [a for a in applications if a["application_status"] == "Interview Completed"]
-    if not to_schedule and not to_evaluate:
+    in_progress = [a for a in applications if a["application_status"] == "Evaluation In Progress"]
+    if not to_schedule and not to_evaluate and not in_progress:
         return ('<div class="pending-bar">'
                 '<span class="pending-empty">No pending interviews to schedule or evaluate.</span>'
                 '</div>')
@@ -415,6 +421,11 @@ def render_pending_interviews_bar(applications):
         parts.append(
             f'<span class="pending-item"><strong>{len(to_evaluate)}</strong> '
             "candidates ready to evaluate</span>"
+        )
+    if in_progress:
+        parts.append(
+            f'<span class="pending-item"><strong>{len(in_progress)}</strong> '
+            "evaluations in progress</span>"
         )
     return f'<div class="pending-bar">{"".join(parts)}</div>'
 

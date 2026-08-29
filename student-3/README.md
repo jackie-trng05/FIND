@@ -60,7 +60,7 @@ candidate screening.
 
 - `applications` — one row per application. Statuses:
   `Draft`, `Submitted`, `Shortlisted`, `Interview Scheduled`,
-  `Interview Completed`, `Evaluation Completed`, `Hired`, `Rejected`,
+  `Interview Completed`, `Evaluation In Progress`, `Hired`, `Rejected`,
   `Withdrawn`. `resume_id` is a soft cross-service reference to student-1's
   `resumes.resume_id` (SQLite databases are per-service, so this isn't a real
   foreign key — the API layer is responsible for validating it).
