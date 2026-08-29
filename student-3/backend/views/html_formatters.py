@@ -482,9 +482,10 @@ def render_ai_screening_panel(application_id, screening):
     """
 
 
-def render_candidate_profile(application, posting, user, resume, screening):
+def render_candidate_profile(application, posting, user, resume, screening, profile=None):
     aid = application["application_id"]
     status = application["application_status"]
+    profile = profile or {}
     resume_html = _render_resume_row(resume)
     ai_section_html = ""
     if status == "Submitted":
@@ -529,6 +530,11 @@ def render_candidate_profile(application, posting, user, resume, screening):
                 <tr><th>First name</th><td>{_e(user.get('user_first_name', '—'))}</td></tr>
                 <tr><th>Last name</th><td>{_e(user.get('user_last_name', '—'))}</td></tr>
                 <tr><th>Email</th><td>{_e(user.get('user_email', '—'))}</td></tr>
+                <tr><th>Phone</th><td>{_e(profile.get('phone', '—'))}</td></tr>
+                <tr><th>Location</th><td>{_e(profile.get('location', '—'))}</td></tr>
+                <tr><th>Professional title</th><td>{_e(profile.get('professional_title', '—'))}</td></tr>
+                <tr><th>Summary</th><td>{_e(profile.get('summary', '—'))}</td></tr>
+                <tr><th>Interests</th><td>{_e(profile.get('interests', '—'))}</td></tr>
                 <tr><th>Applied position</th><td>{_e(posting.get('Job_Title', '—'))}</td></tr>
                 <tr><th>Date submitted</th><td>{_format_date(application.get('submitted_at') or '')}</td></tr>
             </table>

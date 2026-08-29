@@ -1,6 +1,7 @@
 {% set application = data.application %}
 {% set posting = data.posting %}
 {% set candidate = data.candidate %}
+{% set profile = data.profile or {} %}
 {% set resume = data.resume %}
 {% set status = application.application_status %}
 
@@ -19,6 +20,11 @@
             <tr><th>First name</th><td>{{ candidate.user_first_name or '-' }}</td></tr>
             <tr><th>Last name</th><td>{{ candidate.user_last_name or '-' }}</td></tr>
             <tr><th>Email</th><td>{{ candidate.user_email or '-' }}</td></tr>
+            <tr><th>Phone</th><td>{{ profile.phone or '-' }}</td></tr>
+            <tr><th>Location</th><td>{{ profile.location or '-' }}</td></tr>
+            <tr><th>Professional title</th><td>{{ profile.professional_title or '-' }}</td></tr>
+            <tr><th>Summary</th><td>{{ profile.summary or '-' }}</td></tr>
+            <tr><th>Interests</th><td>{{ profile.interests or '-' }}</td></tr>
             <tr><th>Applied position</th><td>{{ posting.Job_Title or '-' }}</td></tr>
             <tr><th>Date submitted</th><td>{{ format_date(application.submitted_at or '') }}</td></tr>
         </table>

@@ -23,6 +23,7 @@ from routes.common import (
 )
 from services.database_api import (
     get_job_posting,
+    get_profile_by_user_id,
     get_postings_map,
     get_session_user,
     get_user,
@@ -54,12 +55,14 @@ def candidate_profile_context(application_id):
 
     posting = get_job_posting(application["job_posting_id"]) or {}
     candidate = get_user(application["user_id"]) or {}
+    profile = get_profile_by_user_id(application["user_id"])
     resume = load_resume(application.get("resume_id"), "staff")
 
     return context_ok({
         "application": application,
         "posting": posting,
         "candidate": candidate,
+        "profile": profile or {},
         "resume": resume,
     })
 
@@ -151,8 +154,11 @@ def candidate_profile(application_id):
         return render_message("Application not found.", "error"), 200
     posting = get_job_posting(application["job_posting_id"]) or {}
     candidate = get_user(application["user_id"]) or {}
+    profile = get_profile_by_user_id(application["user_id"])
     resume = load_resume(application.get("resume_id"), "staff")
-    return render_candidate_profile(application, posting, candidate, resume, screening=None), 200
+    return render_candidate_profile(
+        application, posting, candidate, resume, screening=None, profile=profile
+    ), 200
 
 
 @staff_bp.put("/api/applications/<int:application_id>/status")
