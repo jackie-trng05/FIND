@@ -8,12 +8,14 @@ import requests as http_requests
 from services.config import (
     DB_SERVICE_URL,
     APPLICATIONS_DB_URL,
+    INTERVIEWS_DB_URL,
     POSTINGS_DB_URL,
     SHARED_DB_URL,
 )
 from services.auth import require_session
 from views.html_formatters import render_evaluations_rows, render_eligible_rows
 from routes.ai_mode import ai_mode_bp
+
 
 app = Flask(__name__)
 
@@ -85,24 +87,40 @@ def _validation_error(msg):
     return jsonify({"error": msg}), 400
 
 
-def _apply_decision(application_id, action):
-    """Update a linked application's status for a Hired/Rejected decision.
+def _update_application_status(application_id, new_status):
+    """Set the linked application's status (best-effort)."""
+    try:
+        http_requests.put(
+            f"{APPLICATIONS_DB_URL}/applications/{application_id}",
+            json={"application_status": new_status}, timeout=5,
+        )
+    except Exception:
+        pass
 
-    Returns the applicant email (best effort) or an empty string.
-    """
-    app_resp = http_requests.get(f"{APPLICATIONS_DB_URL}/applications/{application_id}", timeout=3)
-    if app_resp.status_code != 200:
-        return ""
-    app_data = app_resp.json()
+
+def _fetch_interview(application_id):
+    """Find the completed interview for an application (best-effort)."""
+    try:
+        resp = http_requests.get(f"{INTERVIEWS_DB_URL}/interviews", timeout=3)
+        if resp.status_code == 200:
+            for iv in resp.json():
+                if iv.get("application_id") == application_id:
+                    return iv
+    except Exception:
+        pass
+    return None
+
+
+def _apply_decision(application_id, action):
+    """Update a linked application's status to Hired or Rejected."""
     new_status = "Hired" if action == "Hired" else "Rejected"
-    http_requests.put(
-        f"{APPLICATIONS_DB_URL}/applications/{application_id}",
-        json={"application_status": new_status}, timeout=5,
-    )
-    user_resp = http_requests.get(f"{SHARED_DB_URL}/users/{app_data.get('user_id')}", timeout=3)
-    if user_resp.status_code == 200:
-        return user_resp.json().get("user_email", "")
-    return ""
+    try:
+        http_requests.put(
+            f"{APPLICATIONS_DB_URL}/applications/{application_id}",
+            json={"application_status": new_status}, timeout=5,
+        )
+    except Exception:
+        pass
 
 
 def _finish_save(resp, data):
@@ -128,17 +146,17 @@ def _finish_save(resp, data):
     except Exception:
         pass
 
-    status = data.get("Evaluation_Status")
     rec = data.get("Evaluation_FinalRecommendation")
-    if status == "Completed" and rec in ("Hire", "Reject"):
-        application_id = data.get("Application_Id") or saved.get("Application_Id")
+    application_id = data.get("Application_Id") or saved.get("Application_Id")
+    if rec in ("Hire", "Reject"):
         action = "Hired" if rec == "Hire" else "Rejected"
         try:
             _apply_decision(application_id, action)
         except Exception:
             pass
-        msg = f"Evaluation completed. Applicant has been notified via email ({action})."
+        msg = f"Evaluation completed. Applicant has been marked {action}."
     else:
+        _update_application_status(application_id, "Evaluation In Progress")
         msg = "Evaluation saved as draft."
 
     return _hx_redirect(f"{frontend_origin}/?toast=" + quote(msg))
@@ -227,6 +245,17 @@ def get_evaluation(evaluation_id):
     except Exception:
         pass
 
+    iv = _fetch_interview(ev["Application_Id"])
+    if iv:
+        ev["interview_id"] = iv.get("interview_id")
+        notes = iv.get("interview_notes")
+        if isinstance(notes, str):
+            try:
+                notes = json.loads(notes)
+            except Exception:
+                notes = None
+        ev["interview_notes"] = notes
+
     return jsonify(ev)
 
 
@@ -271,7 +300,21 @@ def delete_evaluation(evaluation_id):
     if err:
         return err
 
+    # Capture the linked application before deleting so its status can be reverted.
+    application_id = None
+    try:
+        get_resp = http_requests.get(f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", timeout=3)
+        if get_resp.status_code == 200:
+            application_id = get_resp.json().get("Application_Id")
+    except Exception:
+        pass
+
     resp = http_requests.delete(f"{DB_SERVICE_URL}/evaluations/{evaluation_id}")
+
+    # Deleting a draft frees the application to be evaluated again: revert its
+    # status so it reappears under "Applications Ready for Evaluation".
+    if resp.status_code < 400 and application_id is not None:
+        _update_application_status(application_id, "Interview Completed")
 
     # HTMX list page: return an empty body (the row is removed) plus triggers to
     # toast and refresh the "ready for evaluation" panel.
@@ -324,6 +367,24 @@ def eligible_applications():
         return jsonify(_fetch_eligible())
     except Exception:
         return jsonify([])
+
+
+@app.get("/api/interview/<int:application_id>")
+def get_interview_for_application(application_id):
+    user, err = _require_staff()
+    if err:
+        return err
+    iv = _fetch_interview(application_id)
+    if not iv:
+        return jsonify({"error": "No interview found"}), 404
+    notes = iv.get("interview_notes")
+    if isinstance(notes, str):
+        try:
+            notes = json.loads(notes)
+        except Exception:
+            notes = None
+    iv["interview_notes"] = notes
+    return jsonify(iv)
 
 
 @app.get("/api/eligible-applications/rows")

@@ -52,7 +52,7 @@ def _short_date(value):
 def render_evaluations_rows(evaluations):
     """Render the <tr> rows for the evaluations table body."""
     if not evaluations:
-        return ('<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">'
+        return ('<tr><td colspan="8" style="text-align:center;color:var(--text-muted);">'
                 "No evaluations found</td></tr>")
 
     rows = []
@@ -62,20 +62,29 @@ def render_evaluations_rows(evaluations):
         job = ev.get("job_title") or "\u2014"
         overall = ev.get("Evaluation_OverallScore")
         rec = ev.get("Evaluation_FinalRecommendation") or ""
-        status = ev.get("Evaluation_Status") or ""
+        is_draft = rec == ""
 
-        if status != "Completed":
+        if is_draft:
+            rec_display = '<span class="status-badge status-draft">Evaluation In Progress</span>'
+        else:
+            rec_display = f'<span class="status-badge" style="{_rec_style(rec)}">{_e(rec)}</span>'
+
+        if is_draft:
             actions = (
                 '<div class="actions-cell">'
+                f'<a href="/edit/{_e(eval_id)}" class="btn btn-ghost btn-sm">Edit</a>'
                 f'<button class="btn btn-danger btn-sm" '
                 f'hx-delete="{_e(BACKEND_PUBLIC_URL)}/api/evaluations/{_e(eval_id)}" '
                 'hx-confirm="Delete this evaluation? This action cannot be undone." '
                 'hx-target="closest tr" hx-swap="outerHTML swap:200ms">Delete</button>'
-                f'<a href="/edit/{_e(eval_id)}" class="btn btn-ghost btn-sm">Edit</a>'
                 "</div>"
             )
         else:
-            actions = '<span style="color:var(--text-muted);font-size:0.8rem;">\u2014</span>'
+            actions = (
+                '<div class="actions-cell">'
+                f'<a href="/edit/{_e(eval_id)}" class="btn btn-ghost btn-sm">View</a>'
+                "</div>"
+            )
 
         rows.append(
             "<tr>"
@@ -83,8 +92,7 @@ def render_evaluations_rows(evaluations):
             f"<td>{_e(applicant)}</td>"
             f"<td>{_e(job)}</td>"
             f'<td><span class="score-badge {_score_class(overall)}">{_e(overall)}</span></td>'
-            f'<td><span class="status-badge" style="{_rec_style(rec)}">{_e(rec)}</span></td>'
-            f'<td><span class="status-badge status-{_e(status.lower())}">{_e(status)}</span></td>'
+            f"<td>{rec_display}</td>"
             f"<td>{_e(ev.get('HR_Staff_Name'))}</td>"
             f"<td>{_short_date(ev.get('updated_at'))}</td>"
             f"<td>{actions}</td>"

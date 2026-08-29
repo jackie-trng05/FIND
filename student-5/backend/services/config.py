@@ -20,6 +20,7 @@ INTERVIEWS_DB_URL = os.environ.get("INTERVIEWS_DB_URL", "http://student-4-db:600
 BACKEND_PUBLIC_URL = os.environ.get("BACKEND_PUBLIC_URL", "http://localhost:16017")
 # Browser-facing URL of the applications service (Student-3), for "View application" links.
 APPLICATIONS_PUBLIC_URL = os.environ.get("APPLICATIONS_PUBLIC_URL", "http://localhost:16010")
+INTERVIEWS_PUBLIC_URL = os.environ.get("INTERVIEWS_PUBLIC_URL", "http://localhost:16013")
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
