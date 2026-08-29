@@ -65,7 +65,6 @@ def _create_schema(db_path):
             file_data BLOB NOT NULL,
             uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-            parsed_at TEXT,
             FOREIGN KEY (profile_id) REFERENCES profiles(profile_id) ON DELETE CASCADE
         )
     """)

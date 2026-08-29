@@ -72,7 +72,7 @@ Student 1's SQLite database (`student1.db`) owns the following data:
   `phone`, `location`, `professional_title`, `summary`, `interests`, `created_at`, and
   `updated_at`.
 - `resumes`: profile-linked PDF data stored in the `file_data` BLOB, with `resume_id`,
-  `profile_id`, `file_name`, `file_type`, `uploaded_at`, `updated_at`, and `parsed_at`. The
+  `profile_id`, `file_name`, `file_type`, `uploaded_at`, and `updated_at`. The
   current schema permits one profile-linked resume per profile through a unique `profile_id`.
   An unlinked `/resumes` database endpoint also supports application-only uploads owned by the
   calling application workflow.
@@ -82,8 +82,6 @@ Student 1's SQLite database (`student1.db`) owns the following data:
 are read as-is during image creation; no files are generated at build time or runtime and no
 extra generation dependency is required. DOCX resume support was removed, so the seeded files
 are all PDF.
-
-`parsed_at` exists as reserved resume metadata but is not populated by the current AI flow.
 
 ## Implemented Student 1 AI feature
 
