@@ -33,7 +33,6 @@ def collect(app_dir, repo_root) -> tuple[bool, str]:
 
     route_files = [
         app_dir / "shared" / "backend" / "app.py",
-        app_dir / "ai-services" / "ai-mode" / "routes.py",
     ]
 
     missing = [str(path.relative_to(app_dir)) for path in route_files if not path.exists()]
