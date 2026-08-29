@@ -31,10 +31,6 @@ services:
       PORT: 5000
       COOKIE_DOMAIN: localhost
       ALLOWED_ORIGINS: "http://localhost:16001,http://localhost:16004,http://localhost:16007,http://localhost:16010,http://localhost:16013,http://localhost:16016"
-      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
-      OLLAMA_MODEL: qwen2.5:0.5b
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - shared-db
     networks:
