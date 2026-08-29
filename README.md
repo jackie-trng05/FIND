@@ -6,6 +6,27 @@ FIND is a job application management system with multi-service application organ
 
 The repository is structured so that shared functionality can be developed separately from each student's implementation.
 
+## Repository Conventions
+
+FIND is maintained as one team-owned repository and one integrated application. Keep shared
+functionality separate from student-owned features, and validate each feature before integrating
+it into the complete application.
+
+| Path | Responsibility |
+| --- | --- |
+| `.github/workflows/` | GitHub Actions and CI/CD workflows |
+| `docs/` | Project documentation, architecture diagrams, and reports |
+| `shared/` | Integrated home page, shared CSS, JavaScript, assets, and common configuration |
+| `student-1/` through `student-5/` | Student-owned frontend, backend, database, tests, and Docker artefacts |
+| `agentic_loop/` | Development-time architecture and service review tooling and prompts |
+| `scripts/` | Build, test, and deployment automation |
+| `docker-compose.yml` | Shared local orchestration for the integrated application |
+
+Feature-specific AI integrations belong to their owning student backend; `agentic_loop/` is
+development tooling rather than a product service. Cloud deployment must target the complete
+integrated application, with one shared deployment on Microsoft Azure or Amazon Web Services,
+not individual student microservices.
+
 
 ### Shared Services
 
@@ -138,76 +159,34 @@ This will:
 
 ---
 
-# Quick Links
+# Quick Links and Canonical Port Assignments
 
-The following links provide quick access to the services for testing when the Docker containers are running.
-
-### Shared Services
-
-- **Shared Frontend:** http://localhost:16001
-- **Shared API:** http://localhost:16002
-- **Shared Database:** http://localhost:16003
-
-### Student 1
-
-- **Student 1 Frontend:** http://localhost:16004
-- **Student 1 Backend:** http://localhost:16005
-- **Student 1 Database:** http://localhost:16006
-
-### Student 2
-
-- **Student 2 Frontend:** http://localhost:16007
-- **Student 2 Backend:** http://localhost:16008
-- **Student 2 Database:** http://localhost:16009
-
-### Student 3
-
-- **Student 3 Frontend:** http://localhost:16010
-- **Student 3 Backend:** http://localhost:16011
-- **Student 3 Database:** http://localhost:16012
-
-### Student 4
-
-- **Student 4 Frontend:** http://localhost:16013
-- **Student 4 Backend:** http://localhost:16014
-- **Student 4 Database:** http://localhost:16015
-
-### Student 5
-
-- **Student 5 Frontend:** http://localhost:16016
-- **Student 5 Backend:** http://localhost:16017
-- **Student 5 Database:** http://localhost:16018
-
-> **Note:** Once a student's frontend, backend, and database containers are added to `docker-compose.yml`, their Quick Links above become reachable.
-
----
-
-# Canonical Port Assignments
-
-The following table contains the canonical host and container port assignments for the shared services and all student modules.
+The table below is the canonical list of host and container ports for the shared services and all student modules. Use the host-mapped ports when accessing services from a browser or the host machine.
 
 The port mappings follow the course-provided architecture and should not be changed until discussed as a group.
 
-| Module     | Service       | Host Port | Container Port | Container Implemented |
-| ---------- | ------------- | --------: | -------------: | :-------------------: |
-| Shared     | Frontend      |   `16001` |         `3000` |           Y           |
-| Shared     | Backend / API |   `16002` |         `5000` |           Y           |
-| Shared     | Database      |   `16003` |         `6000` |           Y           |
-| Student 1  | Frontend      |   `16004` |         `3000` |           Y           |
-| Student 1  | Backend       |   `16005` |         `5001` |           Y           |
-| Student 1  | Database      |   `16006` |         `6001` |           Y           |
-| Student 2  | Frontend      |   `16007` |         `3002` |           Y           |
-| Student 2  | Backend       |   `16008` |         `5002` |           Y           |
-| Student 2  | Database      |   `16009` |         `6002` |           Y           |
-| Student 3  | Frontend      |   `16010` |         `3003` |           Y           |
-| Student 3  | Backend       |   `16011` |         `5003` |           Y           |
-| Student 3  | Database      |   `16012` |         `6003` |           Y           |
-| Student 4  | Frontend      |   `16013` |         `3004` |           Y           |
-| Student 4  | Backend       |   `16014` |         `5004` |           Y           |
-| Student 4  | Database      |   `16015` |         `6004` |           Y           |
-| Student 5  | Frontend      |   `16016` |         `3005` |           Y           |
-| Student 5  | Backend       |   `16017` |         `5005` |           Y           |
-| Student 5  | Database      |   `16018` |         `6005` |           Y           |
+| Module    | Service       | Host Port | Container Port | Quick Links |
+| --------- | ------------- | --------: | -------------: | ----------- |
+| Shared    | Frontend      |   `16001` |         `3000` | [Open](http://localhost:16001) |
+| Shared    | Backend / API |   `16002` |         `5000` | [Open](http://localhost:16002) |
+| Shared    | Database      |   `16003` |         `6000` | [Open](http://localhost:16003) |
+| Student 1 | Frontend      |   `16004` |         `3000` | [Open](http://localhost:16004) |
+| Student 1 | Backend       |   `16005` |         `5001` | [Open](http://localhost:16005) |
+| Student 1 | Database      |   `16006` |         `6001` | [Open](http://localhost:16006) |
+| Student 2 | Frontend      |   `16007` |         `3002` | [Open](http://localhost:16007) |
+| Student 2 | Backend       |   `16008` |         `5002` | [Open](http://localhost:16008) |
+| Student 2 | Database      |   `16009` |         `6002` | [Open](http://localhost:16009) |
+| Student 3 | Frontend      |   `16010` |         `3003` | [Open](http://localhost:16010) |
+| Student 3 | Backend       |   `16011` |         `5003` | [Open](http://localhost:16011) |
+| Student 3 | Database      |   `16012` |         `6003` | [Open](http://localhost:16012) |
+| Student 4 | Frontend      |   `16013` |         `3004` | [Open](http://localhost:16013) |
+| Student 4 | Backend       |   `16014` |         `5004` | [Open](http://localhost:16014) |
+| Student 4 | Database      |   `16015` |         `6004` | [Open](http://localhost:16015) |
+| Student 5 | Frontend      |   `16016` |         `3005` | [Open](http://localhost:16016) |
+| Student 5 | Backend       |   `16017` |         `5005` | [Open](http://localhost:16017) |
+| Student 5 | Database      |   `16018` |         `6005` | [Open](http://localhost:16018) |
+
+Database links are provided for local inspection and debugging only; they are not end-user entry points.
 
 ---
 

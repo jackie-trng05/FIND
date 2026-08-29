@@ -9,8 +9,7 @@ Architecture baseline:
 	provides shared navigation, login/register, and a unified dashboard linking to every
 	student's frontend.
 - The shared-api is the shared access API on host port 16002 mapped to container port 5000. It
-	owns authentication endpoints: /api/auth/register, /login, /session, /user, and /logout. It
-	also hosts the shared AI-Mode /ask and /ask-with-context endpoints.
+	owns authentication endpoints: /api/auth/register, /login, /session, /user, and /logout.
 - The shared-db is the shared access database on host port 16003 mapped to container port 6000.
 	It owns the users and sessions tables used by shared-api.
 
@@ -24,10 +23,10 @@ Student feature services:
 | 4 | Interview scheduling | 16013 -> 3004 | 16014 -> 5004 | 16015 -> 6004 |
 | 5 | Candidate evaluation | 16016 -> 3005 | 16017 -> 5005 | 16018 -> 6005 |
 
-Each student's database owns the schema and tables for that student's feature. Each backend
-owns its feature's AI-Mode endpoint and calls a locally running Ollama instance at
+Each student's database owns the schema and tables for that student's feature. Each feature
+backend owns its feature-specific AI-Mode endpoint and calls a locally running Ollama instance at
 http://host.docker.internal:11434, using qwen2.5:0.5b or llama3.1:8b as appropriate. The shared
-API additionally provides a generic assistant for the dashboard. Release 0 requires the
+API provides authentication only and does not expose a shared AI endpoint. Release 0 requires the
 Frontend -> Backend/API -> Ollama -> LLM flow; MCP, RAG, and Multi-Agent capabilities belong to
 later releases and should not be treated as Release 0 gaps.
 

@@ -77,11 +77,12 @@ Student 1's SQLite database (`student1.db`) owns the following data:
   An unlinked `/resumes` database endpoint also supports application-only uploads owned by the
   calling application workflow.
 
-`init_db.py` recreates the tables and seeds 10 profiles mapped to shared-db user IDs 1 through
-10, plus 10 realistic PDF resumes. The committed files under `database/seed_data/resumes/`
-are read as-is during image creation; no files are generated at build time or runtime and no
-extra generation dependency is required. DOCX resume support was removed, so the seeded files
-are all PDF.
+`init_db.py` creates the tables when they are absent, clears existing profile and resume rows,
+and seeds 10 profiles mapped to shared-db user IDs 1 through 10, plus 10 realistic PDF resumes.
+When run against an existing database, it leaves the existing schema in place and does not
+perform schema migrations. The committed files under `database/seed_data/resumes/` are read
+as-is during image creation; no files are generated at build time or runtime and no extra
+generation dependency is required. The seeded files are all PDF.
 
 ## Implemented Student 1 AI feature
 
@@ -108,31 +109,12 @@ This implements the feature's PLAN -> ACT -> OBSERVE -> ADAPT flow: locate the p
 call Ollama, validate the parsed response and resume quality, then retry or adjust the result when
 needed. The LLM response is not saved automatically.
 
-## Current verification context
-
-The Student 1 pytest suite exercises the frontend, backend, and database Flask services in
-isolation. Database tests use a throwaway SQLite file; backend tests fake shared-api and database
-HTTP calls with `requests_mock`; frontend tests fake backend calls. Coverage includes profile
-CRUD, ownership and session checks, resume PDF/size/base64 validation, cascade deletion, user
-detail updates, logout, and the HTMX fragment builders. The suite is run from `student-1` with:
-
-```bash
-pip install -r tests/requirements.txt
-python -m pytest tests -q
-```
-
-There is currently no full docker-compose integration test and no dedicated AI route/model test.
-For multipart uploads, Flask's `MAX_CONTENT_LENGTH` returns HTTP 413 before the backend's manual
-5 MB check can run, so the user-facing error path should be verified deliberately. The
-`student-1-ci` workflow builds the three images, smoke-checks their health endpoints, runs the
-pytest suite, and uploads test evidence.
-
 Use the evidence below to identify:
 - responsibilities and ownership boundaries for each Student 1 tier
 - dependencies, coupling, or overlapping responsibilities with shared or other services
 - duplicated or dead code that should be removed or abstracted
 - authentication, authorization, data ownership, resume storage, and AI integration risks
-- deviations from the intended architecture and gaps in the current verification context
+- deviations from the intended architecture and unverified claims
 
 Distinguish observed evidence from assumptions. Provide at most one or two practical
 recommendations. Reply in at most 40 words.

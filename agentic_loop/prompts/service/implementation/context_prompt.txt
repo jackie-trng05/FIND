@@ -20,8 +20,6 @@ Shared API Endpoints (ONLY these exist):
 - GET /api/auth/session
 - PUT /api/auth/user
 - POST /api/auth/logout
-- POST /ask
-- POST /ask-with-context
 
 Shared Database Endpoints (ONLY these exist):
 - GET /health
