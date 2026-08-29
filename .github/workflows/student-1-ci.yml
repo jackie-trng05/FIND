@@ -206,7 +206,8 @@ jobs:
           (${{ steps.test-summary.outputs.passed }}/${{ steps.test-summary.outputs.total }} passed,
           ${{ steps.test-summary.outputs.failed }} failed, ${{ steps.test-summary.outputs.errors }} errors,
           ${{ steps.test-summary.outputs.skipped }} skipped).
-          See student-1/tests/README.md for the full feature-coverage breakdown.
+          See agentic_loop/prompts/architecture/students/student-1/architecture_task_prompt.txt
+          for the Student 1 feature scope, architecture context, and current testing notes.
 
 
           ## Pytest Results

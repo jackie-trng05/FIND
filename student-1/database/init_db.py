@@ -63,7 +63,7 @@ INSERT INTO profiles (user_id, phone, location, professional_title, summary, int
 VALUES (?, ?, ?, ?, ?, ?)
 """, seed_profiles)
 
-# Seed resumes from real PDF files committed under seed_data/resumes (see seed_data/README.md).
+# Seed resumes from real PDF files committed under seed_data/resumes.
 SEED_RESUME_DIR = os.path.join(os.path.dirname(__file__), "seed_data", "resumes")
 PDF_MIME_TYPE = "application/pdf"
 
