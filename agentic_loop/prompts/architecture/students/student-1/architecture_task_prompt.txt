@@ -110,11 +110,11 @@ call Ollama, validate the parsed response and resume quality, then retry or adju
 needed. The LLM response is not saved automatically.
 
 Use the evidence below to identify:
-- responsibilities and ownership boundaries for each Student 1 tier
-- dependencies, coupling, or overlapping responsibilities with shared or other services
-- duplicated or dead code that should be removed or abstracted
-- authentication, authorization, data ownership, resume storage, and AI integration risks
-- deviations from the intended architecture and unverified claims
+- at least 3 recommendations for code improvement, which may include changes related to:
+    - responsibilities and ownership boundaries for this feature's services
+    - dependencies, coupling, or overlapping responsibilities with shared or other services
+    - duplicated or dead code that should be removed or abstracted into another service, shared or individual
+    - architectural deviations from the canonical microservices architecture
 
 Distinguish observed evidence from assumptions. Provide at most one or two practical
 recommendations. Reply in at most 40 words.
