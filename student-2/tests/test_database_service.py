@@ -54,7 +54,7 @@ def test_applicant_filter_returns_only_published(client):
 
 def test_create_defaults_to_draft(client):
     payload = {
-        "Staff_Id": 1,
+        "User_Id": 1,
         "Job_Title": "Test Engineer",
         "Job_Description": "Write and run tests.",
         "Job_Type": "Full time",
@@ -70,7 +70,7 @@ def test_create_defaults_to_draft(client):
 def test_publish_and_unpublish_roundtrip(client):
     created = client.post(
         "/job-postings",
-        json={"Staff_Id": 1, "Job_Title": "Publishable", "Job_Type": "Casual"},
+        json={"User_Id": 1, "Job_Title": "Publishable", "Job_Type": "Casual"},
     ).get_json()
     pid = created["JobPosting_Id"]
 
@@ -85,7 +85,7 @@ def test_publish_and_unpublish_roundtrip(client):
 def test_update_and_delete(client):
     created = client.post(
         "/job-postings",
-        json={"Staff_Id": 1, "Job_Title": "Temp", "Job_Type": "Contract"},
+        json={"User_Id": 1, "Job_Title": "Temp", "Job_Type": "Contract"},
     ).get_json()
     pid = created["JobPosting_Id"]
 

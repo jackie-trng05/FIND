@@ -29,9 +29,9 @@ def format_interviews_html(interviews):
         <tr>
             <td>{_field(interview, 'interview_id')}</td>
             <td>{_field(interview, 'application_id')}</td>
-            <td>{_field(interview, 'staff_id')}</td>
+            <td>{_field(interview, 'user_id')}</td>
             <td>{_field(interview, 'interview_datetime')}</td>
-            <td>{_status_badge(interview.get('interview_status'))}</td>
+            <td>{_status_badge(interview.get('application_status'))}</td>
             <td>{_field(interview, 'interview_notes')}</td>
         </tr>"""
 
@@ -64,9 +64,9 @@ def format_interview_html(interview):
     <div class="interview-detail">
         <p><strong>Interview ID:</strong> {_field(interview, 'interview_id')}</p>
         <p><strong>Application ID:</strong> {_field(interview, 'application_id')}</p>
-        <p><strong>Staff ID:</strong> {_field(interview, 'staff_id')}</p>
+        <p><strong>Staff ID:</strong> {_field(interview, 'user_id')}</p>
         <p><strong>Date &amp; Time:</strong> {_field(interview, 'interview_datetime')}</p>
-        <p><strong>Status:</strong> {_status_badge(interview.get('interview_status'))}</p>
+        <p><strong>Status:</strong> {_status_badge(interview.get('application_status'))}</p>
         <p><strong>Meeting Link:</strong> {link_html}</p>
         <p><strong>Notes:</strong> {_field(interview, 'interview_notes')}</p>
     </div>"""
@@ -145,7 +145,7 @@ def render_interview_rows(interviews, role="staff", sort="datetime", direction="
         if sort == "posting":
             return item.get("job_posting_title") or ""
         if sort == "status":
-            return item.get("interview_status") or ""
+            return item.get("application_status") or ""
         dt = _parse_dt(item.get("interview_datetime"))
         return dt.timestamp() if dt else 0
 
@@ -191,7 +191,7 @@ def render_interview_rows(interviews, role="staff", sort="datetime", direction="
             <td>{escape(str(person))}</td>
             <td>{escape(str(it.get('job_posting_title') or '—'))}</td>
             <td>{_fmt_dt(it.get('interview_datetime'))}</td>
-            <td>{_interview_badge(it.get('interview_status'))}</td>
+            <td>{_interview_badge(it.get('application_status'))}</td>
             <td class="cell-action"><a class="btn btn-secondary btn-sm" href="{link}">View</a></td>
         </tr>"""
     return f'<table class="data-table">{head}<tbody>{body}</tbody></table>'
@@ -247,7 +247,7 @@ def render_calendar(interviews, year, month, backend_url=""):
         for dt, it in day_events:
             time = dt.strftime("%H:%M")
             label = f"{time} · {escape(str(it.get('applicant_name') or '—'))}"
-            cls = _CAL_STATUS.get(str(it.get("interview_status") or "").lower(), "cal-scheduled")
+            cls = _CAL_STATUS.get(str(it.get("application_status") or "").lower(), "cal-scheduled")
             href = f"/interview/{escape(str(it.get('interview_id')))}?from=calendar"
             ev_html += f'<a class="cal-event {cls}" href="{href}" title="{label}">{label}</a>'
         cells += (
@@ -345,7 +345,7 @@ def render_to_complete_rows(interviews):
                 <div class="meta">{prefix}Interviewed {_fmt_dt(it.get('interview_datetime'))}</div>
             </div>
             <div class="btn-row">
-                {_interview_badge(it.get('interview_status'))}
+                {_interview_badge(it.get('application_status'))}
                 <a class="btn btn-primary btn-sm" href="/interview/{escape(str(it.get('interview_id')))}?from=to-complete">Complete Interview</a>
             </div>
         </div>"""
@@ -355,7 +355,7 @@ def render_to_complete_rows(interviews):
 # ---- Applicant requests --------------------------------------------------- #
 
 def render_requests(interviews, backend_url=""):
-    pending = [it for it in interviews if it.get("interview_status") == "Interview Requested"]
+    pending = [it for it in interviews if it.get("application_status") == "Interview Requested"]
     if not pending:
         return '<div class="card"><div class="empty-state">You have no interview requests right now.</div></div>'
     cards = ""
@@ -375,7 +375,7 @@ def render_requests(interviews, backend_url=""):
                     {notes_html}
                 </div>
                 <div class="btn-row">
-                    {_interview_badge(it.get('interview_status'))}
+                    {_interview_badge(it.get('application_status'))}
                     <a class="btn btn-secondary btn-sm" href="/interview/{iid}?from=requests">View</a>
                 </div>
             </div>
@@ -415,7 +415,7 @@ def _detail_rows(interview):
         ("Applicant", applicant),
         ("Application", f"#{escape(str(interview.get('application_id')))}"),
         ("Job Posting", posting_cell),
-        ("Interviewer", f"{escape(str(interview.get('staff_name') or '—'))} (#{escape(str(interview.get('staff_id')))})"),
+        ("Interviewer", f"{escape(str(interview.get('staff_name') or '—'))} (#{escape(str(interview.get('user_id')))})"),
         ("Date &amp; Time", _fmt_dt(interview.get("interview_datetime"))),
         ("Meeting Link", link_cell),
     ]
@@ -452,13 +452,18 @@ def _notes_form(raw):
 def render_interview_detail(interview, role, backend_url="", is_past=False):
     """Detail card with role/status-appropriate HTMX actions."""
     is_staff = role == "staff"
-    status = interview.get("interview_status")
+    status = interview.get("application_status")
     interview_id = escape(str(interview.get("interview_id")))
 
     actions = ""
     extra = ""
     if is_staff:
-        if status not in ("Interview Completed", "Withdrawn"):
+        # Cancelling only makes sense while the interview is still upcoming:
+        can_cancel = (
+            status == "Interview Requested"
+            or (status == "Interview Scheduled" and not is_past)
+        )
+        if can_cancel:
             actions = f"""
             <div class="btn-row" style="margin-top:1.25rem;">
                 <button class="btn btn-danger" type="button"

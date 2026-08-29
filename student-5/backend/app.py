@@ -78,13 +78,6 @@ def _read_payload():
     return data
 
 
-def _validation_error(msg):
-    """Return a form-friendly (HTMX toast) or JSON validation error."""
-    if request.headers.get("HX-Request"):
-        return _hx_trigger({"showErrorToast": msg})
-    return jsonify({"error": msg}), 400
-
-
 def _apply_decision(application_id, action):
     """Update a linked application's status for a Hired/Rejected decision.
 
@@ -144,12 +137,30 @@ def _finish_save(resp, data):
     return _hx_redirect(f"{frontend_origin}/?toast=" + quote(msg))
 
 
+def _add_evaluator(ev):
+    """Resolve the evaluating staff member from User_Id (shared DB).
+
+    The name and staff number are derived here so there is a single source of truth for staff details.
+    """
+    user_id = ev.get("User_Id")
+    ev["evaluator_number"] = f"HR-{int(user_id):03d}" if user_id else ""
+    try:
+        resp = http_requests.get(f"{SHARED_DB_URL}/users/{user_id}", timeout=3)
+        if resp.status_code == 200:
+            u = resp.json()
+            ev["evaluator_name"] = f"{u.get('user_first_name', '')} {u.get('user_last_name', '')}".strip()
+    except (http_requests.RequestException, ValueError):
+        ev.setdefault("evaluator_name", "")
+    return ev
+
+
 def _fetch_evaluations(params):
     """Fetch evaluations from the DB service and enrich with applicant/job info."""
     resp = http_requests.get(f"{DB_SERVICE_URL}/evaluations", params=params)
     evaluations = resp.json()
 
     for ev in evaluations:
+        _add_evaluator(ev)
         try:
             app_resp = http_requests.get(f"{APPLICATIONS_DB_URL}/applications/{ev['Application_Id']}", timeout=3)
             if app_resp.status_code == 200:
@@ -210,6 +221,7 @@ def get_evaluation(evaluation_id):
         return jsonify(resp.json()), resp.status_code
 
     ev = resp.json()
+    _add_evaluator(ev)
     try:
         app_resp = http_requests.get(f"{APPLICATIONS_DB_URL}/applications/{ev['Application_Id']}", timeout=3)
         if app_resp.status_code == 200:
@@ -237,12 +249,7 @@ def create_evaluation():
         return err
 
     data = _read_payload()
-    data["Staff_Id"] = user["user_id"]
-
-    if not str(data.get("HR_Staff_Name", "")).strip():
-        return _validation_error("HR Staff Name is required")
-    if not str(data.get("HR_Staff_Number", "")).strip():
-        return _validation_error("HR Staff Number is required")
+    data["User_Id"] = user["user_id"]
 
     resp = http_requests.post(f"{DB_SERVICE_URL}/evaluations", json=data)
     return _finish_save(resp, data)
@@ -255,11 +262,6 @@ def update_evaluation(evaluation_id):
         return err
 
     data = _read_payload()
-
-    if "HR_Staff_Name" in data and not str(data["HR_Staff_Name"]).strip():
-        return _validation_error("HR Staff Name is required")
-    if "HR_Staff_Number" in data and not str(data["HR_Staff_Number"]).strip():
-        return _validation_error("HR Staff Number is required")
 
     resp = http_requests.put(f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", json=data)
     return _finish_save(resp, data)

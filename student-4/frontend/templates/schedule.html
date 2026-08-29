@@ -13,7 +13,7 @@
         <form id="schedule-form"
               hx-post="{{ backend_url }}/interviews"
               hx-swap="none">
-            <input type="hidden" name="staff_id" id="sched-staff-id" value="">
+            <input type="hidden" name="user_id" id="sched-user-id" value="">
             <input type="hidden" name="interview_datetime" id="sched-datetime" value="">
 
             <div class="field">
@@ -93,10 +93,10 @@
     (function () {
         var preselect = {{ (request.args.get('application_id') or '')|tojson }};
 
-        // Fill the hidden staff_id once the shared runtime confirms the user.
+        // Fill the hidden user_id once the shared runtime confirms the user.
         document.body.addEventListener('authReady', function () {
             if (window.__findUser) {
-                document.getElementById('sched-staff-id').value = window.__findUser.user_id;
+                document.getElementById('sched-user-id').value = window.__findUser.user_id;
             }
         });
 

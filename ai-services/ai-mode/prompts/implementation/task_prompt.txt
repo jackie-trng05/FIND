@@ -1,8 +1,0 @@
-Task:
-Answer the user's question about the FIND recruitment platform using the context provided below.
-
-Guidelines:
-- Ground your answer in the FIND application context.
-- Tailor advice to the user's role (staff or applicant) when the question implies one.
-- Keep the response focused on recruitment tasks that FIND supports.
-- Prefer clear, step-oriented guidance the user can act on.

@@ -29,9 +29,9 @@ def list_evaluations():
     filters = []
     params = []
 
-    if request.args.get("staff_id"):
-        filters.append("Staff_Id = ?")
-        params.append(int(request.args["staff_id"]))
+    if request.args.get("user_id"):
+        filters.append("User_Id = ?")
+        params.append(int(request.args["user_id"]))
     if request.args.get("status"):
         filters.append("Evaluation_Status = ?")
         params.append(request.args["status"])
@@ -64,7 +64,7 @@ def create_evaluation():
     if not data:
         return jsonify({"error": "JSON body required"}), 400
 
-    required = ["Application_Id", "Staff_Id", "HR_Staff_Name", "HR_Staff_Number",
+    required = ["Application_Id", "User_Id",
                 "Evaluation_TechnicalScore", "Evaluation_EducationScore",
                 "Evaluation_CommunicationScore", "Evaluation_ProblemSolvingScore",
                 "Evaluation_ProfessionalismScore", "Evaluation_FinalRecommendation"]
@@ -95,16 +95,15 @@ def create_evaluation():
 
     cursor = conn.execute("""
         INSERT INTO evaluations (
-            Application_Id, Staff_Id, HR_Staff_Name, HR_Staff_Number,
+            Application_Id, User_Id,
             Evaluation_TechnicalScore, Evaluation_EducationScore,
             Evaluation_CommunicationScore, Evaluation_ProblemSolvingScore,
             Evaluation_ProfessionalismScore, Evaluation_OverallScore,
             Evaluation_FinalRecommendation,
             Evaluation_Status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        data["Application_Id"], data["Staff_Id"],
-        data["HR_Staff_Name"], data["HR_Staff_Number"],
+        data["Application_Id"], data["User_Id"],
         scores[0], scores[1], scores[2], scores[3], scores[4],
         overall, data["Evaluation_FinalRecommendation"],
         status, now, now
@@ -147,7 +146,6 @@ def update_evaluation(evaluation_id):
 
     conn.execute("""
         UPDATE evaluations SET
-            HR_Staff_Name = ?, HR_Staff_Number = ?,
             Evaluation_TechnicalScore = ?, Evaluation_EducationScore = ?,
             Evaluation_CommunicationScore = ?, Evaluation_ProblemSolvingScore = ?,
             Evaluation_ProfessionalismScore = ?, Evaluation_OverallScore = ?,
@@ -155,8 +153,6 @@ def update_evaluation(evaluation_id):
             Evaluation_Status = ?, updated_at = ?
         WHERE Evaluation_Id = ?
     """, (
-        data.get("HR_Staff_Name", existing["HR_Staff_Name"]),
-        data.get("HR_Staff_Number", existing["HR_Staff_Number"]),
         scores[0], scores[1], scores[2], scores[3], scores[4],
         overall,
         data.get("Evaluation_FinalRecommendation", existing["Evaluation_FinalRecommendation"]),
