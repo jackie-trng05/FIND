@@ -88,45 +88,12 @@
             </div>
           </div>
 
-          <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
-            <h2 style="font-size:1rem;margin-bottom:1rem;">Candidate Scoring (1-5)</h2>
-            <div class="score-row">
-              <div class="score-item">
-                <label>Technical Knowledge</label>
-                <select id="score-tech" name="Evaluation_TechnicalScore" onchange="updateOverall()" required>
-                  <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-                </select>
-              </div>
-              <div class="score-item">
-                <label>Education / Training</label>
-                <select id="score-edu" name="Evaluation_EducationScore" onchange="updateOverall()" required>
-                  <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-                </select>
-              </div>
-              <div class="score-item">
-                <label>Communication</label>
-                <select id="score-comm" name="Evaluation_CommunicationScore" onchange="updateOverall()" required>
-                  <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-                </select>
-              </div>
-              <div class="score-item">
-                <label>Problem Solving</label>
-                <select id="score-ps" name="Evaluation_ProblemSolvingScore" onchange="updateOverall()" required>
-                  <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-                </select>
-              </div>
-              <div class="score-item">
-                <label>Professionalism</label>
-                <select id="score-prof" name="Evaluation_ProfessionalismScore" onchange="updateOverall()" required>
-                  <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-                </select>
-              </div>
+          <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;display:none;" id="interview-notes-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+              <h2 style="font-size:1rem;margin:0;">Interview Notes</h2>
+              <a id="interview-link" href="#" target="_blank" class="btn btn-ghost btn-sm" style="display:none;">View Full Interview →</a>
             </div>
-
-            <div class="overall-display">
-              <div class="number" id="overall-score">—</div>
-              <div class="label">Overall Candidate Score</div>
-            </div>
+            <div id="interview-notes-grid" class="form-grid" style="gap:0.75rem;"></div>
           </div>
 
           <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
@@ -140,12 +107,53 @@
             </div>
           </div>
 
+          <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
+            <h2 style="font-size:1rem;margin-bottom:1rem;">Candidate Scoring (1-5)</h2>
+            <div class="score-row">
+              <div class="score-item">
+                <label>Technical Knowledge</label>
+                <select id="score-tech" name="Evaluation_TechnicalScore" onchange="updateOverall()">
+                  <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                </select>
+              </div>
+              <div class="score-item">
+                <label>Education / Training</label>
+                <select id="score-edu" name="Evaluation_EducationScore" onchange="updateOverall()">
+                  <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                </select>
+              </div>
+              <div class="score-item">
+                <label>Communication</label>
+                <select id="score-comm" name="Evaluation_CommunicationScore" onchange="updateOverall()">
+                  <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                </select>
+              </div>
+              <div class="score-item">
+                <label>Problem Solving</label>
+                <select id="score-ps" name="Evaluation_ProblemSolvingScore" onchange="updateOverall()">
+                  <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                </select>
+              </div>
+              <div class="score-item">
+                <label>Professionalism</label>
+                <select id="score-prof" name="Evaluation_ProfessionalismScore" onchange="updateOverall()">
+                  <option value="" selected>—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="overall-display">
+              <div class="number" id="overall-score">—</div>
+              <div class="label">Overall Candidate Score</div>
+            </div>
+          </div>
+
           <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;" id="decision-card">
             <h2 style="font-size:1rem;margin-bottom:1rem;">Applicant Decision</h2>
             <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Select your hiring decision. This will update the application status when submitted.</p>
             <div class="form-group">
               <label for="final-rec">Decision *</label>
-              <select id="final-rec" name="Evaluation_FinalRecommendation" required>
+              <select id="final-rec" name="Evaluation_FinalRecommendation">
                 <option value="">— Select —</option>
                 <option value="Hire">Hire</option>
                 <option value="Reject">Reject</option>
@@ -157,12 +165,11 @@
             <button type="button" class="btn btn-ghost"
                     {% if evaluation_id %}hx-put="{{ backend_url }}/api/evaluations/{{ evaluation_id }}"{% else %}hx-post="{{ backend_url }}/api/evaluations"{% endif %}
                     hx-include="#eval-form" hx-swap="none"
-                    hx-vals='{"Evaluation_Status": "Draft"}'>Save as Draft</button>
+                    hx-vals='{"Evaluation_FinalRecommendation": ""}'>Save as Draft</button>
             <button type="button" class="btn btn-primary"
                     {% if evaluation_id %}hx-put="{{ backend_url }}/api/evaluations/{{ evaluation_id }}"{% else %}hx-post="{{ backend_url }}/api/evaluations"{% endif %}
                     hx-include="#eval-form" hx-swap="none"
-                    hx-vals='{"Evaluation_Status": "Completed"}'
-                    hx-confirm="Submit this evaluation? A notification email will be sent to the applicant and the application status will be updated.">Submit Evaluation</button>
+                    hx-confirm="Submit this evaluation? The applicant will be hired or rejected based on your decision.">Submit Evaluation</button>
             <a href="/" class="btn btn-ghost">Cancel</a>
           </div>
 
@@ -269,6 +276,37 @@
       window.showToast('AI scores applied — you can adjust them', 'success');
     }
 
+    const INTERVIEWS_URL = '{{ interviews_public_url }}';
+
+    function renderInterviewNotes(data) {
+      const card = document.getElementById('interview-notes-card');
+      const grid = document.getElementById('interview-notes-grid');
+      const notes = data.interview_notes;
+      if (!notes || typeof notes !== 'object') return;
+
+      const sections = ['Technical', 'Education', 'Communication', 'Problem Solving', 'Professionalism'];
+      grid.innerHTML = sections.map(function(s) {
+        const text = notes[s] || '—';
+        return '<div style="grid-column:1/-1;padding:0.6rem 0.75rem;background:var(--primary-light);border-radius:var(--radius-md);">'
+          + '<strong style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">' + s + '</strong>'
+          + '<span style="font-size:0.85rem;color:var(--text-secondary);line-height:1.5;">' + text.replace(/</g, '&lt;') + '</span></div>';
+      }).join('');
+
+      if (data.interview_id) {
+        const link = document.getElementById('interview-link');
+        link.href = INTERVIEWS_URL + '/interview/' + data.interview_id;
+        link.style.display = '';
+      }
+      card.style.display = '';
+    }
+
+    async function loadInterviewNotes(appId) {
+      try {
+        const resp = await fetch(BACKEND + '/api/interview/' + appId, { credentials: 'include' });
+        if (resp.ok) renderInterviewNotes(await resp.json());
+      } catch {}
+    }
+
     async function loadExisting() {
       if (!evaluationId) return;
       try {
@@ -282,20 +320,21 @@
         document.getElementById('form-title').textContent = 'Edit Evaluation #' + ev.Evaluation_Id;
         document.getElementById('hr-name').value = ev.HR_Staff_Name || '';
         document.getElementById('hr-number').value = ev.HR_Staff_Number || '';
-        document.getElementById('score-tech').value = ev.Evaluation_TechnicalScore;
-        document.getElementById('score-edu').value = ev.Evaluation_EducationScore;
-        document.getElementById('score-comm').value = ev.Evaluation_CommunicationScore;
-        document.getElementById('score-ps').value = ev.Evaluation_ProblemSolvingScore;
-        document.getElementById('score-prof').value = ev.Evaluation_ProfessionalismScore;
-        document.getElementById('final-rec').value = ev.Evaluation_FinalRecommendation;
+        document.getElementById('score-tech').value = ev.Evaluation_TechnicalScore ?? '';
+        document.getElementById('score-edu').value = ev.Evaluation_EducationScore ?? '';
+        document.getElementById('score-comm').value = ev.Evaluation_CommunicationScore ?? '';
+        document.getElementById('score-ps').value = ev.Evaluation_ProblemSolvingScore ?? '';
+        document.getElementById('score-prof').value = ev.Evaluation_ProfessionalismScore ?? '';
+        document.getElementById('final-rec').value = ev.Evaluation_FinalRecommendation ?? '';
         updateOverall();
 
-        if (ev.Evaluation_Status === 'Completed') {
+        if (ev.Evaluation_FinalRecommendation) {
           document.querySelectorAll('#eval-form select, #eval-form input').forEach(el => { el.disabled = true; });
           document.getElementById('form-actions').style.display = 'none';
-          document.getElementById('ai-btn').style.display = 'none';
+          document.getElementById('ai-btn').parentElement.style.display = 'none';
+          document.getElementById('interview-notes-card').style.display = 'none';
           document.getElementById('submitted-notice').style.display = 'block';
-          document.getElementById('form-title').textContent = 'Evaluation #' + ev.Evaluation_Id + ' (Completed)';
+          document.getElementById('form-title').textContent = 'Evaluation #' + ev.Evaluation_Id + ' (' + ev.Evaluation_FinalRecommendation + ')';
         }
 
         if (ev.applicant_name) {
@@ -308,6 +347,11 @@
         const appLink = document.getElementById('application-link');
         appLink.href = '{{ applications_public_url }}/staff/applications/' + ev.Application_Id;
         document.getElementById('application-link-row').style.display = 'flex';
+
+        if (!ev.Evaluation_FinalRecommendation) {
+          if (ev.interview_notes) renderInterviewNotes(ev);
+          else await loadInterviewNotes(ev.Application_Id);
+        }
       } catch (e) {
         window.showToast('Failed to load evaluation', 'error');
       }
@@ -339,6 +383,22 @@
     document.body.addEventListener('authReady', async function () {
       const u = window.__findUser;
       if (!u) return;
+
+      // Opened via /evaluate/<app_id>: if a draft evaluation already exists for
+      // this application, continue it in edit mode rather than creating a new one.
+      if (!evaluationId && applicationId) {
+        try {
+          const existingResp = await fetch(BACKEND + '/api/evaluations?application_id=' + applicationId, { credentials: 'include' });
+          if (existingResp.ok) {
+            const existing = await existingResp.json();
+            if (existing.length) {
+              window.location.replace('/edit/' + existing[0].Evaluation_Id);
+              return;
+            }
+          }
+        } catch (e) {}
+      }
+
       if (!evaluationId) {
         document.getElementById('hr-name').value = u.first_name + ' ' + u.last_name;
         document.getElementById('hr-number').value = 'HR-' + String(u.user_id).padStart(3, '0');
@@ -347,6 +407,7 @@
       await loadExisting();
       if (!evaluationId && applicationId) {
         await loadCandidateInfo(applicationId);
+        await loadInterviewNotes(applicationId);
       }
       updateOverall();
     });
