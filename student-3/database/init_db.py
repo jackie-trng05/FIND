@@ -61,7 +61,7 @@ seed_applications = [
     (6,  3, 6, "Submitted",            _future(25), 1, _past(2)),
     (6,  7, 6, "Draft",                _future(20), 1, _past(6)),
     (6, 11, 6, "Interview Completed",  _future(15), 1, _past(20)),
-    (7,  2, 7, "Interview Requested",  _future(18), 1, _past(9)),
+    (7,  2, 7, "Shortlisted",          _future(18), 1, _past(9)),
     (6,  5, 6, "Interview Scheduled",  _future(12), 1, _past(11)),
     (7,  8, 7, "Interview Completed",  _future(22), 1, _past(24)),
     (8,  4, 8, "Interview Requested",  _future(14), 1, _past(7)),
@@ -74,7 +74,7 @@ seed_applications = [
     (10, 2, 10, "Rejected",            _future(30), 1, _past(15)),
     (10, 7, 10, "Rejected",            _future(16), 1, _past(26)),
     (10, 11, 10, "Hired",              _future(23), 1, _past(38)),
-    (6, 12, 6, "Shortlisted",          _future(25), 1, _past(5)),
+    (6, 12, 6, "Interview Requested",  _future(25), 1, _past(5)),
     (9,  3, 9, "Rejected",             _future(17), 1, _past(21)),
     (6,  4, 6, "Shortlisted",          _future(22), 1, _past(4)),
 ]

@@ -65,7 +65,7 @@ interviews = [
         "Unable to break the problem down; needed constant prompting to make any progress.",
         "Arrived ten minutes late and seemed unprepared for the interview.",
     )),
-    (2,  5,  2, "2026-09-05 09:00", "https://meet.find.app/int-2", ""),
+    (2, 18,  2, "2026-09-05 09:00", "https://meet.find.app/int-2", ""),
     (3,  6,  2, "2026-08-20 13:00", "https://meet.find.app/int-3", ""),
     (4,  7,  2, "2026-08-10 11:00", "https://meet.find.app/int-4", _done("data analysis")),
     (5,  8,  3, "2026-09-02 14:00", "https://meet.find.app/int-5", ""),
