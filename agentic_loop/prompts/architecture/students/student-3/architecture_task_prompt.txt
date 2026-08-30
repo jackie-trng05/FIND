@@ -1,12 +1,162 @@
-Review the Student 3 feature architecture: job application management.
-This feature owns its own frontend, backend, and database tiers and reuses the shared
-auth service for identity (users and sessions).
-Use the evidence below to identify:
-- responsibilities and ownership boundaries for this feature's services
-- how the feature depends on the shared auth service without duplicating user data
-- dependencies, coupling, or overlapping responsibilities with shared or other services
-Distinguish observed evidence from assumptions.
-Provide a concise review and at most one or two practical recommendations.
-Reply in at most 40 words.
+Review the Student 3 feature architecture: job application management
+for the FIND recruitment platform. Use the baseline below together with the collected evidence.
+Treat the baseline as the intended design, but distinguish observed evidence, assumptions, and
+unverified claims.
 
-# Student 3: replace or extend this prompt with your own architecture review focus.
+## Feature scope
+
+- Applicant self-service supports applying for Published job postings, saving drafts, submitting
+	applications, viewing application details, tracking status, withdrawing active applications, and
+	deleting Draft applications.
+- Applicants can upload a PDF resume up to 5 MB for a specific application or reuse their latest
+	Student 1 profile resume. Application-only resumes are stored by Student 1 with no profile link,
+	while Student 3 owns the application record that references them.
+- Staff users can view all non-draft/non-withdrawn applications, search, filter, sort, open a
+	candidate profile, shortlist submitted candidates, reject candidates, and trigger AI screening.
+- Staff application rows deep-link to Student 4 for interview actions and Student 5 for evaluation
+	actions when the status allows those workflows.
+- Student 3 owns application status values and the application lifecycle, but other services depend
+	on those statuses for interviews and evaluations.
+- Identity fields such as applicant names and email addresses are owned by shared-db, not the local
+	applications table. Credentials are never stored by Student 3.
+- The shared HttpOnly session_token cookie is used for cross-service authentication.
+
+## Service ownership and local access
+
+Student 3 owns three independently containerised tiers:
+
+| Service | Container | Host port | Container port |
+| --- | --- | --- | --- |
+| Frontend | find-student-3-frontend | 16010 | 3003 |
+| Backend/API | find-student-3-backend | 16011 | 5003 |
+| Database | find-student-3-db | 16012 | 6003 |
+
+The local stack is started with `docker compose up --build`. Users log in through the shared
+frontend at `http://localhost:16001`, then open Applications from the dashboard, follow Apply links
+from Student 2 job postings, or visit `http://localhost:16010` directly. Browser routes must use
+host-mapped ports, while backend-to-service calls use container URLs such as `student-3-db:6003`,
+`student-2-db:6002`, `student-1-db:6001`, and `student-4-db:6004`. On Docker Desktop for Windows,
+`127.0.0.1` can be used instead of `localhost` if resolution is unexpected.
+
+## Frontend responsibilities
+
+The Student 3 frontend is a thin Flask page server. `/` renders the applicant My Applications shell
+or staff All Applications shell, `/apply/{jobPostingId}` renders the apply/edit-draft shell,
+`/applications/{applicationId}` renders the applicant detail shell, and
+`/staff/applications/{applicationId}` renders the staff candidate profile shell. The frontend also
+proxies `/resumes/{resumeId}/download` through its own backend so downloads preserve the shared
+cookie and ownership checks.
+
+For full-page loads, the frontend calls backend context endpoints server-side and renders templates
+or fragments for the apply form, application detail, and candidate profile. It injects the backend
+URL, shared API URL, login URL, FIND home URL, and Student 2 job posting URL through environment
+variables. It serves local CSS, shared CSS, and shared JavaScript, and keeps date/status display
+formatting in the presentation layer.
+
+The frontend should not own application persistence, status transitions, resume validation,
+cross-service ownership checks, staff/applicant authorisation, or AI screening decisions. Those
+belong to the backend/API and database services.
+
+## Backend responsibilities and routes
+
+The Student 3 backend validates the caller's session against `shared-api`, enforces applicant and
+staff role checks, calls `student-3-db` for application persistence, reads sibling services for
+display context, and renders HTML fragments for HTMX. Its route surface includes:
+
+| Method | Path | Responsibility |
+| --- | --- | --- |
+| GET | `/health` | Health check |
+| GET | `/api/context/apply/{jobPostingId}` | Return JSON context for the apply form |
+| GET | `/api/context/applications/{id}/detail` | Return JSON context for an applicant detail page |
+| GET | `/api/context/staff/applications/{id}/profile` | Return JSON context for a staff candidate profile |
+| GET | `/api/my-applications` | Render the caller's application table with filters and sorting |
+| GET | `/api/applications/{id}/detail` | Render one applicant-owned application detail fragment |
+| GET | `/api/apply/{jobPostingId}` | Render an apply or continue-draft form fragment |
+| POST | `/api/applications/save` | Create a new Draft application |
+| POST | `/api/applications/submit` | Create and submit a new application |
+| PUT | `/api/applications/{id}/save` | Save changes to an existing Draft application |
+| PUT | `/api/applications/{id}/submit` | Submit an existing Draft application |
+| PUT | `/api/applications/{id}/withdraw` | Withdraw an active application and remove linked interviews |
+| DELETE | `/api/applications/{id}` | Delete an owned Draft application |
+| GET | `/api/all-applications` | Render the staff application table |
+| GET | `/api/pending-summary` | Render the pending-interviews summary bar |
+| GET | `/api/staff/applications/{id}/profile` | Render the staff candidate profile fragment |
+| PUT | `/api/applications/{id}/status` | Staff-only status update to Shortlisted or Rejected |
+| GET | `/api/resumes/{resumeId}/download` | Stream a permitted resume from Student 1 |
+| POST | `/api/applications/{id}/screen` | Generate a staff-only AI screening recommendation |
+
+The backend is organised into applicant, staff, resume, and AI route blueprints; shared route
+helpers; HTML fragment views; an HTTP client for sibling services; a prompt loader; and an LLM
+client. Applicant routes enforce ownership before showing, editing, withdrawing, or deleting an
+application. Staff routes reject non-staff users, hide Draft and Withdrawn applications from the
+staff table, and only allow direct table status changes to Shortlisted or Rejected.
+
+Student 3 reads Student 2 job posting details for apply forms, application tables, and AI screening.
+It reads Student 1 profiles and resumes for candidate context, application resume reuse, application
+resume uploads, resume metadata, and resume downloads. It reads shared-db users for applicant names
+and email addresses. Withdrawing an application calls Student 4's database service to delete linked
+interviews. Student 4 and Student 5 also depend on Student 3's application IDs and status values.
+
+## Database ownership and seed data
+
+Student 3's SQLite database (`student3.db`) owns the `applications` table:
+
+- `application_id`: local primary key.
+- `user_id`: shared-db applicant user reference; not a local user record.
+- `job_posting_id`: soft cross-service reference to Student 2's `job_postings.JobPosting_Id`.
+- `resume_id`: soft cross-service reference to Student 1's `resumes.resume_id`.
+- `application_status`: lifecycle status managed by Student 3.
+- `availability_date`: applicant-provided interview availability date.
+- `declaration_accepted`: integer flag for the applicant declaration.
+- `created_at`, `updated_at`, and `submitted_at`: lifecycle timestamps.
+
+The database service exposes REST endpoints for listing applications by optional user, posting, or
+status; fetching one application; creating applications; updating editable fields and status;
+submitting Draft applications; withdrawing permitted active applications; and deleting Draft
+applications. It prevents duplicate active applications for the same user and posting, allowing a
+new application only after Withdrawn or Rejected outcomes. It validates known status values, requires
+resume and declaration data before submit, and records `submitted_at` when an application leaves
+Draft.
+
+`init_db.py` creates the applications table when absent, clears existing application rows, resets
+AUTOINCREMENT, and seeds 20 application records across shared applicant user IDs 6 through 10 and
+Student 2 job postings 1 through 12. Seed data intentionally covers Draft, Submitted, Shortlisted,
+Interview Requested, Interview Scheduled, Interview Completed, Evaluation In Progress, Hired,
+Rejected, and Withdrawn-like downstream states used by Student 4 and Student 5. Resume IDs 6 through
+10 are soft references to Student 1's seeded resumes. Re-running the script resets data rather than
+performing migrations.
+
+## Implemented Student 3 AI feature
+
+The candidate screening feature is implemented in Release 0 and is owned by Student 3. It is not
+dependent on a shared AI service. Staff users can call `POST /api/applications/{id}/screen` from the
+candidate profile view. The backend route:
+
+1. Validates the shared session and rejects unauthenticated callers and non-staff accounts.
+2. Loads the application from `student-3-db`; if absent, it returns an HTMX-safe error fragment.
+3. Loads the related job posting from Student 2 and candidate identity from shared-db.
+4. Loads resume metadata and file bytes from Student 1 when the application has a `resume_id`;
+	 resume access is allowed for staff and ownership-checked for applicants elsewhere.
+5. Extracts text from PDF content with `pypdf`, falling back to `(No resume provided.)` when no
+	 readable resume text is available.
+6. Loads `screening_system_prompt.txt` and `screening_task_prompt.txt`, then builds a prompt from
+	 job title, job type, description, requirements, candidate name, and resume text.
+7. Calls the OpenAI-compatible Ollama endpoint using the configured `OLLAMA_MODEL`.
+8. Retries once with stricter formatting instructions when the response is too thin, then parses the
+	 required score, matched skills, skill gaps, and summary fields.
+9. Returns an HTML fragment for the candidate profile. The screening result is not persisted and is
+	 regenerated on demand.
+
+This implements the feature's PLAN -> ACT -> OBSERVE -> ADAPT flow: locate application, candidate,
+posting, and resume evidence; call Ollama; inspect and parse model output; then retry or surface a
+usable error when output quality or dependencies fail.
+
+Use the evidence below to identify:
+- at least 3 recommendations for code improvement, which may include changes related to:
+		- responsibilities and ownership boundaries for this feature's services
+		- dependencies, coupling, or overlapping responsibilities with shared or other services
+		- duplicated or dead code that should be removed or abstracted into another service, shared or individual
+		- architectural deviations from the canonical microservices architecture
+
+Distinguish observed evidence from assumptions. Provide at most one or two practical
+recommendations. Reply in at most 40 words.
