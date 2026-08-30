@@ -174,7 +174,7 @@
             <td><span class="score-badge ${scoreClass(ev.Evaluation_OverallScore)}">${overall}</span></td>
             <td><span class="status-badge" style="${recBadgeColor(ev.Evaluation_FinalRecommendation)}">${decision}</span></td>
             <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
-            <td>${ev.HR_Staff_Name}</td>
+            <td>${ev.evaluator_name}</td>
             <td>${new Date(ev.updated_at).toLocaleDateString()}</td>
             <td>${!decided
               ? '<div class="actions-cell"><button class="btn btn-danger btn-sm" onclick="confirmDelete(' + ev.Evaluation_Id + ')">Delete</button><a href="/edit/' + ev.Evaluation_Id + '" class="btn btn-ghost btn-sm">Edit</a></div>'

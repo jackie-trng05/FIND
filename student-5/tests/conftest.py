@@ -50,8 +50,6 @@ def _create_schema(db_path):
             Evaluation_Id INTEGER PRIMARY KEY AUTOINCREMENT,
             Application_Id INTEGER NOT NULL,
             User_Id INTEGER NOT NULL,
-            HR_Staff_Name TEXT NOT NULL,
-            HR_Staff_Number TEXT NOT NULL,
             Evaluation_TechnicalScore INTEGER CHECK(Evaluation_TechnicalScore BETWEEN 1 AND 5),
             Evaluation_EducationScore INTEGER CHECK(Evaluation_EducationScore BETWEEN 1 AND 5),
             Evaluation_CommunicationScore INTEGER CHECK(Evaluation_CommunicationScore BETWEEN 1 AND 5),
@@ -123,8 +121,6 @@ def mock_session(requests_mock, user):
 
 FULL_EVALUATION = {
     "Application_Id": 200,
-    "HR_Staff_Name": "Alex Morgan",
-    "HR_Staff_Number": "HR-001",
     "Evaluation_TechnicalScore": 4,
     "Evaluation_EducationScore": 3,
     "Evaluation_CommunicationScore": 5,
@@ -135,6 +131,4 @@ FULL_EVALUATION = {
 
 DRAFT_EVALUATION = {
     "Application_Id": 201,
-    "HR_Staff_Name": "Alex Morgan",
-    "HR_Staff_Number": "HR-001",
 }

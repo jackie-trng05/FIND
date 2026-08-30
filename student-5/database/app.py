@@ -67,7 +67,7 @@ def create_evaluation():
     if not data:
         return jsonify({"error": "JSON body required"}), 400
 
-    required = ["Application_Id", "User_Id", "HR_Staff_Name", "HR_Staff_Number"]
+    required = ["Application_Id", "User_Id"]
     for field in required:
         if field not in data or data[field] is None or data[field] == "":
             return jsonify({"error": f"{field} is required"}), 400
@@ -110,16 +110,15 @@ def create_evaluation():
 
     cursor = conn.execute("""
         INSERT INTO evaluations (
-            Application_Id, User_Id, HR_Staff_Name, HR_Staff_Number,
+            Application_Id, User_Id,
             Evaluation_TechnicalScore, Evaluation_EducationScore,
             Evaluation_CommunicationScore, Evaluation_ProblemSolvingScore,
             Evaluation_ProfessionalismScore, Evaluation_OverallScore,
             Evaluation_FinalRecommendation,
             created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         data["Application_Id"], data["User_Id"],
-        data["HR_Staff_Name"], data["HR_Staff_Number"],
         scores[0], scores[1], scores[2], scores[3], scores[4],
         overall, rec,
         now, now
@@ -177,7 +176,6 @@ def update_evaluation(evaluation_id):
 
     conn.execute("""
         UPDATE evaluations SET
-            HR_Staff_Name = ?, HR_Staff_Number = ?,
             Evaluation_TechnicalScore = ?, Evaluation_EducationScore = ?,
             Evaluation_CommunicationScore = ?, Evaluation_ProblemSolvingScore = ?,
             Evaluation_ProfessionalismScore = ?, Evaluation_OverallScore = ?,
@@ -185,8 +183,6 @@ def update_evaluation(evaluation_id):
             updated_at = ?
         WHERE Evaluation_Id = ?
     """, (
-        data.get("HR_Staff_Name", existing["HR_Staff_Name"]),
-        data.get("HR_Staff_Number", existing["HR_Staff_Number"]),
         scores[0], scores[1], scores[2], scores[3], scores[4],
         overall,
         rec,

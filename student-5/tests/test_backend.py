@@ -15,8 +15,6 @@ SAVED_EVAL = {
     "Evaluation_Id": 1,
     "Application_Id": 200,
     "User_Id": 1,
-    "HR_Staff_Name": "Alex Morgan",
-    "HR_Staff_Number": "HR-001",
     "Evaluation_TechnicalScore": 4,
     "Evaluation_EducationScore": 3,
     "Evaluation_CommunicationScore": 5,
@@ -30,8 +28,6 @@ SAVED_DRAFT = {
     "Evaluation_Id": 2,
     "Application_Id": 201,
     "User_Id": 1,
-    "HR_Staff_Name": "Alex Morgan",
-    "HR_Staff_Number": "HR-001",
     "Evaluation_TechnicalScore": None,
     "Evaluation_EducationScore": None,
     "Evaluation_CommunicationScore": None,
@@ -86,20 +82,6 @@ def test_create_evaluation_injects_user_id(backend_client, requests_mock, auth_h
     assert sent["User_Id"] == STAFF_USER["user_id"]
 
 
-def test_create_evaluation_missing_hr_name(backend_client, requests_mock, auth_headers):
-    mock_session(requests_mock, STAFF_USER)
-    data = {**FULL_EVALUATION, "HR_Staff_Name": ""}
-    resp = backend_client.post("/api/evaluations", json=data, headers=auth_headers)
-    assert resp.status_code == 400
-
-
-def test_create_evaluation_missing_hr_number(backend_client, requests_mock, auth_headers):
-    mock_session(requests_mock, STAFF_USER)
-    data = {**FULL_EVALUATION, "HR_Staff_Number": ""}
-    resp = backend_client.post("/api/evaluations", json=data, headers=auth_headers)
-    assert resp.status_code == 400
-
-
 def test_create_draft_evaluation(backend_client, requests_mock, auth_headers):
     mock_session(requests_mock, STAFF_USER)
     requests_mock.post(f"{DB_SERVICE_URL}/evaluations", json=SAVED_DRAFT, status_code=201)
@@ -118,8 +100,7 @@ def test_htmx_create_draft_sets_evaluation_in_progress(backend_client, requests_
 
     resp = backend_client.post(
         "/api/evaluations",
-        data={"Application_Id": "201", "HR_Staff_Name": "Alex Morgan",
-              "HR_Staff_Number": "HR-001", "Evaluation_FinalRecommendation": ""},
+        data={"Application_Id": "201", "Evaluation_FinalRecommendation": ""},
         headers={**auth_headers, "HX-Request": "true"},
     )
     assert resp.status_code == 200
@@ -138,8 +119,7 @@ def test_htmx_submit_hire_sets_hired(backend_client, requests_mock, auth_headers
 
     resp = backend_client.post(
         "/api/evaluations",
-        data={"Application_Id": "200", "HR_Staff_Name": "Alex Morgan",
-              "HR_Staff_Number": "HR-001", "Evaluation_TechnicalScore": "4",
+        data={"Application_Id": "200", "Evaluation_TechnicalScore": "4",
               "Evaluation_EducationScore": "3", "Evaluation_CommunicationScore": "5",
               "Evaluation_ProblemSolvingScore": "4", "Evaluation_ProfessionalismScore": "4",
               "Evaluation_FinalRecommendation": "Hire"},
@@ -157,8 +137,7 @@ def test_htmx_submit_reject_sets_rejected(backend_client, requests_mock, auth_he
 
     resp = backend_client.post(
         "/api/evaluations",
-        data={"Application_Id": "200", "HR_Staff_Name": "Alex Morgan",
-              "HR_Staff_Number": "HR-001", "Evaluation_TechnicalScore": "4",
+        data={"Application_Id": "200", "Evaluation_TechnicalScore": "4",
               "Evaluation_EducationScore": "3", "Evaluation_CommunicationScore": "5",
               "Evaluation_ProblemSolvingScore": "4", "Evaluation_ProfessionalismScore": "4",
               "Evaluation_FinalRecommendation": "Reject"},
@@ -198,12 +177,6 @@ def test_update_evaluation_success(backend_client, requests_mock, auth_headers):
 
     resp = backend_client.put("/api/evaluations/1", json={"Evaluation_TechnicalScore": 5}, headers=auth_headers)
     assert resp.status_code == 200
-
-
-def test_update_evaluation_empty_hr_name_rejected(backend_client, requests_mock, auth_headers):
-    mock_session(requests_mock, STAFF_USER)
-    resp = backend_client.put("/api/evaluations/1", json={"HR_Staff_Name": ""}, headers=auth_headers)
-    assert resp.status_code == 400
 
 
 # --- Delete ---

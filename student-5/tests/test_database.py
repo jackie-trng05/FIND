@@ -5,8 +5,6 @@ def _create(db_client, **overrides):
     payload = {
         "Application_Id": 200,
         "User_Id": 1,
-        "HR_Staff_Name": "Alex Morgan",
-        "HR_Staff_Number": "HR-001",
     }
     payload.update(overrides)
     return db_client.post("/evaluations", json=payload)
@@ -40,15 +38,13 @@ def test_create_with_full_scores_and_decision(db_client):
     assert body["Evaluation_OverallScore"] == 4.2
 
 
-def test_create_missing_hr_name_rejected(db_client):
-    resp = _create(db_client, HR_Staff_Name="")
+def test_create_missing_user_id_rejected(db_client):
+    resp = db_client.post("/evaluations", json={"Application_Id": 200})
     assert resp.status_code == 400
 
 
 def test_create_missing_application_id_rejected(db_client):
-    resp = db_client.post("/evaluations", json={
-        "User_Id": 1, "HR_Staff_Name": "A", "HR_Staff_Number": "HR-001",
-    })
+    resp = db_client.post("/evaluations", json={"User_Id": 1})
     assert resp.status_code == 400
 
 
@@ -205,7 +201,7 @@ def test_update_decision_without_scores_rejected(db_client):
 
 
 def test_update_not_found(db_client):
-    resp = db_client.put("/evaluations/999", json={"HR_Staff_Name": "X"})
+    resp = db_client.put("/evaluations/999", json={"Evaluation_TechnicalScore": 3})
     assert resp.status_code == 404
 
 

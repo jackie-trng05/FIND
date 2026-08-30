@@ -318,8 +318,8 @@
         applicationId = ev.Application_Id;
         document.getElementById('application-id-field').value = ev.Application_Id;
         document.getElementById('form-title').textContent = 'Edit Evaluation #' + ev.Evaluation_Id;
-        document.getElementById('hr-name').value = ev.HR_Staff_Name || '';
-        document.getElementById('hr-number').value = ev.HR_Staff_Number || '';
+        document.getElementById('hr-name').value = ev.evaluator_name || '';
+        document.getElementById('hr-number').value = ev.evaluator_number || '';
         document.getElementById('score-tech').value = ev.Evaluation_TechnicalScore ?? '';
         document.getElementById('score-edu').value = ev.Evaluation_EducationScore ?? '';
         document.getElementById('score-comm').value = ev.Evaluation_CommunicationScore ?? '';

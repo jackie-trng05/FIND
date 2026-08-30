@@ -162,12 +162,35 @@ def _finish_save(resp, data):
     return _hx_redirect(f"{frontend_origin}/?toast=" + quote(msg))
 
 
+def _evaluator_fields(user_id):
+    """Derive the evaluator's display name and staff number from the shared users
+    table via the User_Id FK, so they are not duplicated in the evaluations table.
+    The staff number is a deterministic function of the user id (HR-00N)."""
+    if user_id is None:
+        return "", ""
+    number = f"HR-{int(user_id):03d}"
+    name = ""
+    try:
+        resp = http_requests.get(f"{SHARED_DB_URL}/users/{user_id}", timeout=3)
+        if resp.status_code == 200:
+            u = resp.json()
+            name = f"{u.get('user_first_name', '')} {u.get('user_last_name', '')}".strip()
+    except Exception:
+        pass
+    return name, number
+
+
 def _fetch_evaluations(params):
     """Fetch evaluations from the DB service and enrich with applicant/job info."""
     resp = http_requests.get(f"{DB_SERVICE_URL}/evaluations", params=params)
     evaluations = resp.json()
 
+    evaluator_cache = {}
     for ev in evaluations:
+        uid = ev.get("User_Id")
+        if uid not in evaluator_cache:
+            evaluator_cache[uid] = _evaluator_fields(uid)
+        ev["evaluator_name"], ev["evaluator_number"] = evaluator_cache[uid]
         try:
             app_resp = http_requests.get(f"{APPLICATIONS_DB_URL}/applications/{ev['Application_Id']}", timeout=3)
             if app_resp.status_code == 200:
@@ -228,6 +251,7 @@ def get_evaluation(evaluation_id):
         return jsonify(resp.json()), resp.status_code
 
     ev = resp.json()
+    ev["evaluator_name"], ev["evaluator_number"] = _evaluator_fields(ev.get("User_Id"))
     try:
         app_resp = http_requests.get(f"{APPLICATIONS_DB_URL}/applications/{ev['Application_Id']}", timeout=3)
         if app_resp.status_code == 200:
@@ -268,11 +292,6 @@ def create_evaluation():
     data = _read_payload()
     data["User_Id"] = user["user_id"]
 
-    if not str(data.get("HR_Staff_Name", "")).strip():
-        return _validation_error("HR Staff Name is required")
-    if not str(data.get("HR_Staff_Number", "")).strip():
-        return _validation_error("HR Staff Number is required")
-
     resp = http_requests.post(f"{DB_SERVICE_URL}/evaluations", json=data)
     return _finish_save(resp, data)
 
@@ -284,11 +303,6 @@ def update_evaluation(evaluation_id):
         return err
 
     data = _read_payload()
-
-    if "HR_Staff_Name" in data and not str(data["HR_Staff_Name"]).strip():
-        return _validation_error("HR Staff Name is required")
-    if "HR_Staff_Number" in data and not str(data["HR_Staff_Number"]).strip():
-        return _validation_error("HR Staff Number is required")
 
     resp = http_requests.put(f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", json=data)
     return _finish_save(resp, data)
