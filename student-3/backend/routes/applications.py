@@ -148,6 +148,29 @@ def my_applications():
         return render_message(_DB_UNAVAILABLE, "error"), 200
     apps = resp.json()
     postings = get_postings_map([a["job_posting_id"] for a in apps])
+
+    status = request.args.get("status", "").strip()
+    q = request.args.get("q", "").strip().lower()
+    sort = request.args.get("sort", "").strip()
+    order = request.args.get("order", "desc").strip().lower()
+
+    if status:
+        apps = [a for a in apps if a.get("application_status") == status]
+    if q:
+        apps = [
+            a for a in apps
+            if q in (postings.get(a["job_posting_id"]) or {}).get("Job_Title", "").lower()
+        ]
+    if sort:
+        reverse = order == "desc"
+        key_map = {
+            "id": lambda a: a["application_id"],
+            "title": lambda a: (postings.get(a["job_posting_id"]) or {}).get("Job_Title", ""),
+            "status": lambda a: a.get("application_status", ""),
+        }
+        if sort in key_map:
+            apps = sorted(apps, key=key_map[sort], reverse=reverse)
+
     return render_my_applications_table(apps, postings), 200
 
 

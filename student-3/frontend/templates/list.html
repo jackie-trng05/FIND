@@ -11,13 +11,34 @@
         <a class="btn btn-primary" href="{{ job_postings_url }}">Browse job postings</a>
     </div>
     <div class="card">
+        <form id="my-filter-form" class="filters"
+              hx-get="{{ backend_url }}/api/my-applications"
+              hx-target="#my-applications-body"
+              hx-swap="innerHTML"
+              hx-trigger="submit, change, keyup changed delay:300ms from:input[name='q']">
+            <input class="form-input" name="q" placeholder="Search by job title">
+            <select class="form-select" name="status">
+                <option value="">All statuses</option>
+                <option>Draft</option>
+                <option>Submitted</option>
+                <option>Shortlisted</option>
+                <option>Interview Scheduled</option>
+                <option>Interview Completed</option>
+                <option>Evaluation In Progress</option>
+                <option>Hired</option>
+                <option>Rejected</option>
+                <option>Withdrawn</option>
+            </select>
+            <input type="hidden" name="sort" id="my-filter-sort">
+            <input type="hidden" name="order" id="my-filter-order" value="desc">
+        </form>
         <div class="table-wrapper">
             <table class="applications-table">
                 <thead>
                     <tr>
-                        <th>Application ID</th>
-                        <th>Job title</th>
-                        <th>Status</th>
+                        <th data-sort="id">Application ID</th>
+                        <th data-sort="title">Job title</th>
+                        <th data-sort="status">Status</th>
                         <th class="col-actions"></th>
                     </tr>
                 </thead>
@@ -93,10 +114,10 @@
     document.body.addEventListener('click', (e) => {
         const th = e.target.closest('th[data-sort]');
         if (!th) return;
-        const form = document.getElementById('filter-form');
+        const form = th.closest('.card').querySelector('.filters');
         if (!form) return;
-        const sortInput = document.getElementById('filter-sort');
-        const orderInput = document.getElementById('filter-order');
+        const sortInput = form.querySelector('[name="sort"]');
+        const orderInput = form.querySelector('[name="order"]');
         if (sortInput.value === th.dataset.sort) {
             orderInput.value = orderInput.value === 'asc' ? 'desc' : 'asc';
         } else {

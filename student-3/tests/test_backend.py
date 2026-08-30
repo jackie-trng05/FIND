@@ -19,6 +19,7 @@ os.environ.setdefault("STUDENT_1_DB_URL", "http://find-student-1-db:6001")
 # backend/ is placed on sys.path by conftest.py.
 import config
 import app as backend_app
+from routes import applications as application_routes
 from routes import staff as staff_routes
 from services import llm_client
 from views import html_formatters
@@ -116,6 +117,30 @@ def test_my_applications_table_for_submitted_and_draft():
     assert "Delete" in draft
     assert "Withdraw" not in draft
     assert f"{fmt.FRONTEND_PUBLIC_URL}/apply/42" in draft
+
+
+def test_my_applications_filters_status_title_and_sort_for_current_user(monkeypatch):
+    frontend_application = dict(_APPLICATION)
+    frontend_application["application_id"] = 9
+    frontend_application["job_posting_id"] = 43
+    frontend_application["application_status"] = "Submitted"
+    frontend_posting = dict(_POSTING, JobPosting_Id=43, Job_Title="Frontend Engineer")
+    response = Mock()
+    response.json.return_value = [_APPLICATION, frontend_application, _DRAFT_APPLICATION]
+
+    monkeypatch.setattr(application_routes, "get_session_user", lambda: {"user_id": 6})
+    monkeypatch.setattr(application_routes.requests, "get", Mock(return_value=response))
+    monkeypatch.setattr(application_routes, "get_postings_map", lambda ids: {42: _POSTING, 43: frontend_posting})
+
+    with backend_app.app.test_client() as client:
+        result = client.get("/api/my-applications?status=Submitted&q=engineer&sort=title&order=desc")
+
+    assert result.status_code == 200
+    assert result.text.index("Frontend Engineer") < result.text.index("Backend Engineer")
+    assert "#8" not in result.text
+    application_routes.requests.get.assert_called_once_with(
+        f"{config.DATABASE_SERVICE_URL}/applications", params={"user_id": 6}, timeout=config.TIMEOUT
+    )
 
 
 def test_render_apply_form_shows_autofill_notes_and_download_link():
