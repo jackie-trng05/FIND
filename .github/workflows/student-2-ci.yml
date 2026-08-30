@@ -1,51 +1,60 @@
 name: student-2-ci
- 
+
 on:
   push:
+    branches: [ main ]
+    paths:
+      - "student-2/**"
+      - ".github/workflows/student-2-ci.yml"
   pull_request:
+    branches: [ main ]
+    paths:
+      - "student-2/**"
+      - ".github/workflows/student-2-ci.yml"
   workflow_dispatch:
- 
+
 jobs:
   build-images:
     runs-on: ubuntu-latest
- 
+
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
- 
+
       - name: Verify Docker
         run: docker --version
- 
+
       - name: Verify Docker Compose
         run: docker compose version
- 
+
       - name: Build Student 2 services
         run: docker compose build student-2-frontend student-2-backend student-2-db
- 
+
   smoke-check:
     runs-on: ubuntu-latest
     needs: [build-images]
- 
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
- 
+
       - name: Verify Docker
         run: docker --version
- 
+
       - name: Verify Docker Compose
         run: docker compose version
- 
+
       - name: Start Student 2 services
         run: docker compose up -d student-2-frontend student-2-backend student-2-db
- 
+
       - name: Smoke check Student 2 services
         run: |
           check_url() {
             local url="$1"
             local attempts=8
             local code=""
- 
+
             for i in $(seq 1 "$attempts"); do
               code=$(curl -sS \
                 -o /dev/null \
@@ -53,116 +62,182 @@ jobs:
                 --connect-timeout 5 \
                 --max-time 20 \
                 "$url" || true)
- 
+
               if [ "$code" = "200" ]; then
                 echo "PASS: $url -> HTTP $code"
                 return 0
               fi
- 
+
               echo "Retry $i/$attempts for $url (got: ${code:-none})"
               sleep 2
             done
- 
+
             echo "FAIL: $url after $attempts attempts"
             return 1
           }
- 
+
           echo "=== Student 2 Frontend ==="
           check_url "http://localhost:16007/health"
- 
+
           echo "=== Student 2 Backend ==="
           check_url "http://localhost:16008/health"
- 
+
           echo "=== Student 2 Database ==="
           check_url "http://localhost:16009/health"
- 
+
       - name: Stop Student 2 services
         if: always()
         run: docker compose down -v
- 
-  test:
+
+  unit-tests:
     runs-on: ubuntu-latest
     needs: [smoke-check]
- 
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
- 
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
- 
+
       - name: Install test dependencies
         working-directory: student-2
         run: pip install -r tests/requirements.txt
- 
-      - name: Run tests
+
+      - name: Run Student 2 pytest suite
         working-directory: student-2
-        run: python -m pytest tests -q
- 
+        run: python -m pytest tests -v --junitxml=pytest-results.xml | tee pytest-output.txt
+
+      - name: Upload pytest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-2-pytest-results
+          path: |
+            student-2/pytest-results.xml
+            student-2/pytest-output.txt
+          if-no-files-found: warn
+
   evidence-pack:
     runs-on: ubuntu-latest
-    needs: test
- 
+    needs: [unit-tests]
+    if: always()
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
- 
+
       - name: Create reports directory
         run: mkdir -p reports
- 
+
+      - name: Download pytest results
+        uses: actions/download-artifact@v4
+        with:
+          name: student-2-pytest-results
+          path: reports
+        continue-on-error: true
+
       - name: Generate report.json
+        id: test-summary
         run: |
-          cat > reports/report.json << EOF
-          {
-            "workflow_name": "student-2-ci",
-            "run_id": "${{ github.run_id }}",
-            "commit_sha": "${{ github.sha }}",
-            "branch": "${{ github.ref_name }}",
-            "repository": "${{ github.repository }}"
+          python - <<'PY'
+          import json
+          import os
+          import xml.etree.ElementTree as ET
+
+          summary = {"status": "unknown", "total": 0, "passed": 0, "failed": 0, "errors": 0, "skipped": 0}
+          xml_path = "reports/pytest-results.xml"
+          if os.path.exists(xml_path):
+              root = ET.parse(xml_path).getroot()
+              suite = root.find("testsuite") if root.tag == "testsuites" else root
+              total = int(suite.get("tests", 0))
+              failures = int(suite.get("failures", 0))
+              errors = int(suite.get("errors", 0))
+              skipped = int(suite.get("skipped", 0))
+              summary.update({
+                  "status": "passed" if failures == 0 and errors == 0 else "failed",
+                  "total": total,
+                  "passed": total - failures - errors - skipped,
+                  "failed": failures,
+                  "errors": errors,
+                  "skipped": skipped,
+              })
+
+          report = {
+              "workflow_name": "student-2-ci",
+              "run_id": "${{ github.run_id }}",
+              "commit_sha": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "repository": "${{ github.repository }}",
+              "tests": summary,
           }
-          EOF
- 
+          with open("reports/report.json", "w") as f:
+              json.dump(report, f, indent=2)
+          print(json.dumps(report, indent=2))
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              for key, value in summary.items():
+                  f.write(f"{key}={value}\n")
+          PY
+
       - name: Generate report.md
         run: |
-          cat > reports/report.md << EOF
-          # Student 2 CI Workflow Report
- 
+          python - <<'PY'
+          report_md = """# Student 2 CI Workflow Report
+
           - Workflow: student-2-ci
           - Run ID: ${{ github.run_id }}
           - Commit SHA: ${{ github.sha }}
           - Branch: ${{ github.ref_name }}
           - Repository: ${{ github.repository }}
- 
+
           ## CI Stages
- 
+
           1. Docker image build
           2. Student 2 service smoke check
-          3. Automated tests
+          3. Automated tests (pytest)
           4. Evidence generation
- 
+
           ## Current Testing Status
- 
-          Student 2 automated tests run as part of this workflow via pytest.
- 
-          ## Health Check Status
- 
-          The current CI uses temporary HTTP retry-based smoke checks.
-          As a future improvement, Docker healthchecks can replace these checks once the
-          service healthcheck configuration has been added.
-          EOF
- 
+
+          Student 2 pytest suite result: **${{ steps.test-summary.outputs.status }}**
+          (${{ steps.test-summary.outputs.passed }}/${{ steps.test-summary.outputs.total }} passed,
+          ${{ steps.test-summary.outputs.failed }} failed, ${{ steps.test-summary.outputs.errors }} errors,
+          ${{ steps.test-summary.outputs.skipped }} skipped).
+          See agentic_loop/prompts/architecture/students/student-2/architecture_task_prompt.txt
+          for the Student 2 feature scope, architecture context, and current testing notes.
+
+
+          ## Pytest Results
+
+          ```
+          {pytest_log}
+          ```
+          """
+
+          import os
+          log_path = "reports/pytest-output.txt"
+          pytest_log = "No pytest output captured."
+          if os.path.exists(log_path):
+              with open(log_path) as f:
+                  pytest_log = f.read().strip() or pytest_log
+
+          with open("reports/report.md", "w") as f:
+              f.write(report_md.format(pytest_log=pytest_log))
+          PY
+
       - name: Generate run-view.md
         run: |
           cat > reports/run-view.md << EOF
           # GitHub Actions Run
- 
+
           Run URL:
- 
+
           https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           EOF
- 
+
       - name: Upload CI evidence
         uses: actions/upload-artifact@v4
         with:
