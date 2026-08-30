@@ -1,30 +1,3 @@
-# Student 1 CI Workflow Report
-
-- Workflow: student-1-ci
-- Run ID: 32979539577
-- Commit SHA: 4a89233194c41aa714cbefe1dd28a05c32a511ba
-- Branch: 21/merge
-- Repository: jackie-trng05/FIND
-
-## CI Stages
-
-1. Docker image build
-2. Student 1 service smoke check
-3. Automated tests (pytest)
-4. Evidence generation
-
-## Current Testing Status
-
-Student 1 pytest suite result: **passed**
-(82/82 passed,
-0 failed, 0 errors,
-0 skipped).
-See student-1/tests/README.md for the full feature-coverage breakdown.
-
-
-## Pytest Results
-
-```
 ============================= test session starts ==============================
 platform linux -- Python 3.11.16, pytest-9.1.1, pluggy-1.6.0 -- /opt/hostedtoolcache/Python/3.11.16/x64/bin/python
 cachedir: .pytest_cache
@@ -116,5 +89,4 @@ tests/test_frontend.py::test_index_renders_profile_page PASSED           [ 98%]
 tests/test_frontend.py::test_profile_page_renders PASSED                 [100%]
 
 - generated xml file: /home/runner/work/FIND/FIND/student-1/pytest-results.xml -
-============================== 82 passed in 1.91s ==============================
-```
+============================== 82 passed in 2.35s ==============================
