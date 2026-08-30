@@ -255,3 +255,52 @@ def test_notify_hired_updates_application(backend_client, requests_mock, auth_he
     resp = backend_client.post("/api/evaluations/1/notify", json={"action": "Hired"}, headers=auth_headers)
     assert resp.status_code == 200
     assert resp.get_json()["status"] == "Hired"
+
+
+# --- NFR: "Only authenticated HR staff shall be able to access and modify
+#     candidate evaluations." The list endpoint is covered above; these tests
+#     prove the requirement holds for every access (get) and modify
+#     (create/update/delete) endpoint too. ---
+
+def test_create_evaluation_requires_auth(backend_client):
+    resp = backend_client.post("/api/evaluations", json=FULL_EVALUATION)
+    assert resp.status_code == 401
+
+
+def test_create_evaluation_requires_staff(backend_client, requests_mock, auth_headers):
+    mock_session(requests_mock, APPLICANT_USER)
+    resp = backend_client.post("/api/evaluations", json=FULL_EVALUATION, headers=auth_headers)
+    assert resp.status_code == 403
+
+
+def test_update_evaluation_requires_auth(backend_client):
+    resp = backend_client.put("/api/evaluations/1", json={"Evaluation_TechnicalScore": 5})
+    assert resp.status_code == 401
+
+
+def test_update_evaluation_requires_staff(backend_client, requests_mock, auth_headers):
+    mock_session(requests_mock, APPLICANT_USER)
+    resp = backend_client.put("/api/evaluations/1", json={"Evaluation_TechnicalScore": 5}, headers=auth_headers)
+    assert resp.status_code == 403
+
+
+def test_delete_evaluation_requires_auth(backend_client):
+    resp = backend_client.delete("/api/evaluations/1")
+    assert resp.status_code == 401
+
+
+def test_delete_evaluation_requires_staff(backend_client, requests_mock, auth_headers):
+    mock_session(requests_mock, APPLICANT_USER)
+    resp = backend_client.delete("/api/evaluations/1", headers=auth_headers)
+    assert resp.status_code == 403
+
+
+def test_get_evaluation_requires_auth(backend_client):
+    resp = backend_client.get("/api/evaluations/1")
+    assert resp.status_code == 401
+
+
+def test_get_evaluation_requires_staff(backend_client, requests_mock, auth_headers):
+    mock_session(requests_mock, APPLICANT_USER)
+    resp = backend_client.get("/api/evaluations/1", headers=auth_headers)
+    assert resp.status_code == 403
