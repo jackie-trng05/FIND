@@ -25,3 +25,17 @@ def test_edit_renders_form_with_evaluation_id(frontend_client):
     resp = frontend_client.get("/edit/7")
     assert resp.status_code == 200
     assert BACKEND_PUBLIC_URL.encode() in resp.data
+
+
+# --- Bug fix: "Submit Evaluation" must require EVERY field to be completed
+#     (all five scores AND a hiring decision), otherwise an unfinished
+#     evaluation was silently stored as a draft. The Submit button is guarded
+#     client-side by validateSubmit(). ---
+
+def test_submit_button_is_guarded_by_validation(frontend_client):
+    html = frontend_client.get("/evaluate/42").data.decode()
+    assert "function validateSubmit" in html
+    # The Submit button only fires when validation passes.
+    assert "click[validateSubmit()]" in html
+    # Save as Draft stays unguarded (drafts may be incomplete).
+    assert 'hx-vals=\'{"Evaluation_FinalRecommendation": ""}\'' in html
