@@ -1,7 +1,15 @@
 {
   "workflow_name": "student-4-ci",
-  "run_id": "33248974801",
-  "commit_sha": "b25a81bed686663340db5f0d92edf9be7da89fdd",
-  "branch": "main",
-  "repository": "jackie-trng05/FIND"
+  "run_id": "33315427680",
+  "commit_sha": "698f85afd16ccfa6c4d6205b9a4819fab60c2d44",
+  "branch": "32/merge",
+  "repository": "jackie-trng05/FIND",
+  "tests": {
+    "status": "passed",
+    "total": 40,
+    "passed": 40,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  }
 }
