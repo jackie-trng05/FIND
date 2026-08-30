@@ -134,7 +134,7 @@ def enrich_interviews(interviews):
     """Add applicant/job-posting/staff details onto raw interview rows.
 
     Resolves each interview's ``application_id`` -> application (Student 3) ->
-    applicant + job posting, and each ``staff_id`` -> user name (shared DB).
+    applicant + job posting, and each ``user_id`` -> staff user name (shared DB).
     Missing services degrade gracefully to empty strings.
     """
     apps_by_id = {str(a.get("application_id")): a for a in list_applications()}
@@ -154,7 +154,7 @@ def enrich_interviews(interviews):
         item["job_posting_id"] = posting_id or ""
         item["job_posting_title"] = posting.get("Job_Title", "")
         item["application_status"] = app.get("application_status", "")
-        item["staff_name"] = _full_name(users.get(str(row.get("staff_id"))))
+        item["staff_name"] = _full_name(users.get(str(row.get("user_id"))))
         enriched.append(item)
     return enriched
 
@@ -165,24 +165,19 @@ def enrich_one(interview):
     return result[0] if result else dict(interview)
 
 
-def shortlisted_for_staff(staff_id):
-    """Shortlisted applications for job postings created by ``staff_id``.
+def shortlisted_for_staff(user_id):
+    """All shortlisted applications, shaped for the schedule/To-Schedule views.
 
-    Returns a list of dicts shaped for the schedule/To-Schedule views. Postings
-    ownership comes from Student 2's DB; if no postings match this staff member
-    (e.g. seed IDs differ), all shortlisted applications are returned so the
-    workflow is still demonstrable.
+    Staff can schedule interviews for any shortlisted application, regardless of
+    who created the job posting.
     """
     postings = _postings_by_id()
     users = _users_by_id()
-    owned = {pid for pid, p in postings.items() if str(p.get("Staff_Id")) == str(staff_id)}
 
     apps = list_applications(status="Shortlisted")
     result = []
     for app in apps:
         posting_id = str(app.get("job_posting_id"))
-        if owned and posting_id not in owned:
-            continue
         posting = postings.get(posting_id) or {}
         result.append({
             "application_id": app.get("application_id"),

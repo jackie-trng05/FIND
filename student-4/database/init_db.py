@@ -14,15 +14,15 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS interviews (
     interview_id INTEGER PRIMARY KEY AUTOINCREMENT,
     application_id INTEGER NOT NULL,
-    staff_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
     interview_datetime TEXT NOT NULL,
     interview_link TEXT,
-    interview_status TEXT NOT NULL,
     interview_notes TEXT
 )
 """)
 
 cursor.execute("DELETE FROM interviews")
+cursor.execute("DELETE FROM sqlite_sequence WHERE name = 'interviews'")
 
 
 def _notes(technical, education, communication, problem_solving, professionalism):
@@ -36,99 +36,44 @@ def _notes(technical, education, communication, problem_solving, professionalism
     })
 
 
+def _done(role):
+    """Filled-in notes for an interview that has already been written up."""
+    return _notes(
+        f"Solid hands-on {role} knowledge; answered the scenario questions well.",
+        "Qualifications line up with the requirements for the role.",
+        "Explained their reasoning clearly and asked good questions.",
+        "Broke the exercise down methodically before coding.",
+        "Punctual, prepared and professional throughout.",
+    )
+
+
+def _mixed(role):
+    """Notes for an interview with an adequate but unremarkable performance."""
+    return _notes(
+        f"Adequate {role} knowledge, but nothing that stood out as exceptional.",
+        "Qualifications broadly match the role, though not a strong specialisation.",
+        "Communicated clearly enough, though answers were sometimes brief.",
+        "Got to a working answer eventually, but took longer than expected.",
+        "Professional and on time, but seemed only moderately engaged.",
+    )
+
 interviews = [
-    (1, 4, 1, "2026-08-10 10:00", "https://meet.find.app/int-1", "Interview Scheduled", ""),
-    (2, 7, 1, "2026-08-04 14:00", "https://meet.find.app/int-2", "Interview Completed", _notes(
-        "Strong grasp of test automation frameworks and Python.",
-        "Relevant degree in Computer Science.",
-        "Clear, concise communicator throughout.",
-        "Worked through the debugging scenario methodically.",
-        "Punctual and well-prepared.",
+    (1,  4,  1, "2026-08-15 10:00", "https://meet.find.app/int-1", _notes(
+        "Could not answer basic technical questions and struggled through the live coding exercise.",
+        "Educational background is only loosely related to the role's requirements.",
+        "Explanations were unclear and often contradicted earlier answers.",
+        "Unable to break the problem down; needed constant prompting to make any progress.",
+        "Arrived ten minutes late and seemed unprepared for the interview.",
     )),
-    (3, 2, 1, "2026-08-12 14:30", "https://meet.find.app/int-3", "Interview Completed", _notes(
-        "Excellent knowledge of React and modern frontend tooling. Solved the live coding challenge efficiently.",
-        "Bachelor's in Software Engineering with honours. Completed relevant online certifications.",
-        "Articulate and confident. Explained complex concepts clearly.",
-        "Approached the system design question with a well-structured plan.",
-        "Professional demeanour, arrived early, asked thoughtful follow-up questions.",
-    )),
-    (4, 5, 1, "2026-08-06 09:00", "https://meet.find.app/int-4", "Interview Completed", _notes(
-        "Basic understanding of backend APIs but struggled with database design questions.",
-        "Relevant diploma but limited formal CS education.",
-        "Responses were sometimes unclear and lacked depth.",
-        "Had difficulty breaking down the problem into smaller steps.",
-        "Polite and on time but seemed unprepared for technical questions.",
-    )),
-    (5, 6, 2, "2026-08-07 11:00", "https://meet.find.app/int-5", "Interview Completed", _notes(
-        "Strong full-stack skills. Demonstrated deep understanding of microservices architecture.",
-        "Master's in Computer Science with research experience in distributed systems.",
-        "Excellent communicator. Explained trade-offs between approaches clearly.",
-        "Solved the algorithmic challenge with an optimal solution on first attempt.",
-        "Highly professional. Well-researched about the company and role.",
-    )),
-    (6, 8, 2, "2026-08-08 13:00", "https://meet.find.app/int-6", "Interview Completed", _notes(
-        "Limited knowledge of the required tech stack. Could not complete the coding exercise.",
-        "Associate degree, no formal CS training.",
-        "Struggled to explain previous project experience coherently.",
-        "Could not identify the root cause in the debugging scenario.",
-        "Arrived late and appeared disorganised.",
-    )),
-    (7, 10, 3, "2026-08-09 10:00", "https://meet.find.app/int-7", "Interview Completed", _notes(
-        "Solid understanding of Python and Django. Good knowledge of REST API design patterns.",
-        "Bachelor's in Information Technology. Completed AWS certification.",
-        "Communicated well but could be more concise in technical explanations.",
-        "Good problem-solving approach. Used whiteboard effectively to diagram the solution.",
-        "Professional and well-prepared. Asked insightful questions about team culture.",
-    )),
-    (8, 12, 3, "2026-08-11 15:00", "https://meet.find.app/int-8", "Interview Completed", _notes(
-        "Outstanding technical depth across frontend and backend. Built a working prototype during the interview.",
-        "PhD in Computer Science with publications in ML and software engineering.",
-        "Exceptional communicator. Presented ideas with clarity and enthusiasm.",
-        "Tackled the hardest problem variant and found an elegant solution.",
-        "Impeccable professionalism. Followed up with a thoughtful thank-you email.",
-    )),
-    (9, 14, 1, "2026-08-13 09:30", "https://meet.find.app/int-9", "Interview Completed", _notes(
-        "Decent grasp of JavaScript and Node.js. Needs improvement on TypeScript.",
-        "Bachelor's in IT. Currently completing a bootcamp on cloud technologies.",
-        "Communicates ideas adequately but could improve technical vocabulary.",
-        "Took a methodical approach but ran out of time on the second problem.",
-        "Friendly and professional. Showed genuine interest in learning.",
-    )),
-    (10, 15, 4, "2026-08-14 11:00", "https://meet.find.app/int-10", "Interview Completed", _notes(
-        "Good knowledge of containerisation and CI/CD pipelines. Familiar with Kubernetes.",
-        "Bachelor's in Computer Science with DevOps specialisation.",
-        "Clear communicator. Explained deployment strategies well.",
-        "Identified the bottleneck in the scenario quickly and proposed a practical fix.",
-        "Well-prepared and professional throughout the interview.",
-    )),
-    (11, 16, 4, "2026-08-15 14:00", "https://meet.find.app/int-11", "Interview Completed", _notes(
-        "Solid data analysis skills. Comfortable with SQL and Python pandas.",
-        "Master's in Data Science. Published research on predictive modelling.",
-        "Good communicator, especially when discussing statistical concepts.",
-        "Applied a creative approach to the case study and arrived at a sound conclusion.",
-        "Very professional. Brought a portfolio of past work to discuss.",
-    )),
-    (12, 17, 4, "2026-08-16 10:00", "https://meet.find.app/int-12", "Interview Completed", _notes(
-        "Minimal technical knowledge relevant to the role.",
-        "Unrelated degree. No certifications or self-study evidence.",
-        "Difficulty explaining even basic concepts from their resume.",
-        "Could not attempt the problem-solving exercise.",
-        "Arrived on time but otherwise showed minimal engagement.",
-    )),
-    (13, 18, 1, "2026-08-20 09:00", "https://meet.find.app/int-13", "Interview Completed", _notes(
-        "Strong understanding of React and state management patterns.",
-        "Bachelor's in Software Engineering. Relevant internship experience.",
-        "Communicated confidently. Good at explaining design decisions.",
-        "Solved the take-home challenge creatively with clean code.",
-        "Professional and enthusiastic about the opportunity.",
-    )),
-    (14, 19, 2, "2026-08-21 11:30", "https://meet.find.app/int-14", "Interview Completed", _notes(
-        "Good grasp of database design and SQL optimisation.",
-        "Bachelor's in Computer Science. Oracle certification.",
-        "Articulate and well-organised in responses.",
-        "Worked through the normalisation problem systematically.",
-        "Professional demeanour. Asked good questions about the team.",
-    )),
+    (2, 18,  2, "2026-09-05 09:00", "https://meet.find.app/int-2", ""),
+    (3,  6,  2, "2026-08-20 13:00", "https://meet.find.app/int-3", ""),
+    (4,  7,  2, "2026-08-10 11:00", "https://meet.find.app/int-4", _done("data analysis")),
+    (5,  8,  3, "2026-09-02 14:00", "https://meet.find.app/int-5", ""),
+    (6,  9,  3, "2026-09-10 10:30", "https://meet.find.app/int-6", ""),
+    (7,  10, 3, "2026-08-06 15:00", "https://meet.find.app/int-7", _done("UX design")),
+    (8,  11, 4, "2026-08-12 09:30", "https://meet.find.app/int-8", _mixed("project management")),
+    (9,  12, 1, "2026-08-18 16:00", "https://meet.find.app/int-9", _done("project management")),
+    (10, 14, 4, "2026-08-04 10:00", "https://meet.find.app/int-10", _done("marketing")),
 ]
 
 cursor.executemany(
@@ -136,13 +81,12 @@ cursor.executemany(
     INSERT INTO interviews (
         interview_id,
         application_id,
-        staff_id,
+        user_id,
         interview_datetime,
         interview_link,
-        interview_status,
         interview_notes
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?)
     """,
     interviews,
 )

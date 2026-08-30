@@ -21,7 +21,7 @@ app = Flask(__name__)
 # Columns a client is allowed to write. JobPosting_Id and the timestamp/status
 # columns are managed by this service.
 EDITABLE_FIELDS = (
-    "Staff_Id",
+    "User_Id",
     "Job_Title",
     "Job_Description",
     "Job_Type",
@@ -116,9 +116,9 @@ def create_job_posting():
     if not str(data.get("Job_Title", "")).strip():
         return jsonify({"error": "Job_Title is required"}), 400
     try:
-        staff_id = int(data.get("Staff_Id"))
+        user_id = int(data.get("User_Id"))
     except (TypeError, ValueError):
-        return jsonify({"error": "Staff_Id must be an integer"}), 400
+        return jsonify({"error": "User_Id must be an integer"}), 400
 
     status = str(data.get("JobPosting_Status", "Draft")).strip() or "Draft"
     if status not in VALID_STATUSES:
@@ -126,7 +126,7 @@ def create_job_posting():
 
     now = _now()
     values = {field: str(data.get(field, "")).strip() for field in EDITABLE_FIELDS}
-    values["Staff_Id"] = staff_id
+    values["User_Id"] = user_id
     values["Job_Type"] = values["Job_Type"] or "Full time"
 
     published_at = now if status == "Published" else None
@@ -135,14 +135,14 @@ def create_job_posting():
     cursor = conn.execute(
         """
         INSERT INTO job_postings (
-            Staff_Id, Job_Title, Job_Description, Job_Type, Location,
+            User_Id, Job_Title, Job_Description, Job_Type, Location,
             Salary_Range, Requirements,
             Application_Deadline, JobPosting_Status,
             JobPosting_CreatedAt, JobPosting_UpdatedAt, JobPosting_PublishedAt
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
-            values["Staff_Id"], values["Job_Title"], values["Job_Description"],
+            values["User_Id"], values["Job_Title"], values["Job_Description"],
             values["Job_Type"], values["Location"], values["Salary_Range"],
             values["Requirements"],
             values["Application_Deadline"],
@@ -173,12 +173,12 @@ def update_job_posting(posting_id: int):
     updates = {}
     for field in EDITABLE_FIELDS:
         if field in data:
-            if field == "Staff_Id":
+            if field == "User_Id":
                 try:
                     updates[field] = int(data[field])
                 except (TypeError, ValueError):
                     conn.close()
-                    return jsonify({"error": "Staff_Id must be an integer"}), 400
+                    return jsonify({"error": "User_Id must be an integer"}), 400
             else:
                 updates[field] = str(data[field]).strip()
 

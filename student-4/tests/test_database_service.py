@@ -18,17 +18,16 @@ _SCHEMA = """
 CREATE TABLE IF NOT EXISTS interviews (
     interview_id INTEGER PRIMARY KEY AUTOINCREMENT,
     application_id INTEGER NOT NULL,
-    staff_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
     interview_datetime TEXT NOT NULL,
     interview_link TEXT,
-    interview_status TEXT NOT NULL,
     interview_notes TEXT
 )
 """
 
 _SEED = [
-    (1, 4, 1, "2026-09-10 10:00", "https://meet.find.app/int-1", "Interview Scheduled", "Frontend developer interview."),
-    (2, 7, 1, "2026-09-04 14:00", "https://meet.find.app/int-2", "Interview Completed", "Completed — pending evaluation."),
+    (1, 4, 1, "2026-09-10 10:00", "https://meet.find.app/int-1", "Frontend developer interview."),
+    (2, 7, 1, "2026-09-04 14:00", "https://meet.find.app/int-2", "Completed — pending evaluation."),
 ]
 
 
@@ -52,9 +51,9 @@ def client(tmp_path):
     conn.executemany(
         """
         INSERT INTO interviews (
-            interview_id, application_id, staff_id, interview_datetime,
-            interview_link, interview_status, interview_notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            interview_id, application_id, user_id, interview_datetime,
+            interview_link, interview_notes
+        ) VALUES (?, ?, ?, ?, ?, ?)
         """,
         _SEED,
     )
@@ -102,22 +101,6 @@ def test_get_interview_not_found(client):
     assert "not found" in resp.get_json()["error"].lower()
 
 
-def test_by_status_is_case_insensitive(client):
-    rows = client.get("/interviews/by-status?status=interview scheduled").get_json()
-    assert len(rows) == 1
-    assert rows[0]["interview_id"] == 1
-
-
-def test_by_status_requires_status(client):
-    resp = client.get("/interviews/by-status?status=")
-    assert resp.status_code == 400
-
-
-def test_by_status_no_matches_returns_404(client):
-    resp = client.get("/interviews/by-status?status=Withdrawn")
-    assert resp.status_code == 404
-
-
 # --------------------------------------------------------------------------- #
 # Create                                                                       #
 # --------------------------------------------------------------------------- #
@@ -125,7 +108,7 @@ def test_by_status_no_matches_returns_404(client):
 def test_create_interview_success(client):
     resp = client.post("/interviews", json={
         "application_id": 12,
-        "staff_id": 3,
+        "user_id": 3,
         "interview_datetime": "2026-10-01 09:30",
         "interview_link": "https://meet.find.app/int-9",
         "interview_notes": "Second round.",
@@ -133,23 +116,21 @@ def test_create_interview_success(client):
     assert resp.status_code == 201
     body = resp.get_json()
     assert body["application_id"] == 12
-    assert body["interview_status"] == "Scheduled"  # default applied
     assert body["interview_id"] == 3
 
 
 def test_create_applies_defaults_for_optional_fields(client):
     body = client.post("/interviews", json={
         "application_id": 15,
-        "staff_id": 2,
+        "user_id": 2,
         "interview_datetime": "2026-10-02 11:00",
     }).get_json()
-    assert body["interview_status"] == "Scheduled"
     assert body["interview_link"] == ""
     assert body["interview_notes"] == ""
 
 
 def test_create_missing_required_fields_returns_400(client):
-    resp = client.post("/interviews", json={"staff_id": 2})
+    resp = client.post("/interviews", json={"user_id": 2})
     assert resp.status_code == 400
     error = resp.get_json()["error"]
     assert "application_id" in error
@@ -162,9 +143,9 @@ def test_create_missing_required_fields_returns_400(client):
 
 def test_update_interview_partial(client):
     body = client.put("/interviews/1", json={
-        "interview_status": "Interview Completed",
+        "interview_notes": "Updated notes.",
     }).get_json()
-    assert body["interview_status"] == "Interview Completed"
+    assert body["interview_notes"] == "Updated notes."
     # Untouched fields are preserved.
     assert body["application_id"] == 4
 

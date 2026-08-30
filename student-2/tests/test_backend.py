@@ -7,7 +7,7 @@ _FRONTEND = "http://localhost:16007"
 
 _POSTING = {
     "JobPosting_Id": 42,
-    "Staff_Id": 1,
+    "User_Id": 1,
     "Job_Title": "Backend Engineer",
     "Job_Description": "Build and maintain the API.",
     "Job_Type": "Full time",
@@ -52,15 +52,15 @@ def test_posting_panel_shows_management_actions():
     assert "Sydney" in out
 
 
-def test_posting_form_omits_staff_id():
+def test_posting_form_omits_user_id():
     create_form = fmt.render_posting_form(_BACKEND)
     assert "hx-post" in create_form
-    assert 'name="Staff_Id"' not in create_form
+    assert 'name="User_Id"' not in create_form
 
     edit_form = fmt.render_posting_form(_BACKEND, posting=_POSTING)
     assert "hx-put" in edit_form
     assert "Backend Engineer" in edit_form
-    assert 'name="Staff_Id"' not in edit_form
+    assert 'name="User_Id"' not in edit_form
 
 
 def test_create_form_embeds_ai_helper_and_validation():

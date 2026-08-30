@@ -25,14 +25,6 @@ def get_interview_response(interview_id):
     )
 
 
-def get_interviews_by_status_response(status):
-    return requests.get(
-        f"{DATABASE_SERVICE_URL}/interviews/by-status",
-        params={"status": status},
-        timeout=TIMEOUT,
-    )
-
-
 def create_interview(payload):
     return requests.post(
         f"{DATABASE_SERVICE_URL}/interviews", json=payload, timeout=TIMEOUT
