@@ -1,11 +1,58 @@
-Review the FIND platform architecture: shared-frontend, shared-api, and shared-db,
-plus the per-student feature services that integrate with the shared auth service.
-Use the evidence below to identify:
-- responsibilities per service
-- ownership boundaries (which service owns users and sessions)
-- dependencies and coupling between shared and student services
-- missing or overlapping responsibilities
-Distinguish clearly between observed evidence and assumptions.
-Provide a concise review and at most one or two practical recommendations.
-If something cannot be assessed from the evidence, mention that limitation explicitly.
-Reply in at most 40 words.
+You are reviewing the Release 0 architecture of FIND, a job application management platform.
+Use only the architecture baseline and evidence provided. Treat the baseline as the intended
+architecture, but label anything the evidence does not confirm as unverified.
+
+Architecture baseline:
+
+- All services are orchestrated locally by docker-compose.yml.
+- The shared-frontend is the main UI on host port 16001 mapped to container port 3000. It
+	provides shared navigation, login/register, and a unified dashboard linking to every
+	student's frontend.
+- The shared-api is the shared access API on host port 16002 mapped to container port 5000. It
+	owns authentication endpoints: /api/auth/register, /login, /session, /user, and /logout.
+- The shared-db is the shared access database on host port 16003 mapped to container port 6000.
+	It owns the users and sessions tables used by shared-api.
+
+Student feature services:
+
+| Student | Feature | Frontend | Backend/API | Database |
+| --- | --- | --- | --- | --- |
+| 1 | Profile management | 16004 -> 3000 | 16005 -> 5001 | 16006 -> 6001 |
+| 2 | Job posting management | 16007 -> 3002 | 16008 -> 5002 | 16009 -> 6002 |
+| 3 | Application management | 16010 -> 3003 | 16011 -> 5003 | 16012 -> 6003 |
+| 4 | Interview scheduling | 16013 -> 3004 | 16014 -> 5004 | 16015 -> 6004 |
+| 5 | Candidate evaluation | 16016 -> 3005 | 16017 -> 5005 | 16018 -> 6005 |
+
+Each student's database owns the schema and tables for that student's feature. Each feature
+backend owns its feature-specific AI-Mode endpoint and calls a locally running Ollama instance at
+http://host.docker.internal:11434, using qwen2.5:0.5b or llama3.1:8b as appropriate. The shared
+API provides authentication only and does not expose a shared AI endpoint. Release 0 requires the
+Frontend -> Backend/API -> Ollama -> LLM flow; MCP, RAG, and Multi-Agent capabilities belong to
+later releases and should not be treated as Release 0 gaps.
+
+For browser access, use the host-mapped ports above, not container-internal ports. On Docker
+Desktop for Windows, 127.0.0.1 may be used instead of localhost if localhost resolution is
+unexpected.
+
+Cross-service calls follow this trust-boundary pattern:
+
+frontend -> its own backend -> another student's raw Database API
+
+The calling backend is responsible for validating the caller's session through shared-api and
+enforcing ownership and role checks before reading or writing another student's database.
+Database APIs do not authenticate or authorize callers; they trust callers on the internal
+find-network. Host database ports are for local inspection/debugging, not end-user access.
+Known examples are student-2 -> student-3-db, student-3 -> student-1-db, student-4 ->
+student-3-db, and student-5 -> student-3-db and student-4-db. Student-3 locally repeats the
+student-1 ownership check when it fetches or uploads a resume. Student-1 also exposes
+authenticated resume endpoints for its own frontend, but other students currently use the raw
+database API instead.
+
+Use the evidence below to:
+- compare the observed architecture with this baseline
+- identify responsibilities, ownership boundaries, dependencies, coupling, and overlapping or
+	missing responsibilities
+- flag authentication, authorization, deployment, or service-boundary risks
+- distinguish observed evidence from assumptions and state what cannot be assessed
+
+Provide at most one or two practical recommendations. Reply in at most 40 words.

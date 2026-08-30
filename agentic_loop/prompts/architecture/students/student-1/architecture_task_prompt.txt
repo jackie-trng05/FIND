@@ -1,31 +1,120 @@
-Review the Student 1 feature architecture: user profile management (profile CRUD and
-resume storage, applicant self-service).
+Review the Student 1 feature architecture: applicant profile management and resume storage
+for the FIND recruitment platform. Use the baseline below together with the collected evidence.
+Treat the baseline as the intended design, but distinguish observed evidence, assumptions, and
+unverified claims.
 
-This feature owns its own frontend (student-1-frontend), backend/API
-(student-1-backend), and database (student-1-db) tiers. It reuses the shared auth
-service (shared-api/shared-db) for identity (users and sessions) via an HttpOnly
-session_token cookie, and never stores first/last name or credentials in its own
-profiles table.
+## Feature scope
 
-Resumes (PDF only, 5MB max) are stored as a BLOB in student-1-db, owned entirely
-by this feature; resume-level routes live at /resume/{resumeId} rather than
-nested under /profile/{id}/resume/{resumeId}. The backend renders HTML
-fragments for an HTMX frontend (no JSON API), matching student-2/3's pattern.
+- Applicant self-service supports profile create, view, update, and delete.
+- Applicant self-service supports resume upload, view, download, and delete.
+- Resume uploads accept PDF files only and enforce a 5 MB limit in both the backend and database
+  services.
+- Identity fields (first name and last name) are owned by the shared users table, not the local
+  profiles table. Credentials are never stored by Student 1.
+- The shared HttpOnly session_token cookie is used for cross-service authentication.
 
-The AI resume-autofill capability (suggest professional title/summary/interests from
-an uploaded resume, with review/accept/discard via per-field Apply buttons) is
-implemented in this release. It is a self-contained AI-Mode integration owned by
-this feature (routes/ai_mode.py, services/llm_client.py, prompts/), calling Ollama
-directly (llama3.1:8b) the same way student-2/3/4/5 each own their own AI-Mode --
-it does not depend on the shared ai-services/ai-mode placeholder.
+## Service ownership and local access
+
+Student 1 owns three independently containerised tiers:
+
+| Service | Container | Host port | Container port |
+| --- | --- | --- | --- |
+| Frontend | find-student-1-frontend | 16004 | 3000 |
+| Backend/API | find-student-1-backend | 16005 | 5001 |
+| Database | find-student-1-db | 16006 | 6001 |
+
+The local stack is started with `docker compose up --build`. Users log in through the shared
+frontend at `http://localhost:16001`, then open My Profile from the dashboard or visit
+`http://localhost:16004` directly. The browser must use host-mapped ports, not container ports.
+On Docker Desktop for Windows, `127.0.0.1` can be used instead of `localhost` if resolution is
+unexpected.
+
+## Frontend responsibilities
+
+The Student 1 frontend is a thin Flask page server. `/` and `/profile` render the profile page
+shell, while HTMX loads HTML fragments directly from `student-1-backend` using the shared cookie.
+The shell provides user details and profile panels, shared CSS and JavaScript, authentication
+handling, logout, toasts, upload errors, and the themed confirmation dialog. It does not proxy
+API calls. The backend URL, shared API URL, login URL, and home URL are injected through
+environment variables.
+
+## Backend responsibilities and routes
+
+The Student 1 backend validates the caller's session against `shared-api`, enforces applicant
+and ownership checks, calls `student-1-db`, and renders HTML fragments for HTMX rather than
+exposing a JSON API. Its route surface is:
+
+| Method | Path | Responsibility |
+| --- | --- | --- |
+| GET | `/health` | Health check |
+| GET | `/user` | Render the caller's first/last name form |
+| PUT | `/user` | Update first/last name through shared-api |
+| GET | `/profile` | Render the profile form and nested resume panel |
+| POST | `/profile` | Create the caller's profile |
+| PUT | `/profile/{id}` | Update an owned profile |
+| DELETE | `/profile/{id}` | Delete an owned profile and its linked resume |
+| GET | `/resume` | Render the resume panel |
+| POST | `/resume` | Upload an applicant's profile resume |
+| DELETE | `/resume/{id}` | Delete an owned profile resume |
+| GET | `/resume/{id}/download` | Download an owned resume or a resume for staff |
+| POST | `/profile/ai-suggestions` | Generate profile suggestions from the caller's resume |
+
+The backend is organised into route blueprints, HTML fragment views, and HTTP clients for
+shared-api and student-1-db. Staff cannot manage profiles' resumes through the applicant UI.
+Resume-level browser routes use `/resume/{resumeId}` rather than nesting under
+`/profile/{id}/resume/{resumeId}`; ownership is still checked server-side.
+
+## Database ownership and seed data
+
+Student 1's SQLite database (`student1.db`) owns the following data:
+
+- `profiles`: one row per user because `user_id` is unique; fields are `profile_id`, `user_id`,
+  `phone`, `location`, `professional_title`, `summary`, `interests`, `created_at`, and
+  `updated_at`.
+- `resumes`: profile-linked PDF data stored in the `file_data` BLOB, with `resume_id`,
+  `profile_id`, `file_name`, `file_type`, `uploaded_at`, and `updated_at`. The
+  current schema permits one profile-linked resume per profile through a unique `profile_id`.
+  An unlinked `/resumes` database endpoint also supports application-only uploads owned by the
+  calling application workflow.
+
+`init_db.py` creates the tables when they are absent, clears existing profile and resume rows,
+and seeds 10 profiles mapped to shared-db user IDs 1 through 10, plus 10 realistic PDF resumes.
+When run against an existing database, it leaves the existing schema in place and does not
+perform schema migrations. The committed files under `database/seed_data/resumes/` are read
+as-is during image creation; no files are generated at build time or runtime and no extra
+generation dependency is required. The seeded files are all PDF.
+
+## Implemented Student 1 AI feature
+
+The resume-based profile autofill feature is implemented in Release 0 and is owned by Student 1.
+It is not dependent on a shared AI service. The profile form displays a Suggest from my resume
+button. The backend route `POST /profile/ai-suggestions`:
+
+1. Validates the shared session and rejects unauthenticated callers and staff accounts.
+2. Loads the caller's profile and first stored resume from student-1-db.
+3. Extracts text from the PDF with `pypdf`, examines resume quality deterministically, and limits
+	the prompt to the supported extracted text size.
+4. Calls the OpenAI-compatible Ollama endpoint using `OLLAMA_BASE_URL` (default
+	`http://host.docker.internal:11434/v1`) and `OLLAMA_MODEL` (default `llama3.1:8b`).
+5. Loads `profile_system_prompt.txt` and `profile_task_prompt.txt`, then parses the required
+	`Professional_Title`, `Summary`, `Interests`, and `Note` fields.
+6. Retries once with stricter formatting and content instructions when the response is empty or
+	inconsistent, adds deterministic messaging for short or unreadable resumes, and prevents a
+	candidate's personal name from being used as the professional title.
+7. Returns an HTML fragment. Each non-empty suggestion has an Apply button that fills the matching
+	profile field; Dismiss clears the suggestions, and the normal profile update saves any applied
+	values.
+
+This implements the feature's PLAN -> ACT -> OBSERVE -> ADAPT flow: locate the profile/resume,
+call Ollama, validate the parsed response and resume quality, then retry or adjust the result when
+needed. The LLM response is not saved automatically.
 
 Use the evidence below to identify:
-- responsibilities and ownership boundaries for this feature's services
-- dependencies, coupling, or overlapping responsibilities with shared or other services
-- duplicated or dead code that should be removed or abstracted into another service, shared or individual
-- architectural deviations from the canonical microservices architecture
+- at least 3 recommendations for code improvement, which may include changes related to:
+    - responsibilities and ownership boundaries for this feature's services
+    - dependencies, coupling, or overlapping responsibilities with shared or other services
+    - duplicated or dead code that should be removed or abstracted into another service, shared or individual
+    - architectural deviations from the canonical microservices architecture
 
-Distinguish observed evidence from assumptions.
-
-Provide a concise review and at most one or two practical recommendations.
-Reply in at most 40 words.
+Distinguish observed evidence from assumptions. Provide at most one or two practical
+recommendations. Reply in at most 40 words.
