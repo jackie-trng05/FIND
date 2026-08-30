@@ -107,7 +107,7 @@ def get_application(application_id):
 # service does no authentication itself, so ownership checks below are
 # reimplemented here rather than delegated to student-1.
 
-def _get_student1_profile_by_user_id(user_id):
+def get_profile_by_user_id(user_id):
     try:
         resp = requests.get(f"{STUDENT_1_DB_URL}/profiles/by-user/{user_id}", timeout=TIMEOUT)
     except requests.RequestException:
@@ -139,7 +139,7 @@ def _get_student1_resume_meta(resume_id):
 
 def get_latest_profile_resume(user_id):
     """The applicant's single stored resume from their student-1 profile, if any."""
-    profile = _get_student1_profile_by_user_id(user_id)
+    profile = get_profile_by_user_id(user_id)
     if not profile:
         return None
     profile_id = profile.get("profile_id")

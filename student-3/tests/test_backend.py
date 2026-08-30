@@ -85,6 +85,14 @@ _PROFILE_RESUME = {
     "from_profile": True,
 }
 
+_PROFILE = {
+    "phone": "+61400000006",
+    "location": "Sydney, Australia",
+    "professional_title": "Software Engineer",
+    "summary": "Full-stack developer seeking new opportunities.",
+    "interests": "Python, React, Cloud computing",
+}
+
 _STAFF_USER = {
     "user_first_name": "Ada",
     "user_last_name": "Lovelace",
@@ -139,6 +147,14 @@ def test_render_candidate_profile_moves_manual_actions_below_ai_section():
     assert 'data-reject-application-id="7"' in out
     assert out.index('AI Screening') < out.index('data-shortlist-application-id="7"')
     assert 'Change status:' not in out
+
+
+def test_render_candidate_profile_includes_profile_details():
+    out = fmt.render_candidate_profile(
+        _APPLICATION, _POSTING, _STAFF_USER, _PROFILE_RESUME, None, profile=_PROFILE
+    )
+    for value in _PROFILE.values():
+        assert value in out
 
 
 def test_render_candidate_profile_hides_manual_actions_when_not_submitted():
