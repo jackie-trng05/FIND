@@ -5,11 +5,15 @@ on:
     branches: [ main ]
     paths:
       - "student-4/**"
+      - "shared/**"
+      - "docker-compose.yml"
       - ".github/workflows/student-4-ci.yml"
   pull_request:
     branches: [ main ]
     paths:
       - "student-4/**"
+      - "shared/**"
+      - "docker-compose.yml"
       - ".github/workflows/student-4-ci.yml"
   workflow_dispatch:
 
