@@ -1,12 +1,33 @@
 Review the Student 5 feature architecture: candidate evaluation.
-This feature owns its own frontend, backend, and database tiers and reuses the shared
-auth service for identity (users and sessions).
-Use the evidence below to identify:
-- responsibilities and ownership boundaries for this feature's services
-- how the feature depends on the shared auth service without duplicating user data
-- dependencies, coupling, or overlapping responsibilities with shared or other services
-Distinguish observed evidence from assumptions.
+HR staff score interviewed candidates across five criteria, save work as a draft, and
+record a final Hire/Reject decision.
+
+Feature context (background provided by the author -- treat as claims to be
+checked against the Evidence below, not as facts, and flag anything the evidence
+does not confirm as unverified):
+- Owns three independent tiers: an evaluation frontend, a backend API, and its own
+  database that is the sole owner of evaluation records (per-criterion scores,
+  overall score, final recommendation, and the HR staff identity captured on each
+  evaluation).
+- Reuses the shared auth service (shared-api) for identity and session validation
+  via session cookies. It stores only id references (application and staff), never a
+  copy of the shared users table, so user data is not duplicated.
+- Integrates with sibling features it does not own: it reads application data from
+  Student 3, reads interview notes from Student 4, and writes application-status
+  transitions back to Student 3 as an evaluation progresses
+  (Interview Completed -> Evaluation In Progress -> Hired / Rejected).
+- Evaluation status is derived at read time from whether a final recommendation
+  exists, rather than persisted as a status column.
+
+Using the Evidence below, assess:
+- ownership boundaries: what this feature legitimately owns versus what it only
+  reads from, or writes into, services owned by others
+- how it depends on shared auth for identity without duplicating user data
+- coupling and overlap risks, especially cross-service reads (Student 3 / Student 4)
+  and writing an application status that Student 3 owns
+- whether deriving status instead of storing it is a sound choice or a liability
+
+Distinguish observed evidence from assumptions; label anything not visible in the
+Evidence as unverified rather than stating it as fact.
 Provide a concise review and at most one or two practical recommendations.
 Reply in at most 40 words.
-
-# Student 5: replace or extend this prompt with your own architecture review focus.
