@@ -11,6 +11,7 @@ FIND_HOME_URL = os.environ.get("FIND_HOME_URL", "http://localhost:16001/dashboar
 SHARED_API_PUBLIC_URL = os.environ.get("SHARED_API_PUBLIC_URL", "http://localhost:16002")
 LOGIN_URL = os.environ.get("LOGIN_URL", "http://localhost:16001/login")
 APPLICATIONS_PUBLIC_URL = os.environ.get("APPLICATIONS_PUBLIC_URL", "http://localhost:16010")
+INTERVIEWS_PUBLIC_URL = os.environ.get("INTERVIEWS_PUBLIC_URL", "http://localhost:16013")
 
 
 @app.context_processor
@@ -39,7 +40,8 @@ def evaluation_form(application_id):
     return render_template("evaluation_form.html",
                            application_id=application_id,
                            backend_url=BACKEND_PUBLIC_URL,
-                           home_url=FIND_HOME_URL)
+                           home_url=FIND_HOME_URL,
+                           interviews_public_url=INTERVIEWS_PUBLIC_URL)
 
 
 @app.get("/edit/<int:evaluation_id>")
@@ -48,7 +50,8 @@ def edit_evaluation(evaluation_id):
                            evaluation_id=evaluation_id,
                            application_id=None,
                            backend_url=BACKEND_PUBLIC_URL,
-                           home_url=FIND_HOME_URL)
+                           home_url=FIND_HOME_URL,
+                           interviews_public_url=INTERVIEWS_PUBLIC_URL)
 
 
 @app.get("/css/<path:filename>")

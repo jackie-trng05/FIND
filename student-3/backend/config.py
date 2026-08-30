@@ -37,12 +37,12 @@ _DB_UNAVAILABLE = (
 # --------------------------------------------------------------------------- #
 VALID_STATUSES = (
     "Draft", "Submitted", "Shortlisted", "Interview Requested",
-    "Interview Scheduled", "Interview Completed", "Evaluation Completed",
+    "Interview Scheduled", "Interview Completed", "Evaluation In Progress",
     "Hired", "Rejected", "Withdrawn",
 )
 WITHDRAWABLE_STATUSES = (
     "Submitted", "Shortlisted", "Interview Requested", "Interview Scheduled",
-    "Interview Completed", "Evaluation Completed",
+    "Interview Completed", "Evaluation In Progress",
 )
 DELETABLE_STATUSES = ("Draft",)
 INTERVIEW_ACTION_STATUSES = ("Shortlisted",)

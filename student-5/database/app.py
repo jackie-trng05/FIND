@@ -33,8 +33,11 @@ def list_evaluations():
         filters.append("User_Id = ?")
         params.append(int(request.args["user_id"]))
     if request.args.get("status"):
-        filters.append("Evaluation_Status = ?")
-        params.append(request.args["status"])
+        val = request.args["status"]
+        if val == "in_progress":
+            filters.append("Evaluation_FinalRecommendation IS NULL")
+        elif val == "decided":
+            filters.append("Evaluation_FinalRecommendation IS NOT NULL")
     if request.args.get("recommendation"):
         filters.append("Evaluation_FinalRecommendation = ?")
         params.append(request.args["recommendation"])
@@ -64,13 +67,37 @@ def create_evaluation():
     if not data:
         return jsonify({"error": "JSON body required"}), 400
 
-    required = ["Application_Id", "User_Id",
-                "Evaluation_TechnicalScore", "Evaluation_EducationScore",
-                "Evaluation_CommunicationScore", "Evaluation_ProblemSolvingScore",
-                "Evaluation_ProfessionalismScore", "Evaluation_FinalRecommendation"]
+    required = ["Application_Id", "User_Id"]
     for field in required:
         if field not in data or data[field] is None or data[field] == "":
             return jsonify({"error": f"{field} is required"}), 400
+
+    score_fields = ["Evaluation_TechnicalScore", "Evaluation_EducationScore",
+                    "Evaluation_CommunicationScore", "Evaluation_ProblemSolvingScore",
+                    "Evaluation_ProfessionalismScore"]
+    scores = []
+    for f in score_fields:
+        val = data.get(f)
+        if val is not None and val != "":
+            val = int(val)
+            if val < 1 or val > 5:
+                return jsonify({"error": "Scores must be between 1 and 5"}), 400
+            scores.append(val)
+        else:
+            scores.append(None)
+
+    rec = data.get("Evaluation_FinalRecommendation") or None
+    if rec == "":
+        rec = None
+
+    if rec is not None:
+        if rec not in ("Hire", "Reject"):
+            return jsonify({"error": "Decision must be Hire or Reject"}), 400
+        if any(s is None for s in scores):
+            return jsonify({"error": "All scores are required to finalize an evaluation"}), 400
+
+    filled = [s for s in scores if s is not None]
+    overall = round(sum(filled) / len(filled), 2) if filled else None
 
     conn = get_db()
     existing = conn.execute("SELECT Evaluation_Id FROM evaluations WHERE Application_Id = ?",
@@ -79,19 +106,7 @@ def create_evaluation():
         conn.close()
         return jsonify({"error": "An evaluation already exists for this application"}), 409
 
-    scores = [int(data["Evaluation_TechnicalScore"]), int(data["Evaluation_EducationScore"]),
-              int(data["Evaluation_CommunicationScore"]), int(data["Evaluation_ProblemSolvingScore"]),
-              int(data["Evaluation_ProfessionalismScore"])]
-    for s in scores:
-        if s < 1 or s > 5:
-            conn.close()
-            return jsonify({"error": "Scores must be between 1 and 5"}), 400
-
-    overall = round(sum(scores) / len(scores), 2)
     now = datetime.utcnow().isoformat()
-    status = data.get("Evaluation_Status", "Draft")
-    if status not in ("Draft", "Completed"):
-        status = "Draft"
 
     cursor = conn.execute("""
         INSERT INTO evaluations (
@@ -100,13 +115,13 @@ def create_evaluation():
             Evaluation_CommunicationScore, Evaluation_ProblemSolvingScore,
             Evaluation_ProfessionalismScore, Evaluation_OverallScore,
             Evaluation_FinalRecommendation,
-            Evaluation_Status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         data["Application_Id"], data["User_Id"],
         scores[0], scores[1], scores[2], scores[3], scores[4],
-        overall, data["Evaluation_FinalRecommendation"],
-        status, now, now
+        overall, rec,
+        now, now
     ))
     conn.commit()
     row = conn.execute("SELECT * FROM evaluations WHERE Evaluation_Id = ?", (cursor.lastrowid,)).fetchone()
@@ -126,23 +141,38 @@ def update_evaluation(evaluation_id):
         conn.close()
         return jsonify({"error": "Evaluation not found"}), 404
 
-    scores = [
-        int(data.get("Evaluation_TechnicalScore", existing["Evaluation_TechnicalScore"])),
-        int(data.get("Evaluation_EducationScore", existing["Evaluation_EducationScore"])),
-        int(data.get("Evaluation_CommunicationScore", existing["Evaluation_CommunicationScore"])),
-        int(data.get("Evaluation_ProblemSolvingScore", existing["Evaluation_ProblemSolvingScore"])),
-        int(data.get("Evaluation_ProfessionalismScore", existing["Evaluation_ProfessionalismScore"])),
+    score_fields = [
+        "Evaluation_TechnicalScore", "Evaluation_EducationScore",
+        "Evaluation_CommunicationScore", "Evaluation_ProblemSolvingScore",
+        "Evaluation_ProfessionalismScore",
     ]
-    for s in scores:
-        if s < 1 or s > 5:
-            conn.close()
-            return jsonify({"error": "Scores must be between 1 and 5"}), 400
+    scores = []
+    for f in score_fields:
+        val = data.get(f, existing[f])
+        if val is not None and val != "":
+            val = int(val)
+            if val < 1 or val > 5:
+                conn.close()
+                return jsonify({"error": "Scores must be between 1 and 5"}), 400
+            scores.append(val)
+        else:
+            scores.append(None)
 
-    overall = round(sum(scores) / len(scores), 2)
+    rec = data.get("Evaluation_FinalRecommendation", existing["Evaluation_FinalRecommendation"])
+    if rec == "":
+        rec = None
+
+    if rec is not None:
+        if rec not in ("Hire", "Reject"):
+            conn.close()
+            return jsonify({"error": "Decision must be Hire or Reject"}), 400
+        if any(s is None for s in scores):
+            conn.close()
+            return jsonify({"error": "All scores are required to finalize an evaluation"}), 400
+
+    filled = [s for s in scores if s is not None]
+    overall = round(sum(filled) / len(filled), 2) if filled else None
     now = datetime.utcnow().isoformat()
-    status = data.get("Evaluation_Status", existing["Evaluation_Status"])
-    if status not in ("Draft", "Completed"):
-        status = existing["Evaluation_Status"]
 
     conn.execute("""
         UPDATE evaluations SET
@@ -150,13 +180,13 @@ def update_evaluation(evaluation_id):
             Evaluation_CommunicationScore = ?, Evaluation_ProblemSolvingScore = ?,
             Evaluation_ProfessionalismScore = ?, Evaluation_OverallScore = ?,
             Evaluation_FinalRecommendation = ?,
-            Evaluation_Status = ?, updated_at = ?
+            updated_at = ?
         WHERE Evaluation_Id = ?
     """, (
         scores[0], scores[1], scores[2], scores[3], scores[4],
         overall,
-        data.get("Evaluation_FinalRecommendation", existing["Evaluation_FinalRecommendation"]),
-        status, now, evaluation_id
+        rec,
+        now, evaluation_id
     ))
     conn.commit()
     row = conn.execute("SELECT * FROM evaluations WHERE Evaluation_Id = ?", (evaluation_id,)).fetchone()
@@ -171,9 +201,9 @@ def delete_evaluation(evaluation_id):
     if not existing:
         conn.close()
         return jsonify({"error": "Evaluation not found"}), 404
-    if existing["Evaluation_Status"] == "Completed":
+    if existing["Evaluation_FinalRecommendation"] is not None:
         conn.close()
-        return jsonify({"error": "Completed evaluations cannot be deleted"}), 403
+        return jsonify({"error": "Finalized evaluations cannot be deleted"}), 403
     conn.execute("DELETE FROM evaluations WHERE Evaluation_Id = ?", (evaluation_id,))
     conn.commit()
     conn.close()

@@ -59,7 +59,7 @@ STATUS_CLASS = {
     "Interview Requested": "badge-warning",
     "Interview Scheduled": "badge-info",
     "Interview Completed": "badge-accent",
-    "Evaluation Completed": "badge-accent",
+    "Evaluation In Progress": "badge-warning",
     "Hired": "badge-success",
     "Rejected": "badge-danger",
     "Withdrawn": "badge-muted",
