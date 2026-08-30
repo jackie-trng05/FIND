@@ -1,12 +1,136 @@
-Review the Student 2 feature architecture: job posting management.
-This feature owns its own frontend, backend, and database tiers and reuses the shared
-auth service for identity (users and sessions).
-Use the evidence below to identify:
-- responsibilities and ownership boundaries for this feature's services
-- how the feature depends on the shared auth service without duplicating user data
-- dependencies, coupling, or overlapping responsibilities with shared or other services
-Distinguish observed evidence from assumptions.
-Provide a concise review and at most one or two practical recommendations.
-Reply in at most 40 words.
+Review the Student 2 feature architecture: job posting management
+for the FIND recruitment platform. Use the baseline below together with the collected evidence.
+Treat the baseline as the intended design, but distinguish observed evidence, assumptions, and
+unverified claims.
 
-# Student 2: replace or extend this prompt with your own architecture review focus.
+## Feature scope
+
+- Staff users can create, view, update, publish, unpublish, search/filter, and delete job postings.
+- Applicants can browse Published job postings and view a posting detail panel, but cannot create,
+  edit, publish, unpublish, or delete postings.
+- A posting includes title, description, job type, location, salary range, requirements, application
+  deadline, status, and lifecycle timestamps.
+- Required staff form fields are job title, job type, location, description, and requirements.
+  Application deadlines must be valid ISO dates and cannot be in the past.
+- Requirements are normalised into one bullet-prefixed item per line before persistence.
+- The Apply action is applicant-facing and links into Student 3's application workflow; Student 2
+  does not own applications, resumes, interviews, or evaluations.
+- The shared HttpOnly session_token cookie is used for cross-service authentication. Identity and
+  credentials remain owned by the shared services, not Student 2.
+
+## Service ownership and local access
+
+Student 2 owns three independently containerised tiers:
+
+| Service | Container | Host port | Container port |
+| --- | --- | --- | --- |
+| Frontend | find-student-2-frontend | 16007 | 3002 |
+| Backend/API | find-student-2-backend | 16008 | 5002 |
+| Database | find-student-2-db | 16009 | 6002 |
+
+The local stack is started with `docker compose up --build`. Users log in through the shared
+frontend at `http://localhost:16001`, then open Jobs from the dashboard or visit
+`http://localhost:16007` directly. Browser links and HTMX calls must use host-mapped public
+ports such as `http://localhost:16007` and `http://localhost:16008`, while container-to-container
+calls use Docker service names such as `student-2-db:6002` and `student-3-db:6003`.
+On Docker Desktop for Windows, `127.0.0.1` can be used instead of `localhost` if resolution is
+unexpected.
+
+## Frontend responsibilities
+
+The Student 2 frontend is a thin Flask page server. `/` renders the job posting list shell,
+`/new` renders the create-posting shell, and `/postings/{id}` renders the detail/edit shell.
+The pages use HTMX to load HTML fragments directly from `student-2-backend` with the shared
+cookie available to the browser. The frontend serves local CSS, falls back to mounted shared CSS,
+serves shared JavaScript, and injects the backend URL, shared API URL, login URL, and FIND home
+URL through environment variables.
+
+The frontend should stay presentation-focused. It should not own posting persistence, role checks,
+deadline validation, publish/unpublish decisions, application duplicate checks, or AI prompt
+execution; those responsibilities belong to the backend/API or to the relevant owning service.
+
+## Backend responsibilities and routes
+
+The Student 2 backend validates the caller's session against `shared-api`, determines whether the
+caller is staff or applicant, enforces applicant read-only behaviour, calls `student-2-db`, and
+renders HTML fragments for HTMX rather than exposing a browser-facing JSON API. Its route surface is:
+
+| Method | Path | Responsibility |
+| --- | --- | --- |
+| GET | `/` | Basic backend index response |
+| GET | `/health` | Health check |
+| GET | `/job-postings` | Render a filtered postings table; applicants see Published postings only |
+| GET | `/job-postings/{id}` | Render a posting detail panel; applicants cannot view Draft postings |
+| GET | `/job-postings/new` | Render a blank staff-only posting form |
+| GET | `/job-postings/{id}/edit` | Render a staff-only edit form for an existing posting |
+| POST | `/job-postings` | Create a staff-owned Draft posting after form and deadline validation |
+| PUT | `/job-postings/{id}` | Update editable posting fields after form and deadline validation |
+| PUT | `/job-postings/{id}/publish` | Set an existing posting to Published |
+| PUT | `/job-postings/{id}/unpublish` | Set an existing posting back to Draft |
+| DELETE | `/job-postings/{id}` | Delete an existing posting and redirect to the list page |
+| POST | `/ai/suggest-skills` | Generate skill and qualification suggestions for a posting form |
+
+The backend is organised into route blueprints, HTML fragment views, a prompt loader, an LLM client,
+and an HTTP client for `student-2-db` and `shared-api`. Staff mutations store the logged-in staff
+`user_id` as `User_Id`; if a session user is unexpectedly unavailable, the code has a fallback
+`DEFAULT_USER_ID`. Applicants receive HTMX-safe error fragments when they try to mutate postings.
+
+Student 2 integrates with Student 3 by querying `student-3-db` for active applications matching the
+current applicant and posting. Withdrawn and Rejected applications are treated as reusable slots;
+other statuses disable or alter the Apply action. This is a cross-service read for UI guidance only:
+Student 3 remains the owner of application records and application status.
+
+## Database ownership and seed data
+
+Student 2's SQLite database (`job_postings.db`) owns the `job_postings` table:
+
+- `JobPosting_Id`: local primary key.
+- `User_Id`: shared-db staff user reference for the posting owner; not a local user record.
+- `Job_Title`, `Job_Description`, `Job_Type`, `Location`, `Salary_Range`, `Requirements`, and
+  `Application_Deadline`: editable posting content.
+- `JobPosting_Status`: lifecycle value limited by the database service to `Draft` or `Published`.
+- `JobPosting_CreatedAt`, `JobPosting_UpdatedAt`, and `JobPosting_PublishedAt`: timestamps managed
+  by the database service.
+
+The database microservice is the only Student 2 process that talks directly to the SQLite file.
+It exposes REST endpoints for listing, fetching, creating, updating, publishing, unpublishing, and
+deleting postings. Filtering is supported by status, job type, location substring, and free-text
+search across title, description, and requirements. Results are ordered by updated time and posting id.
+
+`init_db.py` creates the table when absent, clears existing job postings, resets AUTOINCREMENT, and
+seeds 12 postings across shared staff user IDs 1 through 5. Seed records include both Published and
+Draft postings, realistic Australian locations and salary ranges, and bullet-normalised requirements.
+When re-run, it resets the table to seed data rather than performing migrations.
+
+## Implemented Student 2 AI feature
+
+The skills and qualifications suggestion feature is implemented in Release 0 and is owned by
+Student 2. It is not dependent on a shared AI service. The posting form can call
+`POST /ai/suggest-skills` with job title, job type, and job description. The backend route:
+
+1. Requires a non-empty job title before asking the model for suggestions.
+2. Loads `skills_system_prompt.txt` and `skills_task_prompt.txt` from Student 2's local prompt
+   directory.
+3. Builds the user prompt from the title, type, and description, using a placeholder when no
+   description is provided.
+4. Calls the OpenAI-compatible Ollama endpoint using the configured `OLLAMA_MODEL` through the
+   local LLM client.
+5. Observes whether the response is long enough to be useful and retries once with stricter
+   instructions when the first response is too thin.
+6. Returns an HTML fragment with the suggestions or an HTMX-safe error fragment when prompt files,
+   Ollama, or the model are unavailable.
+
+This implements the feature's PLAN -> ACT -> OBSERVE -> ADAPT flow: assemble a posting-specific
+prompt, call Ollama, inspect output quality, then retry or surface a useful error. The LLM response
+is not saved automatically; staff decide whether to copy any suggestions into the posting form.
+
+Use the evidence below to identify:
+- at least 3 recommendations for code improvement, which may include changes related to:
+    - responsibilities and ownership boundaries for this feature's services
+    - dependencies, coupling, or overlapping responsibilities with shared or other services
+    - duplicated or dead code that should be removed or abstracted into another service, shared or individual
+    - architectural deviations from the canonical microservices architecture
+
+Distinguish observed evidence from assumptions. Provide at most one or two practical
+recommendations. Reply in at most 40 words.
+ 
