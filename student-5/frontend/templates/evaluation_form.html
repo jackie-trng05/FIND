@@ -169,6 +169,7 @@
             <button type="button" class="btn btn-primary"
                     {% if evaluation_id %}hx-put="{{ backend_url }}/api/evaluations/{{ evaluation_id }}"{% else %}hx-post="{{ backend_url }}/api/evaluations"{% endif %}
                     hx-include="#eval-form" hx-swap="none"
+                    hx-trigger="click[validateSubmit()]"
                     hx-confirm="Submit this evaluation? The applicant will be hired or rejected based on your decision.">Submit Evaluation</button>
             <a href="/" class="btn btn-ghost">Cancel</a>
           </div>
@@ -225,6 +226,26 @@
       const scores = filled.map(Number);
       const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2);
       document.getElementById('overall-score').textContent = avg;
+    }
+
+    // Guard for the "Submit Evaluation" button. Unlike "Save as Draft", a real
+    // submission MUST have EVERY field completed; otherwise the record would
+    // silently be stored as a draft. Returning false stops HTMX from firing the
+    // request (hx-trigger="click[validateSubmit()]").
+    function validateSubmit() {
+      const form = document.getElementById('eval-form');
+      const fields = form.querySelectorAll('input[name], select[name], textarea[name]');
+      for (const el of fields) {
+        if (el.value === '' || el.value == null) {
+          const wrap = el.closest('.form-group, .score-item');
+          const label = wrap ? wrap.querySelector('label') : null;
+          const name = (label ? label.textContent : el.name).replace('*', '').trim();
+          window.showToast('Complete every field before submitting \u2014 "' + name + '" is missing. Use Save as Draft to finish later.', 'error');
+          if (el.focus) el.focus();
+          return false;
+        }
+      }
+      return true;
     }
 
     async function getAIScores() {

@@ -30,16 +30,22 @@ CREATE TABLE IF NOT EXISTS evaluations (
 
 cursor.execute("DELETE FROM evaluations")
 
+# Seed rows are kept consistent with the Student-3 application statuses so an
+# application's status always matches whether (and how) it has been evaluated:
+#   Hired    -> a finalized "Hire" evaluation
+#   Rejected -> a finalized "Reject" evaluation
+#   Evaluation In Progress -> a draft (no final recommendation yet)
+#   Interview Completed    -> NO evaluation (still "ready for evaluation")
+# (Application_Id, User_Id, Tech, Edu, Comm, ProblemSolving, Prof, Overall, Recommendation)
 seed = [
-    (2,  1, 5, 4, 4, 5, 4, 4.4, "Hire"),
-    (5,  1, 3, 3, 4, 3, 4, 3.4, "Reject"),
-    (6,  2, 4, 5, 3, 4, 5, 4.2, "Hire"),
-    (8,  2, 2, 2, 3, 2, 3, 2.4, "Reject"),
-    (10, 3, 4, 4, 5, 4, 4, 4.2, "Hire"),
-    (12, 3, 5, 5, 4, 5, 5, 4.8, "Hire"),
+    # Finalized — applications that are Hired.
+    (13, 1, 5, 4, 4, 5, 4, 4.4, "Hire"),
+    (17, 3, 4, 5, 3, 4, 5, 4.2, "Hire"),
+    # Finalized — applications that are Rejected.
+    (16, 2, 2, 2, 3, 2, 3, 2.4, "Reject"),
+    (19, 4, 3, 2, 2, 1, 2, 2.0, "Reject"),
+    # Drafts — applications that are Evaluation In Progress.
     (14, 1, 3, 4, 3, 3, 3, 3.2, None),
-    (16, 4, 4, 3, 4, 4, 3, 3.6, "Hire"),
-    (17, 4, 1, 2, 2, 1, 2, 1.6, "Reject"),
     (15, 5, 4, 4, 4, 3, 4, 3.8, None),
 ]
 
@@ -55,4 +61,4 @@ INSERT INTO evaluations (
 conn.commit()
 conn.close()
 
-print("Student-5 database initialized with evaluations table (10 seed records).")
+print("Student-5 database initialized with evaluations table (6 seed records).")
