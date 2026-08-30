@@ -266,7 +266,7 @@ def create_evaluation():
         return err
 
     data = _read_payload()
-    data["Staff_Id"] = user["user_id"]
+    data["User_Id"] = user["user_id"]
 
     if not str(data.get("HR_Staff_Name", "")).strip():
         return _validation_error("HR Staff Name is required")

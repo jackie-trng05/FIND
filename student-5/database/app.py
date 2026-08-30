@@ -29,9 +29,9 @@ def list_evaluations():
     filters = []
     params = []
 
-    if request.args.get("staff_id"):
-        filters.append("Staff_Id = ?")
-        params.append(int(request.args["staff_id"]))
+    if request.args.get("user_id"):
+        filters.append("User_Id = ?")
+        params.append(int(request.args["user_id"]))
     if request.args.get("status"):
         val = request.args["status"]
         if val == "in_progress":
@@ -67,7 +67,7 @@ def create_evaluation():
     if not data:
         return jsonify({"error": "JSON body required"}), 400
 
-    required = ["Application_Id", "Staff_Id", "HR_Staff_Name", "HR_Staff_Number"]
+    required = ["Application_Id", "User_Id", "HR_Staff_Name", "HR_Staff_Number"]
     for field in required:
         if field not in data or data[field] is None or data[field] == "":
             return jsonify({"error": f"{field} is required"}), 400
@@ -110,7 +110,7 @@ def create_evaluation():
 
     cursor = conn.execute("""
         INSERT INTO evaluations (
-            Application_Id, Staff_Id, HR_Staff_Name, HR_Staff_Number,
+            Application_Id, User_Id, HR_Staff_Name, HR_Staff_Number,
             Evaluation_TechnicalScore, Evaluation_EducationScore,
             Evaluation_CommunicationScore, Evaluation_ProblemSolvingScore,
             Evaluation_ProfessionalismScore, Evaluation_OverallScore,
@@ -118,7 +118,7 @@ def create_evaluation():
             created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-        data["Application_Id"], data["Staff_Id"],
+        data["Application_Id"], data["User_Id"],
         data["HR_Staff_Name"], data["HR_Staff_Number"],
         scores[0], scores[1], scores[2], scores[3], scores[4],
         overall, rec,

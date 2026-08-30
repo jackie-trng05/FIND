@@ -49,7 +49,7 @@ def _create_schema(db_path):
         CREATE TABLE IF NOT EXISTS evaluations (
             Evaluation_Id INTEGER PRIMARY KEY AUTOINCREMENT,
             Application_Id INTEGER NOT NULL,
-            Staff_Id INTEGER NOT NULL,
+            User_Id INTEGER NOT NULL,
             HR_Staff_Name TEXT NOT NULL,
             HR_Staff_Number TEXT NOT NULL,
             Evaluation_TechnicalScore INTEGER CHECK(Evaluation_TechnicalScore BETWEEN 1 AND 5),

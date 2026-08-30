@@ -14,7 +14,7 @@ from conftest import (
 SAVED_EVAL = {
     "Evaluation_Id": 1,
     "Application_Id": 200,
-    "Staff_Id": 1,
+    "User_Id": 1,
     "HR_Staff_Name": "Alex Morgan",
     "HR_Staff_Number": "HR-001",
     "Evaluation_TechnicalScore": 4,
@@ -29,7 +29,7 @@ SAVED_EVAL = {
 SAVED_DRAFT = {
     "Evaluation_Id": 2,
     "Application_Id": 201,
-    "Staff_Id": 1,
+    "User_Id": 1,
     "HR_Staff_Name": "Alex Morgan",
     "HR_Staff_Number": "HR-001",
     "Evaluation_TechnicalScore": None,
@@ -77,13 +77,13 @@ def test_create_evaluation_success(backend_client, requests_mock, auth_headers):
     assert resp.get_json()["Evaluation_Id"] == 1
 
 
-def test_create_evaluation_injects_staff_id(backend_client, requests_mock, auth_headers):
+def test_create_evaluation_injects_user_id(backend_client, requests_mock, auth_headers):
     mock_session(requests_mock, STAFF_USER)
     requests_mock.post(f"{DB_SERVICE_URL}/evaluations", json=SAVED_EVAL, status_code=201)
 
     backend_client.post("/api/evaluations", json=FULL_EVALUATION, headers=auth_headers)
     sent = requests_mock.request_history[-1].json()
-    assert sent["Staff_Id"] == STAFF_USER["user_id"]
+    assert sent["User_Id"] == STAFF_USER["user_id"]
 
 
 def test_create_evaluation_missing_hr_name(backend_client, requests_mock, auth_headers):

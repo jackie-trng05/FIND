@@ -14,7 +14,7 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS evaluations (
     Evaluation_Id INTEGER PRIMARY KEY AUTOINCREMENT,
     Application_Id INTEGER NOT NULL,
-    Staff_Id INTEGER NOT NULL,
+    User_Id INTEGER NOT NULL,
     HR_Staff_Name TEXT NOT NULL,
     HR_Staff_Number TEXT NOT NULL,
     Evaluation_TechnicalScore INTEGER CHECK(Evaluation_TechnicalScore BETWEEN 1 AND 5),
@@ -47,7 +47,7 @@ seed = [
 
 cursor.executemany("""
 INSERT INTO evaluations (
-    Application_Id, Staff_Id, HR_Staff_Name, HR_Staff_Number,
+    Application_Id, User_Id, HR_Staff_Name, HR_Staff_Number,
     Evaluation_TechnicalScore, Evaluation_EducationScore, Evaluation_CommunicationScore,
     Evaluation_ProblemSolvingScore, Evaluation_ProfessionalismScore, Evaluation_OverallScore,
     Evaluation_FinalRecommendation

@@ -4,7 +4,7 @@
 def _create(db_client, **overrides):
     payload = {
         "Application_Id": 200,
-        "Staff_Id": 1,
+        "User_Id": 1,
         "HR_Staff_Name": "Alex Morgan",
         "HR_Staff_Number": "HR-001",
     }
@@ -47,7 +47,7 @@ def test_create_missing_hr_name_rejected(db_client):
 
 def test_create_missing_application_id_rejected(db_client):
     resp = db_client.post("/evaluations", json={
-        "Staff_Id": 1, "HR_Staff_Name": "A", "HR_Staff_Number": "HR-001",
+        "User_Id": 1, "HR_Staff_Name": "A", "HR_Staff_Number": "HR-001",
     })
     assert resp.status_code == 400
 
