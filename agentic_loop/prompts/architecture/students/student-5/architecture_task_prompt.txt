@@ -1,33 +1,138 @@
-Review the Student 5 feature architecture: candidate evaluation.
-HR staff score interviewed candidates across five criteria, save work as a draft, and
-record a final Hire/Reject decision.
+Review the Student 5 feature architecture: candidate evaluation and final hiring decisions
+for the FIND recruitment platform. Use the baseline below together with the collected evidence.
+Treat the baseline as the intended design, but distinguish observed evidence, assumptions, and
+unverified claims.
 
-Feature context (background provided by the author -- treat as claims to be
-checked against the Evidence below, not as facts, and flag anything the evidence
-does not confirm as unverified):
-- Owns three independent tiers: an evaluation frontend, a backend API, and its own
-  database that is the sole owner of evaluation records (per-criterion scores,
-  overall score, final recommendation, and the HR staff identity captured on each
-  evaluation).
-- Reuses the shared auth service (shared-api) for identity and session validation
-  via session cookies. It stores only id references (application and staff), never a
-  copy of the shared users table, so user data is not duplicated.
-- Integrates with sibling features it does not own: it reads application data from
-  Student 3, reads interview notes from Student 4, and writes application-status
-  transitions back to Student 3 as an evaluation progresses
-  (Interview Completed -> Evaluation In Progress -> Hired / Rejected).
-- Evaluation status is derived at read time from whether a final recommendation
-  exists, rather than persisted as a status column.
+## Feature scope
 
-Using the Evidence below, assess:
-- ownership boundaries: what this feature legitimately owns versus what it only
-  reads from, or writes into, services owned by others
-- how it depends on shared auth for identity without duplicating user data
-- coupling and overlap risks, especially cross-service reads (Student 3 / Student 4)
-  and writing an application status that Student 3 owns
-- whether deriving status instead of storing it is a sound choice or a liability
+- Staff users can view applications that have completed interviews but have no evaluation yet,
+  create new evaluations for those applications, save evaluation drafts with partial scores,
+  record final Hire or Reject decisions, view and edit existing evaluations, and delete drafts
+  to free an application for re-evaluation.
+- Applicants cannot access evaluation features.
+- An evaluation includes scores for five criteria (Technical, Education, Communication, Problem
+  Solving, Professionalism), each on a 1–5 scale; an overall score; optional staff notes; and
+  an optional final recommendation (Hire or Reject).
+- Creating an evaluation with no final recommendation moves the linked Student 3 application to
+  `Evaluation In Progress`; recording a final Hire or Reject recommendation moves the application
+  to `Hired` or `Rejected`. Deleting a draft returns the application to `Interview Completed`.
+- Student 5 owns evaluation records and scoring workflow. Student 3 owns application records
+  and application status values; Student 4 owns interview records; Student 2 owns job postings;
+  Student 1 owns resumes; and shared services own user identity, credentials, and sessions.
+- The shared HttpOnly `session_token` cookie is used for cross-service authentication.
 
-Distinguish observed evidence from assumptions; label anything not visible in the
-Evidence as unverified rather than stating it as fact.
-Provide a concise review and at most one or two practical recommendations.
-Reply in at most 40 words.
+## Service ownership and local access
+
+Student 5 owns three independently containerised tiers:
+
+| Service | Container | Host port | Container port |
+| --- | --- | --- | --- |
+| Frontend | find-student-5-frontend | 16016 | 3005 |
+| Backend/API | find-student-5-backend | 16017 | 5005 |
+| Database | find-student-5-db | 16018 | 6005 |
+
+The local stack is started with `docker compose up --build`. Users log in through the shared
+frontend at `http://localhost:16001`, then open Evaluations from the dashboard or visit
+`http://localhost:16016` directly. Browser routes must use host-mapped public ports, while
+backend-to-service calls use Docker URLs such as `find-student-5-db:6005`, `student-3-db:6003`,
+`student-4-db:6004`, and `student-2-db:6002`. On Docker Desktop for Windows, `127.0.0.1` can be
+used instead of `localhost` if resolution is unexpected.
+
+## Frontend responsibilities
+
+The Student 5 frontend is a thin Flask page server for evaluation list and evaluation-detail views.
+It loads HTML fragments from `student-5-backend` for HTMX interactions and supplies public backend,
+shared API, login, and home URLs through environment variables. It serves local CSS and mounted
+shared CSS and JavaScript.
+
+The frontend should remain presentation-focused. It should not own evaluation persistence, role
+checks, eligibility logic, scoring validation, application status transitions, or AI prompt
+execution; those responsibilities belong to the backend/API, database service, or the relevant
+owning service.
+
+## Backend responsibilities and routes
+
+The Student 5 backend validates the caller's session against `shared-api`, enforces staff-only
+access, calls `student-5-db` for evaluation persistence, enriches evaluation data through
+Student 3, Student 4, Student 2, and shared-db, synchronises allowed application status
+transitions through Student 3, and returns JSON or HTML fragments for HTMX. Its route surface
+includes:
+
+| Method | Path | Responsibility |
+| --- | --- | --- |
+| GET | `/health` | Health and service status response |
+| GET | `/api/evaluations` | List all evaluations with optional status and recommendation filters |
+| GET | `/api/evaluations/{id}` | Get one enriched evaluation with linked interview notes |
+| POST | `/api/evaluations` | Create a new staff-owned evaluation draft |
+| PUT | `/api/evaluations/{id}` | Update an existing evaluation's scores, notes, or decision |
+| DELETE | `/api/evaluations/{id}` | Delete an evaluation draft and revert the application status |
+| GET | `/api/evaluations/rows` | Render evaluation list rows for HTMX |
+| GET | `/api/eligible-applications` | List applications ready for evaluation (Interview Completed, no evaluation) |
+| GET | `/api/eligible-applications/rows` | Render eligible-applications rows for HTMX |
+| GET | `/api/interview/{application_id}` | Get interview notes for an application |
+| POST | `/api/ai/evaluation-recommendation` | Generate AI-assisted scoring and rationale |
+| POST | `/api/evaluations/{id}/notify` | Notify the applicant of final hire/reject decision |
+
+The backend is organised into main application routes and an AI route blueprint, database and
+integration clients, a prompt loader, an Ollama client, and HTML formatter views. It enforces
+staff-only access on all routes. It derives eligibility by checking the Student 3 application
+status and the absence of an existing evaluation. It caches evaluator names and staff numbers by
+querying shared-db for each unique User_Id.
+
+Student 5 reads Student 3 applications to find eligible candidates and synchronise evaluation
+lifecycle states. It reads Student 4 interview notes, Student 2 postings, and shared-db users
+while enriching evaluation context. These cross-service references are soft references rather than
+local foreign keys.
+
+## Database ownership and seed data
+
+Student 5's SQLite database (`student5.db`) owns the `evaluations` table:
+
+- `Evaluation_Id`: local primary key.
+- `Application_Id`: soft cross-service reference to a Student 3 application (unique constraint).
+- `User_Id`: shared-db staff user reference; not a local user record.
+- `Evaluation_TechnicalScore`, `Evaluation_EducationScore`, `Evaluation_CommunicationScore`,
+  `Evaluation_ProblemSolvingScore`, `Evaluation_ProfessionalismScore`: per-criterion 1–5 scores.
+- `Evaluation_OverallScore`: calculated or directly entered overall score.
+- `Evaluation_FinalRecommendation`: nullable text field containing either `Hire`, `Reject`, or `NULL`
+  for draft evaluations.
+- `created_at`, `updated_at`: lifecycle timestamps.
+
+The database microservice is the only Student 5 process that talks directly to the SQLite file.
+It enforces score ranges (1–5) and valid recommendation values at the database layer. Its
+initialisation script creates the table when absent, clears existing evaluations, resets the SQLite
+sequence, and seeds 6 evaluation records with a mix of Hired, Rejected, and draft (Evaluation In
+Progress) states aligned to Student 3 application statuses. Re-running the script resets data
+rather than performing migrations.
+
+## Implemented Student 5 AI feature
+
+The AI-assisted evaluation scoring feature is implemented in Release 0 and is owned by Student 5.
+It is not dependent on a shared AI service. The `POST /api/ai/evaluation-recommendation` route:
+
+1. Validates the caller is authenticated and staff.
+2. Loads the application, job posting, and applicant identity from Student 3, Student 2, and
+   shared-db respectively.
+3. Fetches the linked interview from Student 4 and extracts assessment notes.
+4. Loads `evaluation_system_prompt.txt` and `evaluation_task_prompt.txt`, then builds a prompt
+   from interview notes, job description, requirements, applicant name, and application details.
+5. Calls the OpenAI-compatible Ollama endpoint using the configured `OLLAMA_MODEL`.
+6. Parses the response as JSON to extract 1–5 scores for each criterion and a rationale.
+7. Clamps any scores outside 1–5 to a default of 3, then retries once with stricter formatting
+   instructions if JSON parsing fails.
+8. Returns JSON with suggested scores and rationale. The response is not persisted; staff decide
+   whether to accept or override the suggestions.
+
+This implements the feature's PLAN -> ACT -> OBSERVE -> ADAPT flow: gather application, interview,
+posting, and identity evidence; call Ollama; parse and validate the model output; then retry or
+supply default scores when output quality or dependencies fail.
+
+Use the evidence below to identify:
+- at least 3 recommendations for code improvement, which may include changes related to:
+    - responsibilities and ownership boundaries for this feature's services
+    - dependencies, coupling, or overlapping responsibilities with shared or other services
+    - duplicated or dead code that should be removed or abstracted into another service, shared or individual
+    - architectural deviations from the canonical microservices architecture
+
+Distinguish observed evidence from assumptions. Provide at most one or two practical
+recommendations. Reply in at most 40 words.
