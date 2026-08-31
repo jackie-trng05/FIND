@@ -4,12 +4,12 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class ModeConfig:
-    key: str  # collector selector: "db" | "endpoints" | "architecture"
+    key: str  # collector selector: "db" | "endpoints" | "architecture" | "devops"
     label: str
-    kind: str  # pipeline selector: "service" | "architecture"
+    kind: str  # pipeline selector: "service" | "architecture" | "devops"
     prompt_family: str
     review_target: str = ""
-    scope: str | None = None  # student directory name for scoped architecture evidence
+    scope: str | None = None  # student directory name for scoped architecture/devops evidence
 
 
 def build_base_modes() -> list[ModeConfig]:
@@ -65,5 +65,42 @@ def discover_student_arch_modes(prompts_base: Path) -> list[ModeConfig]:
     return modes
 
 
+def discover_student_devops_modes(prompts_base: Path) -> list[ModeConfig]:
+    """Auto-discover per-student DevOps review targets.
+
+    Each student owns a CI workflow at .github/workflows/<student>-ci.yml and a downloaded
+    evidence pack (report.json, report.md, run-view.md, pytest artifacts) under
+    docs/release-0/reports/<student>/. A student is only picked up once both exist, so students
+    self-register by landing their evidence pack.
+    """
+    modes: list[ModeConfig] = []
+    repo_root = prompts_base.parent
+    reports_root = repo_root / "docs" / "release-0" / "reports"
+    workflows_root = repo_root / ".github" / "workflows"
+    if not reports_root.exists():
+        return modes
+
+    for child in sorted(reports_root.iterdir()):
+        if not child.is_dir():
+            continue
+        student_id = child.name
+        workflow_path = workflows_root / f"{student_id}-ci.yml"
+        if workflow_path.exists() and (child / "report.json").exists():
+            modes.append(
+                ModeConfig(
+                    key="devops",
+                    label=f"DevOps: {student_id}",
+                    kind="devops",
+                    prompt_family="devops",
+                    scope=student_id,
+                )
+            )
+    return modes
+
+
 def build_modes(prompts_base: Path) -> list[ModeConfig]:
-    return build_base_modes() + discover_student_arch_modes(prompts_base)
+    return (
+        build_base_modes()
+        + discover_student_arch_modes(prompts_base)
+        + discover_student_devops_modes(prompts_base)
+    )

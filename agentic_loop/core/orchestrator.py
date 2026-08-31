@@ -1,19 +1,27 @@
-from collectors import architecture_collector, db_collector, endpoints_collector
+from collectors import architecture_collector, db_collector, devops_collector, endpoints_collector
 from config.review_config import ModeConfig
 from core.ai_runner import AIRunner
 from core.prompt_registry import PromptRegistry
-from pipelines import architecture_pipeline, service_pipeline
+from pipelines import architecture_pipeline, devops_pipeline, service_pipeline
 
 
 COLLECTORS = {
     "db": db_collector.collect,
     "endpoints": endpoints_collector.collect,
     "architecture": architecture_collector.collect,
+    "devops": devops_collector.collect,
 }
 
 ARCH_SYSTEM_PROMPT = "implementation/architecture_system_prompt.txt"
 ARCH_TASK_PROMPT = "implementation/architecture_task_prompt.txt"
 ARCH_REVIEW_PROMPT = "review/agent_review_prompt.txt"
+
+DEVOPS_TASK_PROMPT = "implementation/devops_pipeline_review_prompt.txt"
+DEVOPS_REVIEW_PROMPT = "review/devops_evidence_review_prompt.txt"
+DEVOPS_SYSTEM_PROMPT = (
+    "You are a precise DevOps review assistant. "
+    "Use only supplied evidence and reply in at most 30 words."
+)
 
 
 def _stage(mode_label: str, step: str, message: str) -> None:
@@ -99,12 +107,44 @@ def _run_architecture_mode(mode: ModeConfig, prompts: PromptRegistry, ai: AIRunn
     )
 
 
+def _run_devops_mode(mode: ModeConfig, prompts: PromptRegistry, ai: AIRunner, evidence: str) -> str:
+    _stage(mode.label, "PROMPTS", "Loading DevOps prompt family")
+    task_prompt = prompts.read("devops", DEVOPS_TASK_PROMPT)
+    implementation_user_prompt = devops_pipeline.build_implementation_prompt(task_prompt, evidence)
+    _stage(mode.label, "PROMPTS", "Loaded DevOps implementation prompt")
+
+    _stage(mode.label, "LLM", "Running DevOps implementation model")
+    implementation_output, err = ai.call(DEVOPS_SYSTEM_PROMPT, implementation_user_prompt, review=False)
+    if err:
+        _stage(mode.label, "LLM", "Failed")
+        return f"MODEL FAILED: {err}"
+    _stage(mode.label, "LLM", "DevOps implementation model complete")
+
+    review_system_prompt = prompts.read("devops", DEVOPS_REVIEW_PROMPT)
+    review_user_prompt = devops_pipeline.build_review_prompt(implementation_output, evidence)
+    _stage(mode.label, "PROMPTS", "Loaded DevOps review prompt")
+    _stage(mode.label, "LLM", "Running DevOps review model")
+    review_output, review_err = ai.call(review_system_prompt, review_user_prompt, review=True)
+    if review_err:
+        review_output = review_err
+        _stage(mode.label, "LLM", "DevOps review model failed")
+    else:
+        _stage(mode.label, "LLM", "DevOps review model complete")
+
+    _stage(mode.label, "DONE", "Review complete")
+    return (
+        f"OBSERVE: {evidence}\n\n"
+        f"DEVOPS: {implementation_output}\n"
+        f"REVIEW: {review_output}"
+    )
+
+
 def run_mode(mode: ModeConfig, app_dir, repo_root, prompts: PromptRegistry, ai: AIRunner) -> str:
     _stage(mode.label, "START", "Starting review flow")
     _stage(mode.label, "OBSERVE", "Collecting evidence")
 
     collector = COLLECTORS[mode.key]
-    if mode.key == "architecture":
+    if mode.key in ("architecture", "devops"):
         ok, evidence = collector(app_dir, repo_root, mode.scope)
     else:
         ok, evidence = collector(app_dir, repo_root)
@@ -118,4 +158,6 @@ def run_mode(mode: ModeConfig, app_dir, repo_root, prompts: PromptRegistry, ai: 
         return _run_service_mode(mode, prompts, ai, evidence)
     if mode.kind == "architecture":
         return _run_architecture_mode(mode, prompts, ai, evidence)
+    if mode.kind == "devops":
+        return _run_devops_mode(mode, prompts, ai, evidence)
     return "Unknown mode."
