@@ -1,8 +1,8 @@
 """Session/auth helper for the Student-5 (Evaluation) backend.
 
-``require_session`` forwards the incoming session cookie (or Authorization
-header) to the shared authentication API and returns the authenticated user.
-It is shared by ``app.py`` and the AI-Mode blueprint.
+``require_session`` forwards the session cookie/Authorization header to the
+shared auth API and returns the authenticated user. Used by ``app.py`` and
+the AI-Mode blueprint.
 """
 
 import requests as http_requests

@@ -202,9 +202,6 @@
   <script src="/js/find-app.js"></script>
 
   <script>
-    // Reactive form behaviour that stays client-side by design: the live
-    // overall-score calculator and the "Apply AI Scores" helper. Persisting the
-    // evaluation (save/submit) is handled by HTMX on the form buttons.
     const BACKEND = '{{ backend_url }}';
     let applicationId = {{ application_id if application_id else 'null' }};
     let evaluationId = {{ evaluation_id if evaluation_id is defined and evaluation_id else 'null' }};
@@ -228,10 +225,8 @@
       document.getElementById('overall-score').textContent = avg;
     }
 
-    // Guard for the "Submit Evaluation" button. Unlike "Save as Draft", a real
-    // submission MUST have EVERY field completed; otherwise the record would
-    // silently be stored as a draft. Returning false stops HTMX from firing the
-    // request (hx-trigger="click[validateSubmit()]").
+    // A submission must have every field completed, otherwise the record would
+    // silently be stored as a draft. Returning false stops HTMX firing the request.
     function validateSubmit() {
       const form = document.getElementById('eval-form');
       const fields = form.querySelectorAll('input[name], select[name], textarea[name]');

@@ -30,21 +30,15 @@ CREATE TABLE IF NOT EXISTS evaluations (
 
 cursor.execute("DELETE FROM evaluations")
 
-# Seed rows are kept consistent with the Student-3 application statuses so an
-# application's status always matches whether (and how) it has been evaluated:
-#   Hired    -> a finalized "Hire" evaluation
-#   Rejected -> a finalized "Reject" evaluation
-#   Evaluation In Progress -> a draft (no final recommendation yet)
-#   Interview Completed    -> NO evaluation (still "ready for evaluation")
 # (Application_Id, User_Id, Tech, Edu, Comm, ProblemSolving, Prof, Overall, Recommendation)
 seed = [
-    # Finalized — applications that are Hired.
+    # Hired
     (13, 1, 5, 4, 4, 5, 4, 4.4, "Hire"),
     (17, 3, 4, 5, 3, 4, 5, 4.2, "Hire"),
-    # Finalized — applications that are Rejected.
+    # Rejected
     (16, 2, 2, 2, 3, 2, 3, 2.4, "Reject"),
     (19, 4, 3, 2, 2, 1, 2, 2.0, "Reject"),
-    # Drafts — applications that are Evaluation In Progress.
+    # Drafts (Evaluation In Progress)
     (14, 1, 3, 4, 3, 3, 3, 3.2, None),
     (15, 5, 4, 4, 4, 3, 4, 3.8, None),
 ]
