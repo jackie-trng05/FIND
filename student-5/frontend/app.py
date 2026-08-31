@@ -1,7 +1,6 @@
-from flask import Flask, render_template, send_from_directory, request, redirect, Response, jsonify
+from flask import Flask, render_template, send_from_directory, jsonify
 from flask_cors import CORS
 import os
-import requests as http_requests
 
 app = Flask(__name__, template_folder="templates")
 CORS(app, supports_credentials=True)

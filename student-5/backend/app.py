@@ -163,9 +163,7 @@ def _finish_save(resp, data):
 
 
 def _evaluator_fields(user_id):
-    """Derive the evaluator's display name and staff number from the shared users
-    table via the User_Id FK, so they are not duplicated in the evaluations table.
-    The staff number is a deterministic function of the user id (HR-00N)."""
+    """Derive the evaluator's display name and staff number (HR-00N) from User_Id."""
     if user_id is None:
         return "", ""
     number = f"HR-{int(user_id):03d}"
@@ -412,35 +410,6 @@ def eligible_applications_rows():
     except Exception:
         apps = []
     return Response(render_eligible_rows(apps), mimetype="text/html")
-
-
-# --- Notification (SMTP stub) ---
-
-@app.post("/api/evaluations/<int:evaluation_id>/notify")
-def send_notification(evaluation_id):
-    user, err = _require_staff()
-    if err:
-        return err
-
-    data = request.get_json() or {}
-    action = data.get("action")
-    if action not in ("Hired", "Rejected"):
-        return jsonify({"error": "Action must be Hired or Rejected"}), 400
-
-    ev_resp = http_requests.get(f"{DB_SERVICE_URL}/evaluations/{evaluation_id}")
-    if ev_resp.status_code != 200:
-        return jsonify({"error": "Evaluation not found"}), 404
-    ev = ev_resp.json()
-
-    try:
-        applicant_email = _apply_decision(ev["Application_Id"], action)
-        return jsonify({
-            "message": f"Application status updated to {action}. Notification would be sent to {applicant_email}.",
-            "status": action,
-            "email": applicant_email,
-        })
-    except Exception as e:
-        return jsonify({"error": f"Failed to update application: {str(e)}"}), 500
 
 
 if __name__ == "__main__":
