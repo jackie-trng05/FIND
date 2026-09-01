@@ -1,3 +1,5 @@
+"""Shared authentication API for the FIND platform (session cookie issuer)."""
+
 from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 import hashlib
