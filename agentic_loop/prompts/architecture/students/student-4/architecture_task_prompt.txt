@@ -1,29 +1,141 @@
-Review the Student 4 feature architecture: interview scheduling, invitation, and coordination management.
+Review the Student 4 feature architecture: interview scheduling, invitation, and coordination
+management for the FIND recruitment platform. Use the baseline below together with the collected
+evidence. Treat the baseline as the intended design, but distinguish observed evidence, assumptions,
+and unverified claims.
 
-This feature owns its own frontend (student-4-frontend), backend/API
-(student-4-backend), and database (student-4-db) tiers. It reuses the shared auth
-service (shared-api/shared-db) for identity (users and sessions) via an HttpOnly
-session_token cookie, and never stores credentials or user profiles in its own
-interview.db database.
+## Feature scope
 
-Interviews are stored in student-4-db (`interviews` table) with application_id, staff user_id,
-interview_datetime, link, and structured JSON assessment notes across 5 skill criteria.
-It integrates cross-microservice with Student 3 (applications) to query applications and sync status
-(Interview Requested/Scheduled), Student 2 (job postings), Student 1 (resumes), and shared-db (user names).
-The backend renders HTML fragments for an HTMX frontend (calendar view, list view, schedule modal, and write-ups).
+- Staff users can view shortlisted applications, schedule future interviews, view interview details,
+	cancel permitted interviews, and record assessment notes after an interview has taken place.
+- Applicants can view only their own interview requests, accept or decline a request, and view their
+	own interview details.
+- Creating an interview changes the linked Student 3 application to `Interview Requested`; accepting
+	it changes the application to `Interview Scheduled`; completing it changes the application to
+	`Interview Completed`; declining it deletes the interview and returns the application to
+	`Shortlisted`.
+- An interview includes an application reference, staff user reference, date and time, optional
+	meeting link, and assessment notes. Interview date and time must be future-facing when scheduled,
+	and meeting links must be empty or begin with `http://` or `https://`.
+- Completing an interview requires all five assessment areas: Technical, Education, Communication,
+	Problem Solving, and Professionalism.
+- Student 4 owns interview records and interview coordination. Student 3 owns application records
+	and application status values; Student 2 owns job postings; Student 1 owns resumes; and shared
+	services own user identity, credentials, and sessions.
+- The shared HttpOnly `session_token` cookie is used for cross-service authentication.
 
-The AI interview assistant and smart scheduling capability (suggest optimal interview time slots from
-staff availability and answer recruitment queries) is a self-contained AI-Mode integration owned by this
-feature (routes/ai_mode.py, services/llm_client.py, prompts/), calling Ollama directly (llama3.1:8b) the
-same way student-1/2/3/5 each own their own AI-Mode -- it does not depend on the shared ai-services/ai-mode placeholder.
+## Service ownership and local access
+
+Student 4 owns three independently containerised tiers:
+
+| Service | Container | Host port | Container port |
+| --- | --- | --- | --- |
+| Frontend | find-student-4-frontend | 16013 | 3004 |
+| Backend/API | find-student-4-backend | 16014 | 5004 |
+| Database | find-student-4-db | 16015 | 6004 |
+
+The local stack is started with `docker compose up --build`. Users log in through the shared
+frontend at `http://localhost:16001`, then open Interviews from the dashboard or visit
+`http://localhost:16013` directly. Browser routes must use host-mapped public ports, while
+backend-to-service calls use Docker URLs such as `student-4-db:6004`, `student-3-db:6003`, and
+`student-2-db:6002`. On Docker Desktop for Windows, `127.0.0.1` can be used instead of
+`localhost` if resolution is unexpected.
+
+## Frontend responsibilities
+
+The Student 4 frontend is a thin Flask page server for interview calendar, list, request, schedule,
+and interview-detail views. It loads HTML fragments from `student-4-backend` for HTMX interactions
+and supplies public backend, shared API, login, home, and applications URLs through environment
+variables. It serves local CSS and mounted shared CSS and JavaScript.
+
+The frontend should remain presentation-focused. It should not own interview persistence, role and
+ownership checks, scheduling and lifecycle validation, application status transitions, or AI prompt
+execution; those responsibilities belong to the backend/API, database service, or the relevant
+owning service.
+
+## Backend responsibilities and routes
+
+The Student 4 backend validates the caller's session against `shared-api`, applies staff/applicant
+access rules, calls `student-4-db` for interview persistence, enriches interview data through
+Student 3, Student 2, Student 1, and shared-db, synchronises allowed application status transitions
+through Student 3, and returns JSON or HTML fragments for HTMX. Its route surface includes:
+
+| Method | Path | Responsibility |
+| --- | --- | --- |
+| GET | `/` | Health and service status response |
+| GET | `/interviews` | List authenticated interviews with optional filters |
+| GET | `/interviews/to-complete` | List past scheduled interviews needing completion |
+| GET | `/interviews/{id}` | Get one enriched interview |
+| GET | `/schedulable-applications` | List shortlisted applications available to schedule |
+| POST | `/interviews` | Create an interview and request it from the applicant |
+| PUT | `/interviews/{id}` | Update interview assessment notes only |
+| POST | `/interviews/{id}/accept` | Applicant accepts an interview request |
+| POST | `/interviews/{id}/decline` | Applicant declines a request and removes the interview |
+| POST | `/interviews/{id}/complete` | Save five assessment notes and complete an interview |
+| DELETE | `/interviews/{id}` | Cancel a permitted upcoming interview |
+| GET | `/ui/calendar` | Render an authenticated calendar fragment |
+| GET | `/ui/interviews/rows` | Render filtered interview list rows |
+| GET | `/ui/applications/rows` | Render staff-only schedulable-application rows |
+| GET | `/ui/schedule/options` | Render staff-only schedule options |
+| GET | `/ui/to-complete/rows` | Render staff-only completion rows |
+| GET | `/ui/requests` | Render the caller's interview-request fragment |
+| GET | `/ui/interviews/{id}/detail` | Render an authorised interview-detail fragment |
+| POST | `/ask` | Answer a recruitment question with the local AI assistant |
+| POST | `/suggest-times` | Suggest conflict-free future interview time slots |
+
+The backend is organised into normal UI and AI route blueprints, database and integration clients,
+a prompt loader, an Ollama client, and HTML formatter views. It filters applicant interview lists by
+applicant identity; staff can see all interviews. It rejects unauthenticated requests, limits
+schedule and completion UI fragments to staff, and checks an applicant's ownership before returning
+an interview detail fragment.
+
+Student 4 reads Student 3 applications to find shortlisted candidates and synchronise interview
+lifecycle states. It reads Student 2 postings, Student 1 resumes, and shared-db users while enriching
+interview context. These cross-service references are soft references rather than local foreign keys.
+
+## Database ownership and seed data
+
+Student 4's SQLite database (`interview.db`) owns the `interviews` table:
+
+- `interview_id`: local primary key.
+- `application_id`: soft cross-service reference to a Student 3 application.
+- `user_id`: shared-db staff user reference; not a local user record.
+- `interview_datetime`: scheduled interview timestamp.
+- `interview_link`: optional meeting URL.
+- `interview_notes`: text containing structured JSON notes for the five assessment areas.
+
+The database microservice is the only Student 4 process that talks directly to the SQLite file. Its
+initialisation script creates the table when absent, clears existing interviews, resets the SQLite
+sequence, and seeds 10 interview records with application IDs, staff user IDs, dates, links, and a
+mix of completed and empty assessment notes. Re-running the script resets data rather than
+performing migrations.
+
+## Implemented Student 4 AI feature
+
+The interview assistant and smart scheduling feature is implemented in Release 0 and is owned by
+Student 4. It is not dependent on a shared AI service. The `POST /ask` route sends a concise
+recruitment question to the configured OpenAI-compatible Ollama model. The `POST /suggest-times`
+route:
+
+1. Reads staff availability and applicant preferences from the request.
+2. Retrieves existing interviews from Student 4's database service.
+3. Loads `interview/system_prompt.txt` and `interview/task_prompt.txt` using the local prompt
+	 loader, adds the current time and existing schedule, and calls Ollama.
+4. Parses only valid, future `YYYY-MM-DD HH:MM` values and removes schedule conflicts and duplicate
+	 suggestions.
+5. Adds deterministic weekday business-hour slots when the model is unavailable or returns fewer
+	 than six valid suggestions.
+6. Returns an HTML fragment of clickable time suggestions. The response is not persisted.
+
+This implements the feature's PLAN -> ACT -> OBSERVE -> ADAPT flow: gather preferences and current
+schedule, call Ollama, validate output against time and conflict constraints, then supplement it
+with deterministic slots when necessary.
 
 Use the evidence below to identify:
-- responsibilities and ownership boundaries for this feature's services
-- dependencies, coupling, or overlapping responsibilities with shared or other services
-- duplicated or dead code that should be removed or abstracted into another service, shared or individual
-- architectural deviations from the canonical microservices architecture
+- at least 3 recommendations for code improvement, which may include changes related to:
+		- responsibilities and ownership boundaries for this feature's services
+		- dependencies, coupling, or overlapping responsibilities with shared or other services
+		- duplicated or dead code that should be removed or abstracted into another service, shared or individual
+		- architectural deviations from the canonical microservices architecture
 
-Distinguish observed evidence from assumptions.
-
-Provide a concise review and at most one or two practical recommendations.
-Reply in at most 40 words.
+Distinguish observed evidence from assumptions. Provide at most one or two practical
+recommendations. Reply in at most 40 words.

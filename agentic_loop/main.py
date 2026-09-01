@@ -22,6 +22,7 @@ def _print_mode_mapping(prompts_base: Path) -> None:
         "Shared Endpoints": prompts_base / "prompts" / "service",
         "Architecture": prompts_base / "prompts" / "architecture",
         "Student Architecture": prompts_base / "prompts" / "architecture" / "students",
+        "Student DevOps": prompts_base / "prompts" / "devops",
     }
     print_prompt_map({key: str(path) for key, path in prompt_map.items()})
 
