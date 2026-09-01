@@ -3,8 +3,8 @@
 Covers three layers without touching the network or the LLM:
 
 * ``views.html_formatters`` — pure HTML fragment builders.
-* ``routes.normal_ui`` validation helpers.
-* ``routes.normal_ui`` HTTP handlers, with the database/integration service
+* ``routes.interviews`` validation helpers.
+* ``routes.interviews`` HTTP handlers, with the database/integration service
   calls stubbed out so only this service's logic is exercised.
 """
 
@@ -14,8 +14,8 @@ import pytest
 import requests
 from flask import Flask
 
-from routes import normal_ui
-from routes.normal_ui import normal_ui_bp
+from routes import interviews
+from routes.interviews import interviews_bp
 from services import integration_api
 from views import html_formatters as fmt
 
@@ -52,7 +52,7 @@ def client():
     app = Flask(__name__)
     # Register only the normal UI blueprint so the AI/LLM route (and its
     # ``openai`` dependency) is never imported during testing.
-    app.register_blueprint(normal_ui_bp)
+    app.register_blueprint(interviews_bp)
     app.config.update(TESTING=True)
     with app.test_client() as test_client:
         yield test_client
@@ -74,7 +74,7 @@ def stub_session(monkeypatch):
     the session gate to pass so the route logic can be exercised.
     """
     fake_user = {"user_id": 1, "role": "staff", "first_name": "Test", "last_name": "Staff"}
-    monkeypatch.setattr(normal_ui, "get_session_user", lambda: fake_user)
+    monkeypatch.setattr(interviews, "get_session_user", lambda: fake_user)
 
 
 # --------------------------------------------------------------------------- #
@@ -128,30 +128,30 @@ def test_format_interview_html_with_and_without_link():
 # --------------------------------------------------------------------------- #
 
 def test_positive_int():
-    assert normal_ui._positive_int("5") is True
-    assert normal_ui._positive_int(" 3 ") is True
-    assert normal_ui._positive_int("0") is False
-    assert normal_ui._positive_int("-1") is False
-    assert normal_ui._positive_int("abc") is False
-    assert normal_ui._positive_int(None) is False
+    assert interviews._positive_int("5") is True
+    assert interviews._positive_int(" 3 ") is True
+    assert interviews._positive_int("0") is False
+    assert interviews._positive_int("-1") is False
+    assert interviews._positive_int("abc") is False
+    assert interviews._positive_int(None) is False
 
 
 def test_valid_datetime():
-    assert normal_ui._valid_datetime("2026-09-10 10:00") is True
-    assert normal_ui._valid_datetime("2026/09/10 10:00") is False
-    assert normal_ui._valid_datetime("not a date") is False
+    assert interviews._valid_datetime("2026-09-10 10:00") is True
+    assert interviews._valid_datetime("2026/09/10 10:00") is False
+    assert interviews._valid_datetime("not a date") is False
 
 
 def test_is_future():
-    assert normal_ui._is_future(_future_dt()) is True
-    assert normal_ui._is_future(_past_dt()) is False
+    assert interviews._is_future(_future_dt()) is True
+    assert interviews._is_future(_past_dt()) is False
 
 
 def test_valid_link():
-    assert normal_ui._valid_link("") is True
-    assert normal_ui._valid_link("https://x.com") is True
-    assert normal_ui._valid_link("http://x.com") is True
-    assert normal_ui._valid_link("ftp://x.com") is False
+    assert interviews._valid_link("") is True
+    assert interviews._valid_link("https://x.com") is True
+    assert interviews._valid_link("http://x.com") is True
+    assert interviews._valid_link("ftp://x.com") is False
 
 
 # --------------------------------------------------------------------------- #
@@ -163,7 +163,7 @@ def test_list_interviews_filters_by_status(client, monkeypatch):
         {"interview_id": 1, "user_id": 1, "applicant_id": 4, "application_status": "Interview Scheduled"},
         {"interview_id": 2, "user_id": 1, "applicant_id": 5, "application_status": "Interview Completed"},
     ]
-    monkeypatch.setattr(normal_ui, "get_interviews_response", lambda f: _FakeResponse(rows))
+    monkeypatch.setattr(interviews, "get_interviews_response", lambda f: _FakeResponse(rows))
 
     resp = client.get("/interviews?status=Interview Completed")
     assert resp.status_code == 200
@@ -177,7 +177,7 @@ def test_list_interviews_filters_by_staff(client, monkeypatch):
         {"interview_id": 1, "user_id": 1, "applicant_id": 4},
         {"interview_id": 2, "user_id": 2, "applicant_id": 5},
     ]
-    monkeypatch.setattr(normal_ui, "get_interviews_response", lambda f: _FakeResponse(rows))
+    monkeypatch.setattr(interviews, "get_interviews_response", lambda f: _FakeResponse(rows))
 
     body = client.get("/interviews?user_id=2").get_json()
     assert [r["interview_id"] for r in body] == [2]
@@ -186,7 +186,7 @@ def test_list_interviews_filters_by_staff(client, monkeypatch):
 def test_list_interviews_db_unreachable_returns_503(client, monkeypatch):
     def _boom(_filters):
         raise requests.ConnectionError("down")
-    monkeypatch.setattr(normal_ui, "get_interviews_response", _boom)
+    monkeypatch.setattr(interviews, "get_interviews_response", _boom)
 
     resp = client.get("/interviews")
     assert resp.status_code == 503
@@ -195,7 +195,7 @@ def test_list_interviews_db_unreachable_returns_503(client, monkeypatch):
 
 def test_get_interview_not_found(client, monkeypatch):
     monkeypatch.setattr(
-        normal_ui, "get_interview_response", lambda i: _FakeResponse(status_code=404)
+        interviews, "get_interview_response", lambda i: _FakeResponse(status_code=404)
     )
     resp = client.get("/interviews/999")
     assert resp.status_code == 404
@@ -238,7 +238,7 @@ def test_schedule_interview_success(client, monkeypatch):
         captured["status_synced"] = (app_id, status)
         return True
 
-    monkeypatch.setattr(normal_ui, "create_interview", _create)
+    monkeypatch.setattr(interviews, "create_interview", _create)
     monkeypatch.setattr(integration_api, "set_application_status", _set_status)
 
     resp = client.post("/interviews", json={
@@ -260,7 +260,7 @@ def test_accept_interview_sets_scheduled(client, monkeypatch):
     seen = {}
 
     monkeypatch.setattr(
-        normal_ui, "get_interview_response",
+        interviews, "get_interview_response",
         lambda i: _FakeResponse({"interview_id": i, "application_id": 4}),
     )
     monkeypatch.setattr(
@@ -286,7 +286,7 @@ def _full_notes():
 def test_complete_interview_saves_notes_and_completes(client, monkeypatch):
     seen = {}
     monkeypatch.setattr(
-        normal_ui, "get_interview_response",
+        interviews, "get_interview_response",
         lambda i: _FakeResponse({
             "interview_id": i, "application_id": 4,
             "application_status": "Interview Scheduled",
@@ -298,7 +298,7 @@ def test_complete_interview_saves_notes_and_completes(client, monkeypatch):
         seen["payload"] = payload
         return _FakeResponse({"interview_id": i, "application_id": 4, **payload})
 
-    monkeypatch.setattr(normal_ui, "update_interview", _update)
+    monkeypatch.setattr(interviews, "update_interview", _update)
     monkeypatch.setattr(
         integration_api, "set_application_status",
         lambda app_id, status: seen.setdefault("synced", (app_id, status)),
@@ -329,7 +329,7 @@ def test_complete_requires_notes_object(client):
 
 def test_complete_rejects_future_interview(client, monkeypatch):
     monkeypatch.setattr(
-        normal_ui, "get_interview_response",
+        interviews, "get_interview_response",
         lambda i: _FakeResponse({
             "interview_id": i, "application_id": 4,
             "application_status": "Interview Scheduled",
@@ -343,7 +343,7 @@ def test_complete_rejects_future_interview(client, monkeypatch):
 
 def test_complete_rejects_non_scheduled_interview(client, monkeypatch):
     monkeypatch.setattr(
-        normal_ui, "get_interview_response",
+        interviews, "get_interview_response",
         lambda i: _FakeResponse({
             "interview_id": i, "application_id": 4,
             "application_status": "Interview Requested",
@@ -370,7 +370,7 @@ def test_update_rejects_detail_edits(client):
 
 def test_cancel_interview_not_found(client, monkeypatch):
     monkeypatch.setattr(
-        normal_ui, "get_interview_response", lambda i: _FakeResponse(status_code=404)
+        interviews, "get_interview_response", lambda i: _FakeResponse(status_code=404)
     )
     resp = client.delete("/interviews/999")
     assert resp.status_code == 404
@@ -378,11 +378,11 @@ def test_cancel_interview_not_found(client, monkeypatch):
 
 def test_cancel_interview_success(client, monkeypatch):
     monkeypatch.setattr(
-        normal_ui, "get_interview_response",
+        interviews, "get_interview_response",
         lambda i: _FakeResponse({"interview_id": i, "application_status": "Interview Requested"}),
     )
     monkeypatch.setattr(
-        normal_ui, "delete_interview", lambda i: _FakeResponse({"deleted": i})
+        interviews, "delete_interview", lambda i: _FakeResponse({"deleted": i})
     )
     resp = client.delete("/interviews/1")
     assert resp.status_code == 200
@@ -392,7 +392,7 @@ def test_cancel_interview_success(client, monkeypatch):
 def test_cancel_interview_rejects_past_scheduled(client, monkeypatch):
     # A scheduled interview that has already happened is completed, not cancelled.
     monkeypatch.setattr(
-        normal_ui, "get_interview_response",
+        interviews, "get_interview_response",
         lambda i: _FakeResponse({
             "interview_id": i,
             "application_status": "Interview Scheduled",
@@ -418,7 +418,7 @@ def test_schedulable_excludes_already_scheduled(client, monkeypatch):
     ])
     # Interview already exists for application 4, so it is filtered out.
     monkeypatch.setattr(
-        normal_ui, "get_interviews_response",
+        interviews, "get_interviews_response",
         lambda f: _FakeResponse([{"application_id": 4}]),
     )
 
