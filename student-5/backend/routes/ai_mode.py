@@ -19,7 +19,7 @@ import json
 import requests as http_requests
 from flask import Blueprint, jsonify, request
 
-from services.auth import require_session
+from services.integration_api import require_session
 from services.config import (
     APPLICATIONS_DB_URL,
     INTERVIEWS_DB_URL,
@@ -107,8 +107,8 @@ def ai_recommendation():
     except Exception:
         pass
 
-    system_prompt = load_prompt("evaluation_system_prompt.txt")
-    user_prompt = load_prompt("evaluation_task_prompt.txt").format(
+    system_prompt = load_prompt("system_prompt.txt")
+    user_prompt = load_prompt("task_prompt.txt").format(
         interview_notes=interview_notes or "Not available",
         job_info=job_info or "Not available",
         applicant_info=applicant_info or "Not available",

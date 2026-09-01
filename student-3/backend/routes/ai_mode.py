@@ -4,7 +4,7 @@ import requests
 from flask import Blueprint
 
 from services import database_api
-from services.database_api import (
+from services.integration_api import (
     download_resume_stream,
     get_job_posting,
     get_resume_metadata,
@@ -56,8 +56,8 @@ def screen_application(application_id):
             pass
 
     try:
-        system_prompt = load_prompt("screening_system_prompt.txt")
-        task_template = load_prompt("screening_task_prompt.txt")
+        system_prompt = load_prompt("system_prompt.txt")
+        task_template = load_prompt("task_prompt.txt")
     except OSError:
         return render_message("AI prompt templates are missing.", "error"), 200
 

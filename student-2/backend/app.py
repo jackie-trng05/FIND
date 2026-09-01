@@ -9,7 +9,6 @@ Container port: 5002 (host port 16008 per the canonical port table).
 """
 
 from pathlib import Path
-import os
 import sys
 
 from flask import Flask
@@ -21,6 +20,7 @@ if str(BASE_DIR) not in sys.path:
 
 from routes.ai_mode import ai_mode_bp
 from routes.job_postings import job_postings_bp
+from services.config import FRONTEND_PUBLIC_URL, PORT
 
 
 def create_app() -> Flask:
@@ -28,11 +28,10 @@ def create_app() -> Flask:
     # Frontend is served from a different origin (port 16007). We use cookies
     # for auth (same session cookie as the profile feature), so credentials
     # must be allowed and the origin must be specific (not "*").
-    frontend_origin = os.getenv("FRONTEND_PUBLIC_URL", "http://localhost:16007")
     CORS(
         app,
         supports_credentials=True,
-        origins=[frontend_origin],
+        origins=[FRONTEND_PUBLIC_URL],
         expose_headers=["HX-Redirect", "HX-Trigger"],
     )
 
@@ -45,5 +44,4 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "5002"))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=PORT, debug=True)

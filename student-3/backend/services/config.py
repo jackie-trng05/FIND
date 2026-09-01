@@ -1,4 +1,4 @@
-"""Shared configuration and domain constants for the Application service.
+"""Environment-driven configuration for the Student 3 (Application) backend.
 
 Centralises environment-driven service URLs and the status/resume constants
 used across the routes, services and views packages so they are defined once.
@@ -24,10 +24,16 @@ POSTINGS_DB_URL = os.environ["POSTINGS_DB_URL"]
 STUDENT_1_DB_URL = os.environ["STUDENT_1_DB_URL"]
 INTERVIEWS_DB_URL = os.getenv("INTERVIEWS_DB_URL", "http://student-4-db:6004")
 
+# --------------------------------------------------------------------------- #
+# AI-Mode (Ollama)                                                            #
+# --------------------------------------------------------------------------- #
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+
 PORT = int(os.getenv("PORT", "5003"))
 TIMEOUT = 5
 
-_DB_UNAVAILABLE = (
+DB_UNAVAILABLE = (
     "Could not reach the database service. Make sure the student-3-db "
     "container is running."
 )

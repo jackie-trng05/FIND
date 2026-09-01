@@ -4,18 +4,16 @@ Uses the approved open-source LLM through the local Ollama runtime, following
 the same pattern as the other students' AI-Mode integrations.
 """
 
-import os
 from io import BytesIO
 
 from openai import OpenAI
+
+from services.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 
 try:
     from pypdf import PdfReader  # type: ignore
 except Exception:  # pragma: no cover
     PdfReader = None  # type: ignore
-
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 
 client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama", timeout=120.0)
 

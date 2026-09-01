@@ -1,6 +1,6 @@
 """Tests for the Student 3 backend helper rendering and AI parsing logic.
 
-The backend is composed from the ``config``, ``services`` and ``views``
+The backend is composed from the ``services``, ``views`` and ``routes``
 packages (see ``backend/app.py``); this suite exercises the presentation and
 AI-parsing helpers directly from those modules.
 """
@@ -9,7 +9,7 @@ import os
 import types
 from unittest.mock import Mock
 
-# config.py reads these service URLs at import time.
+# services/config.py reads these service URLs at import time.
 os.environ.setdefault("DATABASE_SERVICE_URL", "http://student-3-db:6003")
 os.environ.setdefault("SHARED_API_URL", "http://find-shared-api:5000")
 os.environ.setdefault("SHARED_DB_URL", "http://find-shared-db:6000")
@@ -17,11 +17,9 @@ os.environ.setdefault("POSTINGS_DB_URL", "http://student-2-db:6002")
 os.environ.setdefault("STUDENT_1_DB_URL", "http://find-student-1-db:6001")
 
 # backend/ is placed on sys.path by conftest.py.
-import config
 import app as backend_app
 from routes import applications as application_routes
-from routes import staff as staff_routes
-from services import llm_client
+from services import config, database_api, integration_api, llm_client
 from views import html_formatters
 
 
@@ -128,9 +126,9 @@ def test_my_applications_filters_status_title_and_sort_for_current_user(monkeypa
     response = Mock()
     response.json.return_value = [_APPLICATION, frontend_application, _DRAFT_APPLICATION]
 
-    monkeypatch.setattr(application_routes, "get_session_user", lambda: {"user_id": 6})
-    monkeypatch.setattr(application_routes.requests, "get", Mock(return_value=response))
-    monkeypatch.setattr(application_routes, "get_postings_map", lambda ids: {42: _POSTING, 43: frontend_posting})
+    monkeypatch.setattr(integration_api, "get_session_user", lambda: {"user_id": 6})
+    monkeypatch.setattr(database_api.requests, "get", Mock(return_value=response))
+    monkeypatch.setattr(integration_api, "get_postings_map", lambda ids: {42: _POSTING, 43: frontend_posting})
 
     with backend_app.app.test_client() as client:
         result = client.get("/api/my-applications?status=Submitted&q=engineer&sort=title&order=desc")
@@ -138,7 +136,7 @@ def test_my_applications_filters_status_title_and_sort_for_current_user(monkeypa
     assert result.status_code == 200
     assert result.text.index("Frontend Engineer") < result.text.index("Backend Engineer")
     assert "#8" not in result.text
-    application_routes.requests.get.assert_called_once_with(
+    database_api.requests.get.assert_called_once_with(
         f"{config.DATABASE_SERVICE_URL}/applications", params={"user_id": 6}, timeout=config.TIMEOUT
     )
 
@@ -201,8 +199,8 @@ def test_render_candidate_profile_hides_manual_actions_when_rejected():
 
 
 def test_update_status_only_allows_submitted_to_shortlisted_or_rejected(monkeypatch):
-    monkeypatch.setattr(staff_routes, 'get_session_user', lambda: {'role': 'staff'})
-    monkeypatch.setattr(staff_routes, 'load_application', lambda application_id: ({'application_status': 'Hired'}, None))
+    monkeypatch.setattr(integration_api, 'get_session_user', lambda: {'role': 'staff'})
+    monkeypatch.setattr(application_routes, 'load_application', lambda application_id: ({'application_status': 'Hired'}, None))
 
     with backend_app.app.test_client() as client:
         resp = client.put('/api/applications/7/status', json={'application_status': 'Shortlisted'})
@@ -212,11 +210,11 @@ def test_update_status_only_allows_submitted_to_shortlisted_or_rejected(monkeypa
 
 
 def test_update_status_allows_reject_from_non_rejected_states(monkeypatch):
-    monkeypatch.setattr(staff_routes, 'get_session_user', lambda: {'role': 'staff'})
+    monkeypatch.setattr(integration_api, 'get_session_user', lambda: {'role': 'staff'})
     load_application = Mock(return_value=({'application_status': 'Hired'}, None))
-    monkeypatch.setattr(staff_routes, 'load_application', load_application)
+    monkeypatch.setattr(application_routes, 'load_application', load_application)
     put_response = Mock(status_code=200)
-    monkeypatch.setattr(staff_routes.requests, 'put', Mock(return_value=put_response))
+    monkeypatch.setattr(database_api.requests, 'put', Mock(return_value=put_response))
 
     with backend_app.app.test_client() as client:
         resp = client.put('/api/applications/7/status', json={'application_status': 'Rejected'})
@@ -224,13 +222,13 @@ def test_update_status_allows_reject_from_non_rejected_states(monkeypatch):
     assert resp.status_code == 200
     assert 'Status updated to Rejected.' in resp.headers['HX-Trigger']
     load_application.assert_called_once()
-    staff_routes.requests.put.assert_called_once()
+    database_api.requests.put.assert_called_once()
 
 
 def test_update_status_rejects_already_rejected(monkeypatch):
-    monkeypatch.setattr(staff_routes, 'get_session_user', lambda: {'role': 'staff'})
+    monkeypatch.setattr(integration_api, 'get_session_user', lambda: {'role': 'staff'})
     load_application = Mock(return_value=({'application_status': 'Rejected'}, None))
-    monkeypatch.setattr(staff_routes, 'load_application', load_application)
+    monkeypatch.setattr(application_routes, 'load_application', load_application)
 
     with backend_app.app.test_client() as client:
         resp = client.put('/api/applications/7/status', json={'application_status': 'Rejected'})

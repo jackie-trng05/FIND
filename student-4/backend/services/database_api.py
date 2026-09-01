@@ -1,10 +1,6 @@
-import os
-
 import requests
 
-DATABASE_SERVICE_URL = os.getenv("DATABASE_SERVICE_URL", "http://student-4-db:6004")
-
-TIMEOUT = 5
+from services.config import DATABASE_SERVICE_URL, TIMEOUT
 
 
 def get_interviews():

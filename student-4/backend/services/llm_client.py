@@ -1,9 +1,6 @@
-import os
-
 from openai import OpenAI
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+from services.config import OLLAMA_BASE_URL, OLLAMA_MODEL
 
 client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
 

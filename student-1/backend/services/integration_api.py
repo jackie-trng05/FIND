@@ -1,12 +1,13 @@
-"""HTTP client for the shared-api service (session validation, user identity)."""
+"""Cross-service HTTP client for the shared-api service.
 
-import os
+Session validation and user-identity updates live in the shared service; this
+module forwards the caller's session cookie to it and returns the result.
+"""
 
 import requests
 from flask import request
 
-SHARED_API_URL = os.environ["SHARED_API_URL"]
-TIMEOUT = 5
+from services.config import SHARED_API_URL, TIMEOUT
 
 
 def get_session_user() -> dict | None:

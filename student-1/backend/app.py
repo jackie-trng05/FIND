@@ -7,32 +7,26 @@ validating the shared session cookie against shared-api.
 Container port 5001 (host port 16005 per the canonical port table).
 """
 
-import os
-
 from flask import Flask
 from flask_cors import CORS
 
-from routes.profile_pages import profile_bp
-from routes.resume_pages import resume_bp
-from routes.user_pages import user_bp
 from routes.ai_mode import ai_mode_bp
+from routes.profiles import profiles_bp
+from services.config import FRONTEND_PUBLIC_URL, MAX_FILE_SIZE, PORT
 
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+    app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE
 
-    frontend_origin = os.getenv("FRONTEND_PUBLIC_URL", "http://localhost:16004")
     CORS(
         app,
         supports_credentials=True,
-        origins=[frontend_origin],
+        origins=[FRONTEND_PUBLIC_URL],
         expose_headers=["HX-Redirect", "HX-Trigger"],
     )
 
-    app.register_blueprint(user_bp)
-    app.register_blueprint(profile_bp)
-    app.register_blueprint(resume_bp)
+    app.register_blueprint(profiles_bp)
     app.register_blueprint(ai_mode_bp)
 
     @app.get("/health")
@@ -46,5 +40,4 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "5001"))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=PORT, debug=True)

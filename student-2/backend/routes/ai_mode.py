@@ -32,8 +32,8 @@ def suggest_skills():
         return render_message("Enter a job title first, then ask the AI.", "error"), 200
 
     try:
-        system_prompt = load_prompt("skills_system_prompt.txt")
-        task_template = load_prompt("skills_task_prompt.txt")
+        system_prompt = load_prompt("system_prompt.txt")
+        task_template = load_prompt("task_prompt.txt")
     except OSError:
         return render_message("AI prompt templates are missing.", "error"), 200
 
