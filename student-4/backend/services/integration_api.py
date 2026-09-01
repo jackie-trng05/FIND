@@ -13,17 +13,16 @@ job-posting details, and a helper to keep the linked application's status in
 sync with the interview lifecycle.
 """
 
-import os
-
 import requests
 from flask import request
 
-APPLICATIONS_DB_URL = os.getenv("APPLICATIONS_DB_URL", "http://student-3-db:6003")
-POSTINGS_DB_URL = os.getenv("POSTINGS_DB_URL", "http://student-2-db:6002")
-SHARED_DB_URL = os.getenv("SHARED_DB_URL", "http://find-shared-db:6000")
-SHARED_API_URL = os.getenv("SHARED_API_URL", "http://find-shared-api:5000")
-
-TIMEOUT = 5
+from services.config import (
+    APPLICATIONS_DB_URL,
+    POSTINGS_DB_URL,
+    SHARED_API_URL,
+    SHARED_DB_URL,
+    TIMEOUT,
+)
 
 
 # --------------------------------------------------------------------------- #

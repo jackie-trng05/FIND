@@ -131,8 +131,8 @@ def _llm_slots(preferences, existing):
         scheduled = "No existing interview data could be retrieved."
 
     try:
-        system_prompt = load_prompt("interview/system_prompt.txt")
-        task_prompt = load_prompt("interview/task_prompt.txt")
+        system_prompt = load_prompt("system_prompt.txt")
+        task_prompt = load_prompt("task_prompt.txt")
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
         final_prompt = f"""{task_prompt}
 

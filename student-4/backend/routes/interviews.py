@@ -1,5 +1,4 @@
 import json
-import os
 from datetime import datetime
 from urllib.parse import quote
 
@@ -14,15 +13,12 @@ from services.database_api import (
     update_interview,
 )
 from services import integration_api
+from services.config import BACKEND_PUBLIC_URL, FRONTEND_PUBLIC_URL
 from services.integration_api import get_session_user
 from views import html_formatters as fmt
 
 
-normal_ui_bp = Blueprint("normal_ui", __name__)
-
-# Public (browser-facing) URLs used for HTMX redirects and cross-origin actions.
-FRONTEND_ORIGIN = os.getenv("FRONTEND_PUBLIC_URL", "http://localhost:16013")
-BACKEND_PUBLIC_URL = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:16014")
+interviews_bp = Blueprint("interviews", __name__)
 
 # Interview statuses mirror the linked application's status (Student 3).
 STATUS_SHORTLISTED = "Shortlisted"                 # shortlisted, no invite sent yet
@@ -139,12 +135,12 @@ def _hx_response(triggers=None, redirect=None, status=200):
     return resp
 
 
-@normal_ui_bp.get("/")
+@interviews_bp.get("/")
 def health():
     return jsonify({"service": "student-4-interview-service", "status": "running"})
 
 
-@normal_ui_bp.get("/interviews")
+@interviews_bp.get("/interviews")
 def list_interviews():
     _, err = require_session()
     if err:
@@ -173,7 +169,7 @@ def list_interviews():
     return jsonify(interviews), 200
 
 
-@normal_ui_bp.get("/interviews/to-complete")
+@interviews_bp.get("/interviews/to-complete")
 def interviews_to_complete():
     """Scheduled interviews whose time has passed and still need notes.
 
@@ -205,7 +201,7 @@ def interviews_to_complete():
     return jsonify(interviews), 200
 
 
-@normal_ui_bp.get("/interviews/<int:interview_id>")
+@interviews_bp.get("/interviews/<int:interview_id>")
 def get_interview(interview_id):
     _, err = require_session()
     if err:
@@ -220,7 +216,7 @@ def get_interview(interview_id):
         return _db_error(exc)
 
 
-@normal_ui_bp.get("/schedulable-applications")
+@interviews_bp.get("/schedulable-applications")
 def schedulable_applications():
     """Shortlisted applications a staff member still needs to interview.
 
@@ -259,7 +255,7 @@ def _scheduled_application_ids():
     return {str(row.get("application_id")) for row in interviews}
 
 
-@normal_ui_bp.post("/interviews")
+@interviews_bp.post("/interviews")
 def schedule_interview():
     user, err = require_session()
     if err:
@@ -317,12 +313,12 @@ def schedule_interview():
     integration_api.set_application_status(application_id, STATUS_REQUESTED)
     if _wants_hx():
         return _hx_response(
-            redirect=f"{FRONTEND_ORIGIN}/?toast={quote('Interview scheduled.')}"
+            redirect=f"{FRONTEND_PUBLIC_URL}/?toast={quote('Interview scheduled.')}"
         )
     return jsonify(integration_api.enrich_one(interview)), 201
 
 
-@normal_ui_bp.put("/interviews/<int:interview_id>")
+@interviews_bp.put("/interviews/<int:interview_id>")
 def update_interview_route(interview_id):
     """Update mutable interview fields.
 
@@ -354,7 +350,7 @@ def update_interview_route(interview_id):
     return _apply_update(interview_id, payload)
 
 
-@normal_ui_bp.post("/interviews/<int:interview_id>/accept")
+@interviews_bp.post("/interviews/<int:interview_id>/accept")
 def accept_interview(interview_id):
     """Applicant accepts the request -> Interview Scheduled."""
     _, err = require_session()
@@ -363,11 +359,11 @@ def accept_interview(interview_id):
     return _apply_update(
         interview_id,
         app_status=STATUS_SCHEDULED,
-        hx_success={"redirect": f"{FRONTEND_ORIGIN}/requests?toast={quote('Interview accepted.')}"},
+        hx_success={"redirect": f"{FRONTEND_PUBLIC_URL}/requests?toast={quote('Interview accepted.')}"},
     )
 
 
-@normal_ui_bp.post("/interviews/<int:interview_id>/decline")
+@interviews_bp.post("/interviews/<int:interview_id>/decline")
 def decline_interview(interview_id):
     """Applicant declines the request -> interview removed, application Shortlisted."""
     _, err = require_session()
@@ -388,12 +384,12 @@ def decline_interview(interview_id):
     integration_api.set_application_status(application_id, STATUS_SHORTLISTED)
     if _wants_hx():
         return _hx_response(
-            redirect=f"{FRONTEND_ORIGIN}/requests?toast={quote('Interview declined.')}"
+            redirect=f"{FRONTEND_PUBLIC_URL}/requests?toast={quote('Interview declined.')}"
         )
     return jsonify({"declined": interview_id}), 200
 
 
-@normal_ui_bp.post("/interviews/<int:interview_id>/complete")
+@interviews_bp.post("/interviews/<int:interview_id>/complete")
 def complete_interview(interview_id):
     """Record assessment notes and mark the interview complete.
 
@@ -465,7 +461,7 @@ def complete_interview(interview_id):
     )
 
 
-@normal_ui_bp.delete("/interviews/<int:interview_id>")
+@interviews_bp.delete("/interviews/<int:interview_id>")
 def cancel_interview(interview_id):
     _, err = require_session()
     if err:
@@ -496,7 +492,7 @@ def cancel_interview(interview_id):
 
     if _wants_hx():
         return _hx_response(
-            redirect=f"{FRONTEND_ORIGIN}/list?toast={quote('Interview cancelled.')}"
+            redirect=f"{FRONTEND_PUBLIC_URL}/list?toast={quote('Interview cancelled.')}"
         )
     return jsonify({"cancelled": interview_id}), 200
 
@@ -543,7 +539,7 @@ def _parse_date_only(value):
         return None
 
 
-@normal_ui_bp.get("/ui/calendar")
+@interviews_bp.get("/ui/calendar")
 def ui_calendar():
     user, err = require_session()
     if err:
@@ -565,7 +561,7 @@ def ui_calendar():
     return fmt.render_calendar(interviews, year, month, backend_url=BACKEND_PUBLIC_URL), 200
 
 
-@normal_ui_bp.get("/ui/interviews/rows")
+@interviews_bp.get("/ui/interviews/rows")
 def ui_interview_rows():
     user, err = require_session()
     if err:
@@ -607,7 +603,7 @@ def ui_interview_rows():
     return fmt.render_interview_rows(rows, role=user.get("role"), sort=sort, direction=direction, backend_url=BACKEND_PUBLIC_URL), 200
 
 
-@normal_ui_bp.get("/ui/applications/rows")
+@interviews_bp.get("/ui/applications/rows")
 def ui_applications_rows():
     user, err = require_session()
     if err:
@@ -626,7 +622,7 @@ def ui_applications_rows():
     return fmt.render_schedulable_rows(apps), 200
 
 
-@normal_ui_bp.get("/ui/schedule/options")
+@interviews_bp.get("/ui/schedule/options")
 def ui_schedule_options():
     user, err = require_session()
     if err:
@@ -639,7 +635,7 @@ def ui_schedule_options():
     return fmt.render_schedule_options(apps), 200
 
 
-@normal_ui_bp.get("/ui/to-complete/rows")
+@interviews_bp.get("/ui/to-complete/rows")
 def ui_to_complete_rows():
     user, err = require_session()
     if err:
@@ -663,7 +659,7 @@ def ui_to_complete_rows():
     return fmt.render_to_complete_rows(interviews), 200
 
 
-@normal_ui_bp.get("/ui/requests")
+@interviews_bp.get("/ui/requests")
 def ui_requests():
     user, err = require_session()
     if err:
@@ -675,7 +671,7 @@ def ui_requests():
     return fmt.render_requests(interviews, backend_url=BACKEND_PUBLIC_URL), 200
 
 
-@normal_ui_bp.get("/ui/interviews/<int:interview_id>/detail")
+@interviews_bp.get("/ui/interviews/<int:interview_id>/detail")
 def ui_interview_detail(interview_id):
     user, err = require_session()
     if err:
