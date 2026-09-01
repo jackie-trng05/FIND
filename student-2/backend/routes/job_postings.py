@@ -1,4 +1,4 @@
-"""JobPostingService routes (HTML fragments for HTMX).
+"""Normal-mode routes for the Student 2 (Job Posting) backend.
 
 Implements the backend/API functions from the registration form:
   CreateJobPosting    POST   /job-postings
@@ -13,13 +13,18 @@ Each handler returns an HTML fragment that HTMX swaps into the page, or an
 ``HX-Redirect`` response that navigates the browser to another page.
 """
 
-import os
 from datetime import date
 
 import requests
 from flask import Blueprint, make_response, request
 
-from services import database_api
+from services import database_api, integration_api
+from services.config import (
+    BACKEND_PUBLIC_URL,
+    DB_UNAVAILABLE,
+    DEFAULT_USER_ID,
+    FRONTEND_PUBLIC_URL,
+)
 from views.html_formatters import (
     normalize_requirements,
     render_message,
@@ -30,20 +35,6 @@ from views.html_formatters import (
 
 job_postings_bp = Blueprint("job_postings", __name__)
 
-# Public URLs the browser uses (host-mapped ports).
-BACKEND_PUBLIC_URL = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:16008")
-FRONTEND_PUBLIC_URL = os.getenv("FRONTEND_PUBLIC_URL", "http://localhost:16007")
-
-# Internal URL for the student-3 (applications) database service. Used to
-# check whether the current applicant already has an application for a posting
-# so the Apply button on the applicant panel can be disabled.
-APPLICATIONS_DB_URL = os.getenv(
-    "APPLICATIONS_DB_URL", "http://student-3-db:6003"
-)
-
-# Fallback owner id if a posting is somehow created without a session user.
-DEFAULT_USER_ID = os.getenv("DEFAULT_USER_ID", "1")
-
 EDITABLE_FIELDS = (
     "Job_Title",
     "Job_Description",
@@ -52,11 +43,6 @@ EDITABLE_FIELDS = (
     "Salary_Range",
     "Requirements",
     "Application_Deadline",
-)
-
-_DB_UNAVAILABLE = (
-    "Could not reach the database service. Make sure the student-2-db "
-    "container is running."
 )
 
 # Fields that must be provided when creating/updating a posting.
@@ -79,37 +65,11 @@ def _missing_required(payload: dict) -> str | None:
 
 def _get_role() -> str:
     """Return 'staff' or 'applicant' based on the session cookie."""
-    user = database_api.get_session_user()
+    user = integration_api.get_session_user()
     if user is None:
         return "applicant"
     role = (user.get("role") or "").strip().lower()
     return "staff" if role == "staff" else "applicant"
-
-
-def _get_existing_application(user_id: int, posting_id: int) -> dict | None:
-    """Return the applicant's existing active application for this posting,
-    or None if there isn't one.
-
-    Withdrawn/Rejected applications are treated as "no application" so the
-    candidate can apply again.
-    """
-    try:
-        resp = requests.get(
-            f"{APPLICATIONS_DB_URL}/applications",
-            params={"user_id": user_id, "job_posting_id": posting_id},
-            timeout=5,
-        )
-        resp.raise_for_status()
-    except requests.RequestException:
-        return None
-    for row in resp.json() or []:
-        status = row.get("application_status")
-        if status not in ("Withdrawn", "Rejected"):
-            return {
-                "application_id": row.get("application_id"),
-                "application_status": status,
-            }
-    return None
 
 
 def _forbidden_for_applicants():
@@ -160,7 +120,7 @@ def list_postings():
         response = database_api.list_job_postings(params)
         response.raise_for_status()
     except requests.RequestException:
-        return render_message(_DB_UNAVAILABLE, "error"), 200
+        return render_message(DB_UNAVAILABLE, "error"), 200
 
     role = _get_role()
     # Applicants only ever see Published postings.
@@ -178,7 +138,7 @@ def _load_posting(posting_id: int):
             return None, (render_message("Job posting not found.", "error"), 200)
         response.raise_for_status()
     except requests.RequestException:
-        return None, (render_message(_DB_UNAVAILABLE, "error"), 200)
+        return None, (render_message(DB_UNAVAILABLE, "error"), 200)
     return response.json(), None
 
 
@@ -188,7 +148,7 @@ def get_posting(posting_id: int):
     posting, error = _load_posting(posting_id)
     if error:
         return error
-    user = database_api.get_session_user()
+    user = integration_api.get_session_user()
     role = "staff" if (user and (user.get("role") or "").lower() == "staff") else "applicant"
     # Applicants may only view Published postings.
     if role == "applicant" and posting.get("JobPosting_Status") != "Published":
@@ -196,7 +156,7 @@ def get_posting(posting_id: int):
 
     existing_application = None
     if role == "applicant" and user:
-        existing_application = _get_existing_application(
+        existing_application = integration_api.get_existing_application(
             user.get("user_id"), posting_id
         )
     return (
@@ -262,7 +222,7 @@ def create_posting():
     if error:
         return render_message(error, "error"), 200
     # Owner is the logged-in staff member creating the posting.
-    user = database_api.get_session_user()
+    user = integration_api.get_session_user()
     payload["User_Id"] = (user or {}).get("user_id") or DEFAULT_USER_ID
 
     try:
@@ -271,7 +231,7 @@ def create_posting():
             return render_message(response.json().get("error", "Invalid data."), "error"), 200
         response.raise_for_status()
     except requests.RequestException:
-        return render_message(_DB_UNAVAILABLE, "error"), 200
+        return render_message(DB_UNAVAILABLE, "error"), 200
     # Success: send the browser back to the list page with a toast.
     return _redirect("/?toast=Job+posting+created+successfully")
 
@@ -298,7 +258,7 @@ def update_posting(posting_id: int):
             return render_posting_form(BACKEND_PUBLIC_URL, data, error=message), 200
         response.raise_for_status()
     except requests.RequestException:
-        return render_message(_DB_UNAVAILABLE, "error"), 200
+        return render_message(DB_UNAVAILABLE, "error"), 200
     # Return the refreshed panel with a toast trigger for success feedback.
     posting, error = _load_posting(posting_id)
     if error:
@@ -323,7 +283,7 @@ def publish_posting(posting_id: int):
             return render_message("Job posting not found.", "error"), 200
         response.raise_for_status()
     except requests.RequestException:
-        return render_message(_DB_UNAVAILABLE, "error"), 200
+        return render_message(DB_UNAVAILABLE, "error"), 200
     posting, error = _load_posting(posting_id)
     if error:
         return error
@@ -347,7 +307,7 @@ def unpublish_posting(posting_id: int):
             return render_message("Job posting not found.", "error"), 200
         response.raise_for_status()
     except requests.RequestException:
-        return render_message(_DB_UNAVAILABLE, "error"), 200
+        return render_message(DB_UNAVAILABLE, "error"), 200
     posting, error = _load_posting(posting_id)
     if error:
         return error
@@ -371,6 +331,6 @@ def delete_posting(posting_id: int):
             return render_message("Job posting not found.", "error"), 200
         response.raise_for_status()
     except requests.RequestException:
-        return render_message(_DB_UNAVAILABLE, "error"), 200
+        return render_message(DB_UNAVAILABLE, "error"), 200
     # Success: the posting is gone, so navigate back to the list with a toast.
     return _redirect("/?toast=Job+posting+deleted+successfully")
