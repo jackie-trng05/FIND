@@ -15,7 +15,7 @@ The frontend calls this endpoint and HTMX swaps the returned HTML fragment.
 
 from flask import Blueprint
 
-from services import database_api, shared_api
+from services import database_api, integration_api
 from services.llm_client import (
     OLLAMA_MODEL,
     classify_resume_quality,
@@ -58,7 +58,7 @@ def _ask(system_prompt, user_prompt, extra_instruction=""):
 
 @ai_mode_bp.post("/profile/ai-suggestions")
 def suggest_profile_fields():
-    user = shared_api.get_session_user()
+    user = integration_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
     if user["role"] == "staff":
@@ -94,8 +94,8 @@ def suggest_profile_fields():
         ), 200
 
     try:
-        system_prompt = load_prompt("profile_system_prompt.txt")
-        task_template = load_prompt("profile_task_prompt.txt")
+        system_prompt = load_prompt("system_prompt.txt")
+        task_template = load_prompt("task_prompt.txt")
     except OSError:
         return render_message("AI prompt templates are missing.", "error"), 200
 

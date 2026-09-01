@@ -4,12 +4,9 @@ Centralises the database-service URL and returns raw ``requests.Response``
 objects so callers can handle status codes and render appropriate HTML.
 """
 
-import os
-
 import requests
 
-DATABASE_SERVICE_URL = os.environ["DATABASE_SERVICE_URL"]
-TIMEOUT = 5
+from services.config import DATABASE_SERVICE_URL, TIMEOUT
 
 
 def get_profile_by_user(user_id: int) -> requests.Response:
