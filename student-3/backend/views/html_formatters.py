@@ -7,7 +7,7 @@ the markup here separates presentation from the route/handler logic.
 from datetime import date, datetime
 from html import escape
 
-from config import (
+from services.config import (
     BACKEND_PUBLIC_URL,
     DELETABLE_STATUSES,
     EVALUATIONS_URL,
