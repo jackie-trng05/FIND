@@ -19,7 +19,6 @@ it into the complete application.
 | `shared/` | Integrated home page, shared CSS, JavaScript, assets, and common configuration |
 | `student-1/` through `student-5/` | Student-owned frontend, backend, database, tests, and Docker artefacts |
 | `agentic_loop/` | Development-time architecture and service review tooling and prompts |
-| `scripts/` | Build, test, and deployment automation |
 | `docker-compose.yml` | Shared local orchestration for the integrated application |
 
 Feature-specific AI integrations belong to their owning student backend; `agentic_loop/` is
@@ -28,40 +27,331 @@ integrated application, with one shared deployment on Microsoft Azure or Amazon 
 not individual student microservices.
 
 
-### Shared Services
+<a id="project-structure"></a>
 
-The `shared/` directory contains services that are shared across the application:
-
-```text
-shared/
-├── frontend/
-├── backend/
-└── database/
-```
-
-### Student Services
-
-Each student has their own frontend, backend, and database service.
-
-For example:
+## Project Structure
 
 ```text
-student-1/
-├── frontend/
-├── backend/
-└── database/
+FIND/
+├── .github/
+│   └── workflows/
+│       ├── student-1-ci.yml
+│       ├── student-2-ci.yml
+│       ├── student-3-ci.yml
+│       ├── student-4-ci.yml
+│       └── student-5-ci.yml
+├── LICENSE
+├── README.md
+├── requirements.txt                  # root dependencies for dev tooling
+├── docker-compose.yml                # integrated local service orchestration
+│
+├── agentic_loop/                     # review tool for architecture/service checks
+│   ├── __init__.py
+│   ├── agentic_loop.py               # runs the review loop from the repo root
+│   ├── main.py                       # interactive menu for review modes
+│   ├── README.md
+│   ├── collectors/
+│   │   ├── __init__.py
+│   │   ├── architecture_collector.py # inspects Compose services and boundaries
+│   │   ├── db_collector.py           # checks database service evidence
+│   │   ├── devops_collector.py       # checks CI/CD workflow evidence
+│   │   └── endpoints_collector.py    # checks API endpoint evidence
+│   ├── config/
+│   │   ├── __init__.py
+│   │   └── review_config.py          # review modes, prompt paths, and models
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── ai_runner.py              # sends prompts to the configured LLM
+│   │   ├── orchestrator.py           # runs observe -> implement -> review -> summary
+│   │   ├── prompt_registry.py        # loads and validates prompt files
+│   │   └── reporter.py               # prints review results and evidence
+│   ├── pipelines/
+│   │   ├── __init__.py
+│   │   ├── architecture_pipeline.py  # architecture review steps
+│   │   ├── devops_pipeline.py        # DevOps review steps
+│   │   └── service_pipeline.py       # service implementation review steps
+│   └── prompts/
+│       ├── architecture/
+│       │   ├── implementation/
+│       │   │   ├── architecture_system_prompt.txt
+│       │   │   └── architecture_task_prompt.txt
+│       │   ├── review/
+│       │   │   └── agent_review_prompt.txt
+│       │   └── students/
+│       │       ├── student-1/architecture_task_prompt.txt
+│       │       ├── student-2/architecture_task_prompt.txt
+│       │       ├── student-3/architecture_task_prompt.txt
+│       │       ├── student-4/architecture_task_prompt.txt
+│       │       └── student-5/architecture_task_prompt.txt
+│       ├── devops/
+│       │   ├── implementation/devops_pipeline_review_prompt.txt
+│       │   └── review/devops_evidence_review_prompt.txt
+│       └── service/
+│           └── implementation/
+│               ├── context_prompt.txt
+│               ├── system_prompt.txt
+│               └── task_prompt.txt
+│
+├── shared/                           # integrated application shell and services
+│   ├── css/
+│   │   └── theme.css
+│   ├── backend/
+│   │   ├── app.py                    # shared backend Flask entrypoint
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   ├── database/
+│   │   ├── app.py                    # shared database API service
+│   │   ├── Dockerfile
+│   │   ├── init_db.py                # creates shared tables and seed data
+│   │   └── requirements.txt
+│   └── frontend/
+│       ├── app.py                    # shared frontend Flask entrypoint
+│       ├── Dockerfile
+│       ├── requirements.txt
+│       ├── css/styles.css
+│       ├── js/app.js
+│       ├── static/js/
+│       │   ├── auth.js
+│       │   └── find-app.js
+│       └── templates/
+│           ├── dashboard.html
+│           ├── index.html
+│           ├── login.html
+│           └── register.html
+│
+├── student-1/                        # profiles and resumes
+│   ├── backend/
+│   │   ├── app.py                    # profile backend entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   ├── prompts/
+│   │   │   ├── system_prompt.txt
+│   │   │   └── task_prompt.txt
+│   │   ├── routes/
+│   │   │   ├── __init__.py
+│   │   │   ├── ai_mode.py            # AI profile suggestions endpoint
+│   │   │   └── profiles.py           # profile CRUD endpoints
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py             # service URLs and settings
+│   │   │   ├── database_api.py       # profile database client
+│   │   │   ├── integration_api.py    # calls other FIND services
+│   │   │   ├── llm_client.py         # Ollama/LLM client
+│   │   │   └── prompt_loader.py      # reads prompt text files
+│   │   └── views/
+│   │       ├── __init__.py
+│   │       └── html_formatters.py    # shared HTML response helpers
+│   ├── database/
+│   │   ├── app.py                    # profile database API
+│   │   ├── Dockerfile
+│   │   ├── init_db.py                # profile schema and resume seed setup
+│   │   ├── requirements.txt
+│   │   └── seed_data/resumes/
+│   │       └── resume_profile_1.pdf ... resume_profile_10.pdf
+│   ├── frontend/
+│   │   ├── app.py                    # profile frontend entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   └── templates/
+│   │       ├── base.html
+│   │       └── profile.html
+│   └── tests/
+│       ├── conftest.py
+│       ├── requirements.txt
+│       ├── test_backend.py
+│       ├── test_database.py
+│       └── test_frontend.py
+│
+├── student-2/                        # job postings
+│   ├── backend/
+│   │   ├── app.py                    # job posting backend entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   ├── prompts/
+│   │   │   ├── system_prompt.txt
+│   │   │   └── task_prompt.txt
+│   │   ├── routes/
+│   │   │   ├── __init__.py
+│   │   │   ├── ai_mode.py            # AI job posting helper endpoints
+│   │   │   └── job_postings.py       # job posting CRUD endpoints
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py             # service URLs and settings
+│   │   │   ├── database_api.py       # job posting database client
+│   │   │   ├── integration_api.py    # calls other FIND services
+│   │   │   ├── llm_client.py         # Ollama/LLM client
+│   │   │   └── prompt_loader.py      # reads prompt text files
+│   │   └── views/
+│   │       ├── __init__.py
+│   │       └── html_formatters.py    # shared HTML response helpers
+│   ├── database/
+│   │   ├── app.py                    # job posting database API
+│   │   ├── Dockerfile
+│   │   ├── init_db.py                # job posting schema and seed data
+│   │   ├── requirements.txt
+│   │   └── data/.gitkeep
+│   ├── frontend/
+│   │   ├── app.py                    # job posting frontend entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   ├── css/styles.css
+│   │   └── templates/
+│   │       ├── base.html
+│   │       ├── detail.html
+│   │       ├── list.html
+│   │       └── new.html
+│   └── tests/
+│       ├── conftest.py
+│       ├── requirements.txt
+│       ├── test_backend.py
+│       └── test_database.py
+│
+├── student-3/                        # applications
+│   ├── backend/
+│   │   ├── app.py                    # application backend entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   ├── prompts/
+│   │   │   ├── system_prompt.txt
+│   │   │   └── task_prompt.txt
+│   │   ├── routes/
+│   │   │   ├── __init__.py
+│   │   │   ├── ai_mode.py            # AI application helper endpoints
+│   │   │   └── applications.py       # application workflow endpoints
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py             # service URLs and settings
+│   │   │   ├── database_api.py       # application database client
+│   │   │   ├── integration_api.py    # calls other FIND services
+│   │   │   ├── llm_client.py         # Ollama/LLM client
+│   │   │   └── prompt_loader.py      # reads prompt text files
+│   │   └── views/
+│   │       ├── __init__.py
+│   │       └── html_formatters.py    # shared HTML response helpers
+│   ├── database/
+│   │   ├── app.py                    # application database API
+│   │   ├── Dockerfile
+│   │   ├── init_db.py                # application schema and seed data
+│   │   └── requirements.txt
+│   ├── frontend/
+│   │   ├── app.py                    # application frontend entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   ├── css/styles.css
+│   │   └── templates/
+│   │       ├── apply.html
+│   │       ├── base.html
+│   │       ├── candidate.html
+│   │       ├── detail.html
+│   │       ├── list.html
+│   │       └── fragments/
+│   │           ├── application_detail.html
+│   │           ├── apply_form.html
+│   │           └── candidate_profile.html
+│   └── tests/
+│       ├── conftest.py
+│       ├── requirements.txt
+│       ├── test_backend.py
+│       └── test_database.py
+│
+├── student-4/                        # interviews
+│   ├── backend/
+│   │   ├── app.py                    # interview backend entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   ├── prompts/
+│   │   │   ├── system_prompt.txt
+│   │   │   └── task_prompt.txt
+│   │   ├── routes/
+│   │   │   ├── __init__.py
+│   │   │   ├── ai_mode.py            # AI interview helper endpoints
+│   │   │   └── interviews.py         # interview scheduling endpoints
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py             # service URLs and settings
+│   │   │   ├── database_api.py       # interview database client
+│   │   │   ├── integration_api.py    # calls other FIND services
+│   │   │   ├── llm_client.py         # Ollama/LLM client
+│   │   │   └── prompt_loader.py      # reads prompt text files
+│   │   └── views/
+│   │       ├── __init__.py
+│   │       └── html_formatters.py    # shared HTML response helpers
+│   ├── database/
+│   │   ├── app.py                    # interview database API
+│   │   ├── Dockerfile
+│   │   ├── init_db.py                # interview schema and seed data
+│   │   └── requirements.txt
+│   ├── frontend/
+│   │   ├── app.py                    # interview frontend entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   ├── css/styles.css
+│   │   └── templates/
+│   │       ├── applications.html
+│   │       ├── base.html
+│   │       ├── details.html
+│   │       ├── index.html
+│   │       ├── list.html
+│   │       ├── requests.html
+│   │       ├── schedule.html
+│   │       └── to-complete.html
+│   └── tests/
+│       ├── conftest.py
+│       ├── requirements.txt
+│       ├── test_backend.py
+│       └── test_database.py
+│
+├── student-5/                        # evaluations
+│   ├── backend/
+│   │   ├── app.py                    # evaluation backend entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   ├── prompts/
+│   │   │   ├── system_prompt.txt
+│   │   │   └── task_prompt.txt
+│   │   ├── routes/
+│   │   │   ├── __init__.py
+│   │   │   ├── ai_mode.py            # AI evaluation helper endpoints
+│   │   │   └── evaluations.py        # candidate evaluation endpoints
+│   │   ├── services/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py             # service URLs and settings
+│   │   │   ├── database_api.py       # evaluation database client
+│   │   │   ├── integration_api.py    # calls other FIND services
+│   │   │   ├── llm_client.py         # Ollama/LLM client
+│   │   │   └── prompt_loader.py      # reads prompt text files
+│   │   └── views/
+│   │       ├── __init__.py
+│   │       └── html_formatters.py    # shared HTML response helpers
+│   ├── database/
+│   │   ├── app.py                    # evaluation database API
+│   │   ├── Dockerfile
+│   │   ├── init_db.py                # evaluation schema and seed data
+│   │   └── requirements.txt
+│   ├── frontend/
+│   │   ├── app.py                    # evaluation frontend entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   └── templates/
+│   │       ├── evaluation_form.html
+│   │       └── evaluations.html
+│   └── tests/
+│       ├── conftest.py
+│       ├── requirements.txt
+│       ├── test_backend.py
+│       ├── test_database.py
+│       └── test_frontend.py
+│
+└── docs/
+    └── release-0/reports/            # CI evidence reports
+        └── student-1/ ... student-5/
+            ├── pytest-output.txt
+            ├── pytest-results.xml
+            ├── report.json
+            ├── report.md
+            └── run-view.md
 ```
 
-Additional students follow the same general structure:
-
-```text
-student-X/
-├── frontend/
-├── backend/
-└── database/
-```
-
-The port assignments for each student follow the canonical port allocation on this README file.
 
 ---
 
