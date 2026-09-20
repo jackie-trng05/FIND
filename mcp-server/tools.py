@@ -191,15 +191,13 @@ def get_applications_for_job(job_posting_id: int | str, status: str | None = Non
 
     Grounds the student-3 AI-Mode question "Who should be shortlisted for job X?":
     given a ``job_posting_id`` (and an optional ``status`` filter) it returns the
-    matching application records — including the soft ``resume_id`` link to
-    student-1's resume — each backed by a citation to the ``applications`` record
+    matching application records including the soft ``resume_id`` link to
+    student-1's resume, each backed by a citation to the ``applications`` record
     so the shortlist answer stays grounded.
 
     Confidence (per the shared rule):
         High   = a status filter was supplied and matching records were returned
-                 (a precise, filtered query)
-        Medium = no status filter, but the job has applications (a broader set
-                 that still needs a human shortlisting decision)
+        Medium = no status filter, but the job has applications
         Low    = no applications for the job (or the service is unreachable /
                  the id is invalid)
     """
@@ -221,7 +219,7 @@ def get_applications_for_job(job_posting_id: int | str, status: str | None = Non
         response = requests.get(url, params=params, timeout=config.REQUEST_TIMEOUT)
         response.raise_for_status()
         records = response.json()
-    except Exception as exc:  # noqa: BLE001 - surface any transport/parse failure as Low
+    except Exception as exc:  # noqa: BLE001 - surface transport failures as Low
         return retrieval.empty_context(
             f"Application service unreachable for job {job_id}: {exc}",
             [retrieval.source(table="applications")],
@@ -257,11 +255,15 @@ def get_applications_for_job(job_posting_id: int | str, status: str | None = Non
     for app in applications:
         app_id = app["application_id"]
         sources.append(
-            retrieval.source(table="applications", record_id=app_id, field="application_status")
+            retrieval.source(
+                table="applications", record_id=app_id, field="application_status"
+            )
         )
         if app.get("resume_id") is not None:
             sources.append(
-                retrieval.source(table="applications", record_id=app_id, field="resume_id")
+                retrieval.source(
+                    table="applications", record_id=app_id, field="resume_id"
+                )
             )
 
     confidence = retrieval.derive_confidence(
@@ -270,8 +272,105 @@ def get_applications_for_job(job_posting_id: int | str, status: str | None = Non
     return retrieval.build_context(answer_data, sources, confidence)
 
 
+# --- Student 2: Job Posting Management -----------------------------------
+# Cap the postings echoed back so answer_data / citations stay bounded.
+_POSTING_LIMIT = 10
+
+
+def _description_snippet(text: str | None, limit: int = 240) -> str:
+    text = (text or "").strip()
+    return text if len(text) <= limit else text[:limit].rstrip() + "…"
+
+
+def get_job_postings(
+    query: str = "", job_type: str = "", location: str = "", status: str = "Published"
+) -> dict:
+    """Retrieve job postings matching an optional filter (student-2 domain).
+
+    Grounds the student-2 AI-Mode question "Which roles fit a Python backend
+    engineer?": the ``query`` runs a free-text match over the postings' title,
+    description and requirements; ``job_type`` / ``location`` / ``status`` narrow
+    the result set. Each returned posting is cited to its ``job_postings`` record
+    (Requirements + Job_Description) so the answer stays grounded, and posting
+    IDs are surfaced in ``answer_data``.
+
+    Confidence (per the shared rule):
+        High   = a targeted filter (query/type/location) was supplied and matched
+        Medium = only a broad status listing was requested but postings exist
+        Low    = no postings match (or the service is unreachable)
+    """
+    filters = {}
+    if status:
+        filters["status"] = status
+    if job_type:
+        filters["job_type"] = job_type
+    if location:
+        filters["location"] = location
+    if query:
+        filters["q"] = query
+
+    url = f"{config.db_url('student-2')}/job-postings"
+    try:
+        response = requests.get(url, params=filters, timeout=config.REQUEST_TIMEOUT)
+        response.raise_for_status()
+        records = response.json()
+    except Exception as exc:  # noqa: BLE001 - surface any transport/parse failure as Low
+        return retrieval.empty_context(
+            f"Job posting service unreachable: {exc}",
+            [retrieval.source(table="job_postings")],
+        )
+
+    if not records:
+        return retrieval.build_context(
+            {
+                "filters": filters,
+                "count": 0,
+                "postings": [],
+                "message": "No job postings match the requested filter.",
+            },
+            [retrieval.source(table="job_postings", field="JobPosting_Status")],
+            retrieval.LOW,
+        )
+
+    limited = records[:_POSTING_LIMIT]
+    postings = [
+        {
+            "job_posting_id": record.get("JobPosting_Id"),
+            "title": record.get("Job_Title"),
+            "job_type": record.get("Job_Type"),
+            "location": record.get("Location"),
+            "status": record.get("JobPosting_Status"),
+            "requirements": record.get("Requirements"),
+            "description": _description_snippet(record.get("Job_Description")),
+        }
+        for record in limited
+    ]
+
+    sources = []
+    for record in limited:
+        posting_id = record.get("JobPosting_Id")
+        sources.append(
+            retrieval.source(table="job_postings", record_id=posting_id, field="Requirements")
+        )
+        sources.append(
+            retrieval.source(table="job_postings", record_id=posting_id, field="Job_Description")
+        )
+
+    answer_data = {
+        "filters": filters,
+        "count": len(records),
+        "returned": len(postings),
+        "postings": postings,
+    }
+
+    targeted = bool(query or job_type or location)
+    confidence = retrieval.derive_confidence(exact=targeted, partial=not targeted)
+    return retrieval.build_context(answer_data, sources, confidence)
+
+
 if __name__ == "__main__":
     print(json.dumps(list_project_files("."), indent=2))
     print(json.dumps(read_ci_report(), indent=2))
-    print(json.dumps(get_applications_for_job(1), indent=2))
     print(json.dumps(get_evaluation_scores(13), indent=2))
+    print(json.dumps(get_applications_for_job(1), indent=2))
+    print(json.dumps(get_job_postings(query="python"), indent=2))
