@@ -270,8 +270,118 @@ def get_applications_for_job(job_posting_id: int | str, status: str | None = Non
     return retrieval.build_context(answer_data, sources, confidence)
 
 
+# --- Student 4: Interview Scheduling -------------------------------------
+def _parse_interview_notes(raw) -> dict:
+    """Parse the ``interview_notes`` JSON column into a dict of feedback areas.
+
+    Notes are stored as a JSON object keyed by skill area (Technical,
+    Education, Communication, Problem Solving, Professionalism). Blank areas are
+    dropped so a scheduled-but-unwritten interview yields an empty dict. Returns
+    an empty dict when notes have not been written yet or cannot be parsed.
+    """
+    if not raw or not str(raw).strip():
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {"Notes": str(raw)}
+    if isinstance(parsed, dict):
+        return {key: value for key, value in parsed.items() if str(value).strip()}
+    return {"Notes": parsed}
+
+
+def get_interview_details(application_id: int | str) -> dict:
+    """Retrieve the interview scheduled for one application.
+
+    Grounds the student-4 AI-Mode question "Summarise interview feedback for
+    candidate X": given an ``application_id`` it returns the interview's
+    datetime, meeting link and the structured ``interview_notes`` feedback, each
+    backed by a citation to the ``interviews`` record/field so the answer stays
+    grounded.
+
+    Confidence (per the shared rule, driven by whether an interview exists and
+    has written-up feedback):
+        High   = an interview exists and its feedback notes are written up
+        Medium = an interview exists but its notes are still empty (scheduled,
+                 no feedback yet)
+        Low    = no interview on record for the application (or the service is
+                 unreachable / the id is invalid)
+    """
+    try:
+        app_id = int(application_id)
+    except (TypeError, ValueError):
+        return retrieval.empty_context(
+            f"application_id must be an integer, got: {application_id!r}",
+            [retrieval.source(table="interviews")],
+        )
+
+    url = f"{config.db_url('student-4')}/interviews"
+    try:
+        response = requests.get(url, timeout=config.REQUEST_TIMEOUT)
+        response.raise_for_status()
+        records = response.json()
+    except Exception as exc:  # noqa: BLE001 - surface any transport/parse failure as Low
+        return retrieval.empty_context(
+            f"Interview service unreachable for application {app_id}: {exc}",
+            [retrieval.source(table="interviews")],
+        )
+
+    matches = [record for record in records if record.get("application_id") == app_id]
+    if not matches:
+        return retrieval.build_context(
+            {
+                "application_id": app_id,
+                "interview": None,
+                "message": "No interview has been scheduled for this application yet.",
+            },
+            [retrieval.source(table="interviews", field="application_id")],
+            retrieval.LOW,
+        )
+
+    # Most recent interview for the application if several exist.
+    record = sorted(
+        matches, key=lambda item: item.get("interview_datetime") or "", reverse=True
+    )[0]
+    interview_id = record.get("interview_id")
+    notes = _parse_interview_notes(record.get("interview_notes"))
+    has_feedback = bool(notes)
+
+    answer_data = {
+        "application_id": app_id,
+        "interview_id": interview_id,
+        "interview_datetime": record.get("interview_datetime"),
+        "interview_link": record.get("interview_link"),
+        "notes": notes,
+        "status": "completed" if has_feedback else "scheduled",
+    }
+
+    # Cite the schedule fields and each written-up feedback area.
+    sources = [
+        retrieval.source(
+            table="interviews", record_id=interview_id, field="interview_datetime"
+        ),
+        retrieval.source(
+            table="interviews", record_id=interview_id, field="interview_link"
+        ),
+    ]
+    for area in notes:
+        sources.append(
+            retrieval.source(
+                table="interviews",
+                record_id=interview_id,
+                field=f"interview_notes.{area}",
+            )
+        )
+
+    confidence = retrieval.derive_confidence(
+        exact=has_feedback, partial=not has_feedback
+    )
+    return retrieval.build_context(answer_data, sources, confidence)
+
+
 if __name__ == "__main__":
     print(json.dumps(list_project_files("."), indent=2))
     print(json.dumps(read_ci_report(), indent=2))
     print(json.dumps(get_applications_for_job(1), indent=2))
     print(json.dumps(get_evaluation_scores(13), indent=2))
+    print(json.dumps(get_interview_details(4), indent=2))

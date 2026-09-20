@@ -119,3 +119,125 @@ def mcp_project_files():
 def mcp_ci_report():
     report_path = request.form.get("report_path", "").strip()
     return _run_tool("MCP Tool: ci_report", "ci_report", {"report_path": report_path})
+
+
+# --- Student 4: Interview Scheduling -------------------------------------
+def _parse_application_id(raw: str):
+    raw = (raw or "").strip()
+    if not raw.isdigit():
+        return None
+    return int(raw)
+
+
+@mcp_bp.post("/mcp/interview-details")
+def mcp_interview_details():
+    """Grounded retrieval of the interview scheduled for an application."""
+    if not mcp_mode_is_active(request):
+        return _disabled_fragment()
+    application_id = _parse_application_id(request.form.get("application_id", ""))
+    if application_id is None:
+        return "<p>Enter a numeric application_id.</p>", 400
+    return _run_tool(
+        f"MCP Tool: interview_details (application {application_id})",
+        "interview_details",
+        {"application_id": application_id},
+    )
+
+
+def _grounded_summary(application_id: int, context: dict) -> str:
+    """Build a grounded, cited interview-feedback summary from MCP context.
+
+    The summary is derived strictly from the retrieved interview record (no
+    invention). When AI-Mode is enabled AND the local LLM is reachable, a short
+    natural-language summary is layered on top of the same grounded facts;
+    otherwise a deterministic grounded summary is used so the endpoint still
+    works in CI / without Ollama.
+    """
+    data = context.get("answer_data", {}) or {}
+    notes = data.get("notes") or {}
+    status = data.get("status")
+    when = data.get("interview_datetime")
+
+    if data.get("interview", data) is None or status is None:
+        return (
+            f"No interview is on record for application {application_id}, so interview "
+            "feedback cannot be summarised yet."
+        )
+
+    if not notes:
+        return (
+            f"An interview for application {application_id} is scheduled for {when}, but "
+            "no feedback notes have been written up yet, so there is nothing to summarise."
+        )
+
+    lines = [f"Interview feedback for application {application_id} (held {when}):"]
+    for area, note in notes.items():
+        lines.append(f"- {area}: {note}")
+    verdict = "\n".join(lines)
+
+    if not ai_mode_enabled():
+        return verdict
+
+    try:  # Optional LLM narrative, grounded in the retrieved context only.
+        import json
+
+        from services.llm_client import OLLAMA_MODEL, client as ollama_client
+
+        grounding = (
+            "You are a recruitment assistant. Summarise ONLY using the interview "
+            "feedback provided as JSON. Do not invent details or scores. If a feedback "
+            "area is missing, do not mention it."
+        )
+        prompt = (
+            f"Question: Summarise the interview feedback for application {application_id}.\n\n"
+            f"Interview context (the only allowed source):\n{json.dumps(data, indent=2)}\n\n"
+            "Give a 2-3 sentence grounded summary of the candidate's interview."
+        )
+        # Bound the local-model latency: on a slow CPU host the narrative can
+        # take minutes, so cap it and fall back to the deterministic summary.
+        response = ollama_client.with_options(timeout=25.0).chat.completions.create(
+            model=OLLAMA_MODEL,
+            messages=[
+                {"role": "system", "content": grounding},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=160,
+            temperature=0.2,
+        )
+        narrative = (response.choices[0].message.content or "").strip()
+        if narrative:
+            return narrative
+    except Exception:  # noqa: BLE001 - fall back to the deterministic grounded summary
+        pass
+    return verdict
+
+
+@mcp_bp.post("/mcp/interview-summary")
+def mcp_interview_summary():
+    """Grounded RAG answer to "Summarise interview feedback for candidate X"."""
+    if not mcp_mode_is_active(request):
+        return _disabled_fragment()
+    application_id = _parse_application_id(request.form.get("application_id", ""))
+    if application_id is None:
+        return "<p>Enter a numeric application_id.</p>", 400
+
+    try:
+        context = mcp_client.call_tool(
+            "interview_details", {"application_id": application_id}
+        )
+    except mcp_client.MCPClientError as exc:
+        return (
+            f"<p>MCP interview_details failed.</p><pre>{escape(str(exc))}</pre>",
+            503,
+        )
+
+    answer = _grounded_summary(application_id, context)
+    confidence = context.get("confidence", "Low")
+    sources = context.get("sources", [])
+    fragment = (
+        f"<h3>{escape(f'Interview feedback summary for application {application_id}')}</h3>"
+        f"{_confidence_badge(confidence)}"
+        f"<p class=\"mcp-answer\">{escape(answer)}</p>"
+        f"<h4>Citations</h4>{_citations_list(sources)}"
+    )
+    return fragment, 200
