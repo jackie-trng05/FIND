@@ -20,6 +20,7 @@ from mcp.server.fastmcp import FastMCP
 AVAILABLE_TOOLS = [
     "project_files",
     "ci_report",
+    "interview_details",
     "evaluation_scores",
 ]
 
@@ -47,8 +48,9 @@ def register_student_tools(server: FastMCP) -> None:
     self-register their tool (under ``students/``) without touching the shared
     server wiring above.
     """
-    from students import student_5
+    from students import student_4, student_5
 
+    student_4.register(server)
     student_5.register(server)
 
 
