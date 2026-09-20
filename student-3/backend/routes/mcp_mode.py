@@ -119,3 +119,137 @@ def mcp_project_files():
 def mcp_ci_report():
     report_path = request.form.get("report_path", "").strip()
     return _run_tool("MCP Tool: ci_report", "ci_report", {"report_path": report_path})
+
+
+# --- Student 3: Applications / Screening ---------------------------------
+def _parse_int(raw: str):
+    raw = (raw or "").strip()
+    if not raw.isdigit():
+        return None
+    return int(raw)
+
+
+@mcp_bp.post("/mcp/applications-for-job")
+def mcp_applications_for_job():
+    """Grounded retrieval of the applications submitted for a job posting."""
+    if not mcp_mode_is_active(request):
+        return _disabled_fragment()
+    job_posting_id = _parse_int(request.form.get("job_posting_id", ""))
+    if job_posting_id is None:
+        return "<p>Enter a numeric job_posting_id.</p>", 400
+    arguments = {"job_posting_id": job_posting_id}
+    status = request.form.get("status", "").strip()
+    if status:
+        arguments["status"] = status
+    return _run_tool(
+        f"MCP Tool: applications_for_job (job {job_posting_id})",
+        "applications_for_job",
+        arguments,
+    )
+
+
+def _grounded_shortlist(job_posting_id: int, context: dict) -> str:
+    """Build a grounded, cited shortlist answer from MCP application context.
+
+    The answer is derived strictly from the retrieved application records (no
+    invention): candidates in "Submitted" are awaiting a shortlist decision and
+    those already "Shortlisted" are confirmed. When AI-Mode is enabled AND the
+    local LLM is reachable, a short natural-language rationale is layered on top
+    of the same grounded facts; otherwise a deterministic grounded summary is used
+    so the endpoint still works in CI / without Ollama.
+    """
+    data = context.get("answer_data", {}) or {}
+    applications = data.get("applications", []) or []
+
+    if not applications:
+        return (
+            f"No applications are on record for job {job_posting_id}, so a "
+            "shortlist cannot be grounded in application data yet."
+        )
+
+    awaiting = [a for a in applications if a.get("application_status") == "Submitted"]
+    already = [a for a in applications if a.get("application_status") == "Shortlisted"]
+
+    def _ids(items):
+        return ", ".join(str(a.get("application_id")) for a in items)
+
+    parts = [f"Job {job_posting_id} has {len(applications)} application(s) on record."]
+    if awaiting:
+        parts.append(
+            f"Recommend shortlisting the {len(awaiting)} application(s) currently "
+            f"\"Submitted\" (application {_ids(awaiting)})."
+        )
+    if already:
+        parts.append(f"Already shortlisted: application {_ids(already)}.")
+    if not awaiting and not already:
+        parts.append(
+            "No applications are in a shortlist-eligible state (Submitted/Shortlisted)."
+        )
+    verdict = " ".join(parts)
+
+    if not ai_mode_enabled():
+        return verdict
+
+    try:  # Optional LLM narrative, grounded in the retrieved context only.
+        import json
+
+        from services.llm_client import OLLAMA_MODEL, client as ollama_client
+
+        grounding = (
+            "You are a recruitment assistant. Answer ONLY using the applications "
+            "context provided as JSON. Do not invent candidates or statuses. "
+            "Recommend shortlisting candidates whose status is 'Submitted'."
+        )
+        prompt = (
+            f"Question: Who should be shortlisted for job {job_posting_id}?\n\n"
+            f"Applications context (the only allowed source):\n{json.dumps(data, indent=2)}\n\n"
+            "Give a 2-3 sentence grounded shortlist recommendation citing application ids."
+        )
+        # Bound the local-model latency: on a slow CPU host the narrative can
+        # take minutes, so cap it and fall back to the deterministic verdict.
+        response = ollama_client.with_options(timeout=25.0).chat.completions.create(
+            model=OLLAMA_MODEL,
+            messages=[
+                {"role": "system", "content": grounding},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=160,
+            temperature=0.2,
+        )
+        narrative = (response.choices[0].message.content or "").strip()
+        if narrative:
+            return narrative
+    except Exception:  # noqa: BLE001 - fall back to the deterministic grounded verdict
+        pass
+    return verdict
+
+
+@mcp_bp.post("/mcp/shortlist-recommendation")
+def mcp_shortlist_recommendation():
+    """Grounded RAG answer to "Who should be shortlisted for job X?"."""
+    if not mcp_mode_is_active(request):
+        return _disabled_fragment()
+    job_posting_id = _parse_int(request.form.get("job_posting_id", ""))
+    if job_posting_id is None:
+        return "<p>Enter a numeric job_posting_id.</p>", 400
+
+    try:
+        context = mcp_client.call_tool(
+            "applications_for_job", {"job_posting_id": job_posting_id}
+        )
+    except mcp_client.MCPClientError as exc:
+        return (
+            f"<p>MCP applications_for_job failed.</p><pre>{escape(str(exc))}</pre>",
+            503,
+        )
+
+    answer = _grounded_shortlist(job_posting_id, context)
+    confidence = context.get("confidence", "Low")
+    sources = context.get("sources", [])
+    fragment = (
+        f"<h3>{escape(f'Who should be shortlisted for job {job_posting_id}?')}</h3>"
+        f"{_confidence_badge(confidence)}"
+        f"<p class=\"mcp-answer\">{escape(answer)}</p>"
+        f"<h4>Citations</h4>{_citations_list(sources)}"
+    )
+    return fragment, 200
