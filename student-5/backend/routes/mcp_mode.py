@@ -119,3 +119,127 @@ def mcp_project_files():
 def mcp_ci_report():
     report_path = request.form.get("report_path", "").strip()
     return _run_tool("MCP Tool: ci_report", "ci_report", {"report_path": report_path})
+
+
+# --- Student 5: Candidate Evaluation -------------------------------------
+def _parse_application_id(raw: str):
+    raw = (raw or "").strip()
+    if not raw.isdigit():
+        return None
+    return int(raw)
+
+
+@mcp_bp.post("/mcp/evaluation-scores")
+def mcp_evaluation_scores():
+    """Grounded retrieval of a candidate's evaluation scorecard."""
+    if not mcp_mode_is_active(request):
+        return _disabled_fragment()
+    application_id = _parse_application_id(request.form.get("application_id", ""))
+    if application_id is None:
+        return "<p>Enter a numeric application_id.</p>", 400
+    return _run_tool(
+        f"MCP Tool: evaluation_scores (application {application_id})",
+        "evaluation_scores",
+        {"application_id": application_id},
+    )
+
+
+def _grounded_recommendation(application_id: int, context: dict) -> str:
+    """Build a grounded, cited "Should we hire?" verdict from MCP context.
+
+    The verdict is derived strictly from the retrieved evaluation record (no
+    invention). When AI-Mode is enabled AND the local LLM is reachable, a short
+    natural-language rationale is layered on top of the same grounded facts;
+    otherwise a deterministic grounded summary is used so the endpoint still
+    works in CI / without Ollama.
+    """
+    data = context.get("answer_data", {}) or {}
+    evaluation = data.get("evaluation", data)
+    recommendation = data.get("recommendation")
+    overall = data.get("overall_score")
+    status = data.get("status")
+
+    if evaluation is None or status is None:
+        return (
+            f"No evaluation is on record for application {application_id}, so a "
+            "hiring recommendation cannot be grounded in evaluation data yet."
+        )
+
+    if recommendation:
+        verdict = (
+            f"Yes — hire. The evaluation for application {application_id} records a "
+            f"final decision of \"{recommendation}\" with an overall score of {overall}/5."
+            if recommendation == "Hire"
+            else f"No — do not hire. The evaluation for application {application_id} "
+            f"records a final decision of \"{recommendation}\" with an overall score "
+            f"of {overall}/5."
+        )
+    else:
+        verdict = (
+            f"Undecided. The evaluation for application {application_id} is still in "
+            f"progress (no final Hire/Reject decision); the current overall score is "
+            f"{overall}/5."
+        )
+
+    if not ai_mode_enabled():
+        return verdict
+
+    try:  # Optional LLM narrative, grounded in the retrieved context only.
+        import json
+
+        from services.llm_client import create_chat_completion
+
+        grounding = (
+            "You are a hiring assistant. Answer ONLY using the evaluation context "
+            "provided as JSON. Do not invent scores or facts. If the context lacks a "
+            "final decision, say the evaluation is still in progress."
+        )
+        prompt = (
+            f"Question: Should we hire the candidate for application {application_id}?\n\n"
+            f"Evaluation context (the only allowed source):\n{json.dumps(data, indent=2)}\n\n"
+            "Give a 2-3 sentence grounded recommendation."
+        )
+        narrative = create_chat_completion(
+            [
+                {"role": "system", "content": grounding},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=200,
+            temperature=0.2,
+        )
+        if narrative:
+            return narrative
+    except Exception:  # noqa: BLE001 - fall back to the deterministic grounded verdict
+        pass
+    return verdict
+
+
+@mcp_bp.post("/mcp/hire-recommendation")
+def mcp_hire_recommendation():
+    """Grounded RAG answer to "Should we hire candidate X?" for an application."""
+    if not mcp_mode_is_active(request):
+        return _disabled_fragment()
+    application_id = _parse_application_id(request.form.get("application_id", ""))
+    if application_id is None:
+        return "<p>Enter a numeric application_id.</p>", 400
+
+    try:
+        context = mcp_client.call_tool(
+            "evaluation_scores", {"application_id": application_id}
+        )
+    except mcp_client.MCPClientError as exc:
+        return (
+            f"<p>MCP evaluation_scores failed.</p><pre>{escape(str(exc))}</pre>",
+            503,
+        )
+
+    answer = _grounded_recommendation(application_id, context)
+    confidence = context.get("confidence", "Low")
+    sources = context.get("sources", [])
+    fragment = (
+        f"<h3>{escape(f'Should we hire candidate for application {application_id}?')}</h3>"
+        f"{_confidence_badge(confidence)}"
+        f"<p class=\"mcp-answer\">{escape(answer)}</p>"
+        f"<h4>Citations</h4>{_citations_list(sources)}"
+    )
+    return fragment, 200
