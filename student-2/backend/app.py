@@ -20,6 +20,7 @@ if str(BASE_DIR) not in sys.path:
 
 from routes.ai_mode import ai_mode_bp
 from routes.job_postings import job_postings_bp
+from routes.mcp_mode import mcp_bp
 from services.config import FRONTEND_PUBLIC_URL, PORT
 
 
@@ -37,6 +38,7 @@ def create_app() -> Flask:
 
     app.register_blueprint(job_postings_bp)
     app.register_blueprint(ai_mode_bp)
+    app.register_blueprint(mcp_bp)
     return app
 
 

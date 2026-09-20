@@ -69,6 +69,11 @@ def posting_detail(posting_id: int):
     )
 
 
+@app.get("/mcp")
+def mcp_page():
+    return render_template("mcp.html", backend_url=BACKEND_PUBLIC_URL, home_url=HOME_URL)
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
