@@ -7,7 +7,6 @@ tested directly; ``register`` only wires it onto the shared MCP server.
 
 import tools
 
-
 def register(server) -> None:
     """Register the job_postings tool on the shared FIND MCP server."""
 
@@ -32,3 +31,4 @@ def register(server) -> None:
         return tools.get_job_postings(
             query=query, job_type=job_type, location=location, status=status
         )
+    
