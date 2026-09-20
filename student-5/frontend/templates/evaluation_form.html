@@ -29,6 +29,28 @@
     .toast-hide { opacity: 0; transition: opacity 0.4s; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     @media (max-width: 640px) { .score-row { grid-template-columns: repeat(2, 1fr); } .form-grid { grid-template-columns: 1fr; } }
+    /* MCP Insights */
+    .mcp-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .mcp-toggle-row { display: flex; align-items: center; gap: 0.5rem; }
+    .mcp-state { font-weight: 700; font-size: 0.8rem; }
+    .mcp-on { color: #16a34a; }
+    .mcp-off { color: #dc2626; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch .slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 999px; transition: 0.2s; }
+    .switch .slider::before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+    .switch input:checked + .slider { background: #16a34a; }
+    .switch input:checked + .slider::before { transform: translateX(18px); }
+    .mcp-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .mcp-panel { padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--primary-light); font-size: 0.85rem; }
+    .mcp-panel h3 { font-size: 0.9rem; margin-bottom: 0.4rem; }
+    .mcp-panel h4 { font-size: 0.78rem; margin: 0.6rem 0 0.2rem; color: var(--text-muted); }
+    .mcp-answer { white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin: 0.4rem 0; max-height: 260px; overflow: auto; }
+    .mcp-citations { margin: 0.2rem 0 0 1rem; font-size: 0.78rem; color: var(--text-muted); }
+    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-danger { background: #fde8e8; color: #991b1b; }
   </style>
 </head>
 <body>
@@ -105,6 +127,25 @@
               <p id="ai-rec-rationale"></p>
               <button type="button" class="btn btn-ghost btn-sm" style="margin-top:0.5rem;" onclick="applyAIScores()">Apply AI Scores</button>
             </div>
+          </div>
+
+          <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
+            <div class="mcp-head">
+              <h2 style="font-size:1rem;margin:0;">MCP Insights</h2>
+              <div class="mcp-toggle-row">
+                <label class="switch" for="mcp-toggle" title="Enable or disable MCP Mode">
+                  <input id="mcp-toggle" type="checkbox" checked onchange="onMcpToggle()">
+                  <span class="slider"></span>
+                </label>
+                <span id="mcp-state" class="mcp-state mcp-on">ON</span>
+              </div>
+            </div>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.75rem;">Grounded retrieval through the shared MCP server. Answers cite their source records and a confidence level.</p>
+            <div class="mcp-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="mcp-scores-btn" onclick="runMcpTool('/mcp/evaluation-scores')">Evaluation scores</button>
+              <button type="button" class="btn btn-primary btn-sm" id="mcp-hire-btn" onclick="runMcpTool('/mcp/hire-recommendation')">Should we hire?</button>
+            </div>
+            <div id="mcp-result" class="mcp-panel">MCP responses will appear here.</div>
           </div>
 
           <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
@@ -292,6 +333,67 @@
       window.showToast('AI scores applied — you can adjust them', 'success');
     }
 
+    // --- MCP Insights (grounded via shared MCP server) ---
+    const MCP_KEY = 'mcp_mode_enabled';
+
+    function isMcpEnabled() { return document.getElementById('mcp-toggle').checked; }
+
+    function renderMcpState() {
+      const state = document.getElementById('mcp-state');
+      const on = isMcpEnabled();
+      state.textContent = on ? 'ON' : 'OFF';
+      state.classList.toggle('mcp-on', on);
+      state.classList.toggle('mcp-off', !on);
+      document.getElementById('mcp-scores-btn').disabled = !on;
+      document.getElementById('mcp-hire-btn').disabled = !on;
+    }
+
+    function onMcpToggle() {
+      localStorage.setItem(MCP_KEY, String(isMcpEnabled()));
+      renderMcpState();
+      document.getElementById('mcp-result').innerHTML = isMcpEnabled()
+        ? 'MCP responses will appear here.'
+        : '<p class="mcp-off">MCP Mode is OFF. Enable it to run MCP tools.</p>';
+    }
+
+    function loadMcpMode() {
+      const persisted = localStorage.getItem(MCP_KEY);
+      document.getElementById('mcp-toggle').checked = persisted === null ? true : persisted === 'true';
+      renderMcpState();
+      if (!isMcpEnabled()) {
+        document.getElementById('mcp-result').innerHTML = '<p class="mcp-off">MCP Mode is OFF. Enable it to run MCP tools.</p>';
+      }
+    }
+
+    async function runMcpTool(path) {
+      if (!isMcpEnabled()) {
+        document.getElementById('mcp-result').innerHTML = '<p class="mcp-off">MCP Mode is OFF. Enable it to run MCP tools.</p>';
+        return;
+      }
+      if (!applicationId) { window.showToast('No application linked', 'error'); return; }
+      const panel = document.getElementById('mcp-result');
+      panel.innerHTML = 'Contacting MCP server…';
+      try {
+        const resp = await fetch(BACKEND + path, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-MCP-Mode': isMcpEnabled() ? 'on' : 'off'
+          },
+          body: new URLSearchParams({ application_id: String(applicationId) })
+        });
+        const html = await resp.text();
+        if (resp.status === 503) {
+          panel.innerHTML = '<p class="mcp-off">MCP server unavailable. Ensure the shared MCP server is running on port 16050.</p>';
+          return;
+        }
+        panel.innerHTML = html;
+      } catch (e) {
+        panel.innerHTML = '<p class="mcp-off">Failed to reach the MCP server. Is it running on port 16050?</p>';
+      }
+    }
+
     const INTERVIEWS_URL = '{{ interviews_public_url }}';
 
     function renderInterviewNotes(data) {
@@ -426,6 +528,7 @@
         await loadInterviewNotes(applicationId);
       }
       updateOverall();
+      loadMcpMode();
     });
   </script>
 </body>
