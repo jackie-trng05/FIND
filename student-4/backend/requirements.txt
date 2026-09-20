@@ -4,3 +4,4 @@ requests==2.32.3
 openai==1.51.0
 httpx==0.27.2
 python-dotenv
+mcp<2

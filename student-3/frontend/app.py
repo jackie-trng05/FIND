@@ -156,6 +156,11 @@ def index():
     return render_template("list.html", **_context())
 
 
+@app.get("/mcp")
+def mcp_page():
+    return render_template("mcp.html", **_context())
+
+
 @app.get("/apply/<int:job_posting_id>")
 def apply(job_posting_id: int):
     return render_template("apply.html", **_context(job_posting_id=job_posting_id))

@@ -34,6 +34,13 @@ def index():
                            home_url=FIND_HOME_URL)
 
 
+@app.get("/mcp")
+def mcp_page():
+    return render_template("mcp.html",
+                           backend_url=BACKEND_PUBLIC_URL,
+                           home_url=FIND_HOME_URL)
+
+
 @app.get("/evaluate/<int:application_id>")
 def evaluation_form(application_id):
     return render_template("evaluation_form.html",

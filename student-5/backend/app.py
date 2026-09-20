@@ -19,6 +19,7 @@ if str(BASE_DIR) not in sys.path:
 
 from routes.ai_mode import ai_mode_bp
 from routes.evaluations import evaluations_bp
+from routes.mcp_mode import mcp_bp
 from services.config import FRONTEND_PUBLIC_URL, PORT
 
 
@@ -26,13 +27,17 @@ def create_app() -> Flask:
     app = Flask(__name__)
     CORS(
         app,
-        resources={r"/api/*": {"origins": [FRONTEND_PUBLIC_URL, "http://localhost:16016"]}},
+        resources={
+            r"/api/*": {"origins": [FRONTEND_PUBLIC_URL, "http://localhost:16016"]},
+            r"/mcp/*": {"origins": [FRONTEND_PUBLIC_URL, "http://localhost:16016"]},
+        },
         supports_credentials=True,
         expose_headers=["HX-Redirect", "HX-Trigger"],
     )
 
     app.register_blueprint(evaluations_bp)
     app.register_blueprint(ai_mode_bp)
+    app.register_blueprint(mcp_bp)
 
     return app
 
