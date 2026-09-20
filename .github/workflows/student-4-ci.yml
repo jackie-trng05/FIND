@@ -17,6 +17,12 @@ on:
       - ".github/workflows/student-4-ci.yml"
   workflow_dispatch:
 
+# AI-Mode and MCP are disabled during CI/CD: the pipeline never needs
+# Ollama or the shared MCP server. Guard tests assert the disabled response.
+env:
+  AI_MODE_ENABLED: "false"
+  MCP_ENABLED: "false"
+
 jobs:
   build-images:
     runs-on: ubuntu-latest
