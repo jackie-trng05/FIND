@@ -68,6 +68,131 @@
 </section>
 {% endif %}
 
+<section class="ai-section mcp-section">
+    <div class="mcp-head">
+        <h3>MCP Insights</h3>
+        <div class="mcp-toggle-row">
+            <label class="switch" for="mcp-toggle" title="Enable or disable MCP Mode">
+                <input id="mcp-toggle" type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
+            <span id="mcp-state" class="mcp-state mcp-on">ON</span>
+        </div>
+    </div>
+    <p class="mcp-desc">Grounded retrieval through the shared MCP server for job
+        {{ application.job_posting_id }}. Answers cite their source records and a confidence level.</p>
+    <div class="mcp-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="mcp-apps-btn">Applications for this job</button>
+        <button type="button" class="btn btn-primary btn-sm" id="mcp-shortlist-btn">Who should be shortlisted?</button>
+    </div>
+    <div id="mcp-result" class="mcp-panel">MCP responses will appear here.</div>
+</section>
+
+<style>
+    .mcp-section { margin-top: 1.5rem; }
+    .mcp-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .mcp-head h3 { margin: 0; }
+    .mcp-toggle-row { display: flex; align-items: center; gap: 0.5rem; }
+    .mcp-state { font-weight: 700; font-size: 0.8rem; }
+    .mcp-on { color: #16a34a; }
+    .mcp-off { color: #dc2626; }
+    .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch .slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 999px; transition: 0.2s; }
+    .switch .slider::before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+    .switch input:checked + .slider { background: #16a34a; }
+    .switch input:checked + .slider::before { transform: translateX(18px); }
+    .mcp-desc { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .mcp-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .mcp-panel { padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--primary-light); font-size: 0.85rem; }
+    .mcp-panel h3 { font-size: 0.9rem; margin-bottom: 0.4rem; }
+    .mcp-panel h4 { font-size: 0.78rem; margin: 0.6rem 0 0.2rem; color: var(--text-muted); }
+    .mcp-answer { white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin: 0.4rem 0; max-height: 260px; overflow: auto; }
+    .mcp-citations { margin: 0.2rem 0 0 1rem; font-size: 0.78rem; color: var(--text-muted); }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-danger { background: #fde8e8; color: #991b1b; }
+    .mcp-spinner { display: inline-block; width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; border: 2px solid #cbd5e1; border-top-color: #16a34a; border-radius: 50%; animation: mcp-spin 0.7s linear infinite; }
+    @keyframes mcp-spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+(function () {
+    const BACKEND = '{{ backend_url }}';
+    const jobPostingId = {{ application.job_posting_id }};
+    const MCP_KEY = 'mcp_mode_enabled';
+
+    const toggle = document.getElementById('mcp-toggle');
+    const stateEl = document.getElementById('mcp-state');
+    const appsBtn = document.getElementById('mcp-apps-btn');
+    const shortlistBtn = document.getElementById('mcp-shortlist-btn');
+    const panel = document.getElementById('mcp-result');
+    if (!toggle || !panel) return;
+
+    function isEnabled() { return toggle.checked; }
+
+    function renderState() {
+        const on = isEnabled();
+        stateEl.textContent = on ? 'ON' : 'OFF';
+        stateEl.classList.toggle('mcp-on', on);
+        stateEl.classList.toggle('mcp-off', !on);
+        appsBtn.disabled = !on;
+        shortlistBtn.disabled = !on;
+    }
+
+    function disabledMsg() {
+        panel.innerHTML = '<p class="mcp-off">MCP Mode is OFF. Enable it to run MCP tools.</p>';
+    }
+
+    function onToggle() {
+        localStorage.setItem(MCP_KEY, String(isEnabled()));
+        renderState();
+        if (isEnabled()) { panel.innerHTML = 'MCP responses will appear here.'; }
+        else { disabledMsg(); }
+    }
+
+    async function runTool(path) {
+        if (!isEnabled()) { disabledMsg(); return; }
+        const busyMsg = path.indexOf('shortlist') !== -1
+            ? '<span class="mcp-spinner"></span> Generating grounded recommendation — the local AI model can take up to a minute…'
+            : '<span class="mcp-spinner"></span> Contacting MCP server…';
+        panel.innerHTML = busyMsg;
+        appsBtn.disabled = true;
+        shortlistBtn.disabled = true;
+        try {
+            const resp = await fetch(BACKEND + path, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-MCP-Mode': isEnabled() ? 'on' : 'off'
+                },
+                body: new URLSearchParams({ job_posting_id: String(jobPostingId) })
+            });
+            const html = await resp.text();
+            if (resp.status === 503) {
+                panel.innerHTML = '<p class="mcp-off">MCP server unavailable. Ensure the shared MCP server is running on port 16050.</p>';
+                return;
+            }
+            panel.innerHTML = html;
+        } catch (e) {
+            panel.innerHTML = '<p class="mcp-off">Failed to reach the MCP server. Is it running on port 16050?</p>';
+        } finally {
+            renderState();
+        }
+    }
+
+    toggle.addEventListener('change', onToggle);
+    appsBtn.addEventListener('click', () => runTool('/mcp/applications-for-job'));
+    shortlistBtn.addEventListener('click', () => runTool('/mcp/shortlist-recommendation'));
+
+    const persisted = localStorage.getItem(MCP_KEY);
+    toggle.checked = persisted === null ? true : persisted === 'true';
+    renderState();
+    if (!isEnabled()) { disabledMsg(); }
+})();
+</script>
+
 {% if status != 'Rejected' %}
 <section class="ai-manual-actions">
     {% if status == 'Submitted' %}
