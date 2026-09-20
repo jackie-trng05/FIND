@@ -22,6 +22,7 @@ AVAILABLE_TOOLS = [
     "ci_report",
     "applicant_profile",
     "applications_for_job",
+    "interview_details",
     "evaluation_scores",
 ]
 
@@ -49,10 +50,11 @@ def register_student_tools(server: FastMCP) -> None:
     self-register their tool (under ``students/``) without touching the shared
     server wiring above.
     """
-    from students import student_1, student_3, student_5
+    from students import student_1, student_3, student_4, student_5
 
     student_1.register(server)
     student_3.register(server)
+    student_4.register(server)
     student_5.register(server)
 
 
