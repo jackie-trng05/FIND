@@ -62,6 +62,11 @@ def calendar_page():
     return render_template("index.html", active_page="calendar")
 
 
+@app.get("/mcp")
+def mcp_page():
+    return render_template("mcp.html", active_page="mcp")
+
+
 @app.get("/list")
 def list_page():
     return render_template("list.html", active_page="list")
