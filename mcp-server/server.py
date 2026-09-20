@@ -20,6 +20,7 @@ from mcp.server.fastmcp import FastMCP
 AVAILABLE_TOOLS = [
     "project_files",
     "ci_report",
+    "evaluation_scores",
 ]
 
 mcp = FastMCP("FIND MCP", host=config.MCP_HOST, port=config.MCP_PORT)
@@ -42,14 +43,13 @@ def ci_report(report_path: str = "") -> dict:
 def register_student_tools(server: FastMCP) -> None:
     """Register each student feature's retrieval tool.
 
-    Populated in Step 2 (one tool per student domain). Kept as an explicit
-    extension point so students self-register their tool without touching the
-    shared server wiring above.
+    One tool per student domain. Kept as an explicit extension point so students
+    self-register their tool (under ``students/``) without touching the shared
+    server wiring above.
     """
-    # Example (Step 2):
-    #     from students import student_2
-    #     student_2.register(server)
-    return None
+    from students import student_5
+
+    student_5.register(server)
 
 
 register_student_tools(mcp)

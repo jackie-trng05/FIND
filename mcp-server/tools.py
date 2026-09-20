@@ -20,11 +20,22 @@ testing (mirrors the lab's ``if __name__ == '__main__'`` smoke test).
 import json
 from pathlib import Path
 
+import requests
+
 import config
 import retrieval
 
 # Guard project_files against escaping the repository root.
 _REPO_ROOT = config.REPO_ROOT.resolve()
+
+# Database column -> friendly score key for the evaluation_scores tool.
+_EVALUATION_SCORE_FIELDS = {
+    "Evaluation_TechnicalScore": "technical",
+    "Evaluation_EducationScore": "education",
+    "Evaluation_CommunicationScore": "communication",
+    "Evaluation_ProblemSolvingScore": "problem_solving",
+    "Evaluation_ProfessionalismScore": "professionalism",
+}
 
 
 def list_project_files(directory_path: str = ".") -> dict:
@@ -78,6 +89,94 @@ def read_ci_report(report_path: str | None = None) -> dict:
     )
 
 
+# --- Student 5: Candidate Evaluation -------------------------------------
+def get_evaluation_scores(application_id: int | str) -> dict:
+    """Retrieve a candidate's evaluation scorecard for one application.
+
+    Grounds the student-5 AI-Mode question "Should we hire candidate X?": given
+    an ``application_id`` it returns the five 1-5 criteria scores, the overall
+    score and the final Hire/Reject recommendation, each backed by a citation to
+    the ``evaluations`` record/field so the answer stays grounded.
+
+    Confidence (per the shared rule, driven by whether an evaluation exists):
+        High   = an evaluation exists and is finalized (Hire/Reject decided)
+        Medium = an evaluation exists but is still in progress (draft, no decision)
+        Low    = no evaluation on record for the application (or the service is
+                 unreachable / the id is invalid)
+    """
+    try:
+        app_id = int(application_id)
+    except (TypeError, ValueError):
+        return retrieval.empty_context(
+            f"application_id must be an integer, got: {application_id!r}",
+            [retrieval.source(table="evaluations")],
+        )
+
+    url = f"{config.db_url('student-5')}/evaluations"
+    try:
+        response = requests.get(
+            url, params={"application_id": app_id}, timeout=config.REQUEST_TIMEOUT
+        )
+        response.raise_for_status()
+        records = response.json()
+    except Exception as exc:  # noqa: BLE001 - surface any transport/parse failure as Low
+        return retrieval.empty_context(
+            f"Evaluation service unreachable for application {app_id}: {exc}",
+            [retrieval.source(table="evaluations")],
+        )
+
+    if not records:
+        return retrieval.build_context(
+            {
+                "application_id": app_id,
+                "evaluation": None,
+                "message": "No evaluation has been recorded for this application yet.",
+            },
+            [retrieval.source(table="evaluations", field="Application_Id")],
+            retrieval.LOW,
+        )
+
+    record = records[0]
+    evaluation_id = record.get("Evaluation_Id")
+    recommendation = record.get("Evaluation_FinalRecommendation")
+    finalized = recommendation is not None
+
+    scores = {
+        key: record.get(column) for column, key in _EVALUATION_SCORE_FIELDS.items()
+    }
+
+    answer_data = {
+        "application_id": app_id,
+        "evaluation_id": evaluation_id,
+        "scores": scores,
+        "overall_score": record.get("Evaluation_OverallScore"),
+        "recommendation": recommendation,
+        "status": "finalized" if finalized else "in_progress",
+    }
+
+    # Cite each score field, the overall score and the recommendation.
+    sources = [
+        retrieval.source(table="evaluations", record_id=evaluation_id, field=column)
+        for column in _EVALUATION_SCORE_FIELDS
+    ]
+    sources.append(
+        retrieval.source(
+            table="evaluations", record_id=evaluation_id, field="Evaluation_OverallScore"
+        )
+    )
+    sources.append(
+        retrieval.source(
+            table="evaluations",
+            record_id=evaluation_id,
+            field="Evaluation_FinalRecommendation",
+        )
+    )
+
+    confidence = retrieval.derive_confidence(exact=finalized, partial=not finalized)
+    return retrieval.build_context(answer_data, sources, confidence)
+
+
 if __name__ == "__main__":
     print(json.dumps(list_project_files("."), indent=2))
     print(json.dumps(read_ci_report(), indent=2))
+    print(json.dumps(get_evaluation_scores(13), indent=2))
