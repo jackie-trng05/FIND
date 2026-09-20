@@ -414,6 +414,26 @@ The first build may take some time because Docker needs to download the required
 
 ---
 
+## Start the Shared MCP Server (manual step)
+
+MCP-Mode and grounded AI-Mode features (per-student retrieval tools, citations, confidence)
+depend on the shared MCP server. It is **not** part of `docker-compose.yml` and does **not**
+start with `docker-compose up` — it must be run as a separate local host process.
+
+Open a **separate** PowerShell window and run:
+
+```powershell
+cd C:\git\FIND\mcp-server
+pip install -r requirements.txt
+python server.py
+```
+
+Leave this process running alongside `docker-compose up` for as long as you want to test MCP-Mode
+or AI-Mode features. See [`mcp-server/README.md`](mcp-server/README.md) for tool details and the
+retrieval-context contract.
+
+---
+
 ## Stop FIND
 
 To stop and remove the containers created by Docker Compose:
