@@ -43,17 +43,6 @@ def profile_page():
     return index()
 
 
-@app.get("/mcp")
-def mcp_page():
-    return render_template(
-        "mcp.html",
-        backend_url=BACKEND_PUBLIC_URL,
-        shared_api_public_url=SHARED_API_PUBLIC_URL,
-        login_url=LOGIN_URL,
-        home_url=HOME_URL,
-    )
-
-
 @app.get("/css/<path:filename>")
 def serve_css(filename):
     return send_from_directory("/app/shared-css", filename)

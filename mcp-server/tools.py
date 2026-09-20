@@ -89,6 +89,106 @@ def read_ci_report(report_path: str | None = None) -> dict:
     )
 
 
+# --- Student 1: Applicant Profile -----------------------------------------
+_PROFILE_FIELDS = ("phone", "location", "professional_title", "summary", "interests")
+
+
+def get_applicant_profile(user_id: int | str) -> dict:
+    """Retrieve an applicant's profile fields plus their resume metadata.
+
+    Grounds the student-1 AI-Mode question "Summarise this applicant's
+    strengths": given a ``user_id`` it returns the profile fields (phone,
+    location, professional_title, summary, interests) and the linked resume's
+    metadata (file_name, file_type, uploaded_at), each backed by a citation to
+    the ``profiles``/``resumes`` record/field so the answer stays grounded.
+
+    Confidence (per the shared rule, driven by field completeness):
+        High   = a profile exists with title/summary/interests all filled AND
+                 a resume is on file
+        Medium = a profile exists but some of those fields are missing, or no
+                 resume has been uploaded yet
+        Low    = no profile on record for the user (or the service is
+                 unreachable / the id is invalid)
+    """
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return retrieval.empty_context(
+            f"user_id must be an integer, got: {user_id!r}",
+            [retrieval.source(table="profiles")],
+        )
+
+    base_url = config.db_url("student-1")
+    try:
+        response = requests.get(
+            f"{base_url}/profiles/by-user/{uid}", timeout=config.REQUEST_TIMEOUT
+        )
+    except Exception as exc:  # noqa: BLE001 - surface any transport failure as Low
+        return retrieval.empty_context(
+            f"Profile service unreachable for user {uid}: {exc}",
+            [retrieval.source(table="profiles")],
+        )
+
+    if response.status_code != 200:
+        return retrieval.build_context(
+            {
+                "user_id": uid,
+                "profile": None,
+                "resume": None,
+                "message": "No profile has been created for this user yet.",
+            },
+            [retrieval.source(table="profiles", field="user_id")],
+            retrieval.LOW,
+        )
+
+    profile = response.json()
+    profile_id = profile.get("profile_id")
+
+    resume = None
+    try:
+        resumes_resp = requests.get(
+            f"{base_url}/profiles/{profile_id}/resumes", timeout=config.REQUEST_TIMEOUT
+        )
+        if resumes_resp.status_code == 200:
+            records = resumes_resp.json()
+            if records:
+                resume = records[0]
+    except Exception:  # noqa: BLE001 - resume lookup is best-effort
+        resume = None
+
+    answer_data = {
+        "user_id": uid,
+        "profile": {field: profile.get(field) for field in _PROFILE_FIELDS},
+        "resume": (
+            {
+                "file_name": resume.get("file_name"),
+                "file_type": resume.get("file_type"),
+                "uploaded_at": resume.get("uploaded_at"),
+            }
+            if resume
+            else None
+        ),
+    }
+
+    # Cite each populated profile field plus the resume file, when present.
+    sources = [
+        retrieval.source(table="profiles", record_id=profile_id, field=field)
+        for field in _PROFILE_FIELDS
+        if profile.get(field)
+    ]
+    if resume:
+        sources.append(
+            retrieval.source(table="resumes", record_id=resume.get("resume_id"), field="file_name")
+        )
+
+    fields_complete = all(profile.get(field) for field in ("professional_title", "summary", "interests"))
+    confidence = retrieval.derive_confidence(
+        exact=fields_complete and resume is not None,
+        partial=not (fields_complete and resume is not None),
+    )
+    return retrieval.build_context(answer_data, sources, confidence)
+
+
 # --- Student 5: Candidate Evaluation -------------------------------------
 def get_evaluation_scores(application_id: int | str) -> dict:
     """Retrieve a candidate's evaluation scorecard for one application.
@@ -179,4 +279,5 @@ def get_evaluation_scores(application_id: int | str) -> dict:
 if __name__ == "__main__":
     print(json.dumps(list_project_files("."), indent=2))
     print(json.dumps(read_ci_report(), indent=2))
+    print(json.dumps(get_applicant_profile(1), indent=2))
     print(json.dumps(get_evaluation_scores(13), indent=2))

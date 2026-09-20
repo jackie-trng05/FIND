@@ -20,7 +20,7 @@ from html import escape
 
 from flask import Blueprint, request
 
-from services import mcp_client
+from services import integration_api, mcp_client
 
 mcp_bp = Blueprint("mcp_mode", __name__)
 
@@ -119,3 +119,109 @@ def mcp_project_files():
 def mcp_ci_report():
     report_path = request.form.get("report_path", "").strip()
     return _run_tool("MCP Tool: ci_report", "ci_report", {"report_path": report_path})
+
+
+# --- Student 1: Applicant Profile -----------------------------------------
+@mcp_bp.post("/mcp/applicant-profile")
+def mcp_applicant_profile():
+    """Grounded retrieval of the current session user's profile + resume metadata."""
+    if not mcp_mode_is_active(request):
+        return _disabled_fragment()
+    user = integration_api.get_session_user()
+    if not user:
+        return {"error": "Not authenticated"}, 401
+    return _run_tool(
+        f"MCP Tool: applicant_profile (user {user['user_id']})",
+        "applicant_profile",
+        {"user_id": user["user_id"]},
+    )
+
+
+def _grounded_strengths_summary(context: dict) -> str:
+    """Build a grounded, cited "strengths" summary from MCP context.
+
+    The summary is derived strictly from the retrieved profile fields (no
+    invention). When AI-Mode is enabled AND the local LLM is reachable, a short
+    natural-language rewrite is layered on top of the same grounded facts;
+    otherwise a deterministic grounded summary is used so the endpoint still
+    works in CI / without Ollama.
+    """
+    data = context.get("answer_data", {}) or {}
+    profile = data.get("profile")
+    resume = data.get("resume")
+
+    if not profile:
+        return "No profile is on record for this user, so a strengths summary cannot be grounded in profile data yet."
+
+    parts = []
+    if profile.get("professional_title"):
+        parts.append(f"works as a {profile['professional_title']}")
+    if profile.get("summary"):
+        parts.append(profile["summary"])
+    if profile.get("interests"):
+        parts.append(f"Interests: {profile['interests']}.")
+    summary = " ".join(parts) if parts else "The profile has no summary, title, or interests recorded yet."
+    if resume:
+        summary += f" A resume is on file ({resume.get('file_name')})."
+    else:
+        summary += " No resume has been uploaded yet."
+
+    if not ai_mode_enabled():
+        return summary
+
+    try:  # Optional LLM rewrite, grounded in the retrieved context only.
+        import json
+
+        from services.llm_client import OLLAMA_MODEL, client as ollama_client
+
+        grounding = (
+            "You are a hiring assistant. Answer ONLY using the applicant profile "
+            "context provided as JSON. Do not invent facts. If a field is missing, "
+            "say so rather than guessing."
+        )
+        prompt = (
+            "Question: Summarise this applicant's strengths.\n\n"
+            f"Profile context (the only allowed source):\n{json.dumps(data, indent=2)}\n\n"
+            "Give a 2-3 sentence grounded summary."
+        )
+        response = ollama_client.chat.completions.create(
+            model=OLLAMA_MODEL,
+            messages=[
+                {"role": "system", "content": grounding},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=200,
+            temperature=0.2,
+        )
+        narrative = (response.choices[0].message.content or "").strip()
+        if narrative:
+            return narrative
+    except Exception:  # noqa: BLE001 - fall back to the deterministic grounded summary
+        pass
+    return summary
+
+
+@mcp_bp.post("/mcp/strengths-summary")
+def mcp_strengths_summary():
+    """Grounded RAG answer to "Summarise this applicant's strengths"."""
+    if not mcp_mode_is_active(request):
+        return _disabled_fragment()
+    user = integration_api.get_session_user()
+    if not user:
+        return {"error": "Not authenticated"}, 401
+
+    try:
+        context = mcp_client.call_tool("applicant_profile", {"user_id": user["user_id"]})
+    except mcp_client.MCPClientError as exc:
+        return f"<p>MCP applicant_profile failed.</p><pre>{escape(str(exc))}</pre>", 503
+
+    answer = _grounded_strengths_summary(context)
+    confidence = context.get("confidence", "Low")
+    sources = context.get("sources", [])
+    fragment = (
+        "<h3>Strengths summary</h3>"
+        f"{_confidence_badge(confidence)}"
+        f'<p class="mcp-answer">{escape(answer)}</p>'
+        f"<h4>Citations</h4>{_citations_list(sources)}"
+    )
+    return fragment, 200
