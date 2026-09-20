@@ -60,6 +60,33 @@
 
         <div id="mcp-result" class="panel panel-mcp">MCP tool responses will appear here.</div>
     </div>
+
+    <div class="card">
+        <div class="card-header"><h2 class="card-title">Candidate Evaluation (evaluation_scores)</h2></div>
+        <p class="muted">
+            Retrieve a candidate's evaluation scorecard by application, then ask a grounded
+            "Should we hire?" question. Both go through this feature's backend/API to the
+            shared MCP server and return citations + a confidence category.
+        </p>
+
+        <div class="mcp-actions">
+            <form class="feature-form" hx-post="{{ backend_url }}/mcp/evaluation-scores"
+                  hx-headers='{"X-MCP-Mode": "on"}' hx-target="#eval-result" hx-swap="innerHTML">
+                <label for="eval_application_id">evaluation_scores (application_id)</label>
+                <input id="eval_application_id" name="application_id" type="number" min="1" value="13">
+                <button type="submit" class="btn btn-primary mcp-action">Get scores</button>
+            </form>
+
+            <form class="feature-form" hx-post="{{ backend_url }}/mcp/hire-recommendation"
+                  hx-headers='{"X-MCP-Mode": "on"}' hx-target="#eval-result" hx-swap="innerHTML">
+                <label for="hire_application_id">Should we hire? (application_id)</label>
+                <input id="hire_application_id" name="application_id" type="number" min="1" value="13">
+                <button type="submit" class="btn btn-primary mcp-action">Ask (grounded)</button>
+            </form>
+        </div>
+
+        <div id="eval-result" class="panel panel-mcp">Evaluation answers will appear here.</div>
+    </div>
 </main>
 
 <script>
