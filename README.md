@@ -478,6 +478,62 @@ The port mappings follow the course-provided architecture and should not be chan
 
 Database links are provided for local inspection and debugging only; they are not end-user entry points.
 
+| Shared MCP | MCP Server    |   `16050` |          n/a   |    N (local host)     |
+
+---
+
+# AI-Mode, MCP & RAG (shared, local, non-containerised)
+
+Release 1 adds **one shared MCP server** used by **all five** student features
+to ground AI-Mode answers with source citations and a confidence category.
+
+## Not in Docker Compose (by design)
+
+The MCP server, AI-Mode, and the agentic loop run as **local host processes**.
+`docker-compose.yml` continues to run only the Release 0 containerised feature
+microservices and is **not** extended with MCP, AI-Mode, or the agentic loop.
+Containerised backends reach the local MCP server at
+`http://host.docker.internal:16050`.
+
+## Shared MCP server
+
+- Location: [`mcp-server/`](mcp-server/README.md)
+- Transport: streamable-HTTP, fixed port **16050** (`http://localhost:16050/mcp`)
+- Shared tools: `project_files`, `ci_report` (per-student retrieval tools added in Step 2)
+- Start it:
+
+```powershell
+cd mcp-server
+pip install -r requirements.txt   # installs mcp<2 (FastMCP) + requests
+python server.py
+```
+
+## Grounding contract (RAG)
+
+Shared prompt convention for grounded answers:
+`shared/prompts/rag/grounded_answer_prompt.txt`. The model answers **only** from
+retrieved MCP context and must emit citations + a confidence category
+(**High / Medium / Low**). Every MCP tool returns a retrieval-context object:
+
+```json
+{ "answer_data": {}, "sources": [ {"table": "", "record_id": "", "field": ""} ], "confidence": "High|Medium|Low" }
+```
+
+## Frontend access (through the backend only)
+
+The browser reaches the shared MCP **only** through each feature's backend/API.
+Each student frontend serves an **MCP tab at `/mcp`** that POSTs (via HTMX) to
+its own backend `POST /mcp/*` endpoints (`routes/mcp_mode.py`), which proxy to
+the shared MCP server through `services/mcp_client.py`. The browser never calls
+the MCP server directly.
+
+## Feature flags
+
+`MCP_ENABLED` and `AI_MODE_ENABLED` (default `true` locally) gate the backend
+MCP/AI endpoints. GitHub Actions per-student workflows set both to `false`, so
+**CI/CD never needs Ollama or the MCP process**; the endpoints return a clear
+disabled response, verified by guard tests (`tests/test_mcp_mode.py`).
+
 ---
 
 ## Docker Desktop Is Not Running
