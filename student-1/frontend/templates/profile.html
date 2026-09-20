@@ -15,6 +15,8 @@
     .mcp-answer { white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin: 0.4rem 0; }
     .mcp-citations { margin: 0.2rem 0 0 1rem; font-size: 0.78rem; color: var(--text-muted); }
     .badge-danger { background: #fde8e8; color: #991b1b; }
+    /* MCP Insights are grounded in the applicant's profile/resume; staff have neither. */
+    body.role-staff .applicant-only { display: none !important; }
 </style>
 
 <div class="page-head">
@@ -37,7 +39,7 @@
     </div>
 </div>
 
-<div class="card" style="margin-bottom:2rem;">
+<div class="card applicant-only" style="margin-bottom:2rem;">
     <div class="mcp-head">
         <h2 style="font-size:1rem;margin:0;">MCP Insights</h2>
         <div class="mcp-toggle-row">

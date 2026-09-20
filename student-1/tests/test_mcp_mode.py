@@ -72,3 +72,25 @@ def test_strengths_summary_requires_authentication(client, monkeypatch):
     monkeypatch.setattr("routes.mcp_mode.integration_api.get_session_user", lambda: None)
     resp = client.post("/mcp/strengths-summary", data={})
     assert resp.status_code == 401
+
+
+def test_applicant_profile_rejects_staff(client, monkeypatch):
+    monkeypatch.setenv("MCP_ENABLED", "true")
+    monkeypatch.setattr(
+        "routes.mcp_mode.integration_api.get_session_user",
+        lambda: {"user_id": 1, "role": "staff"},
+    )
+    resp = client.post("/mcp/applicant-profile", data={})
+    assert resp.status_code == 200
+    assert "do not have profiles" in resp.get_data(as_text=True).lower()
+
+
+def test_strengths_summary_rejects_staff(client, monkeypatch):
+    monkeypatch.setenv("MCP_ENABLED", "true")
+    monkeypatch.setattr(
+        "routes.mcp_mode.integration_api.get_session_user",
+        lambda: {"user_id": 1, "role": "staff"},
+    )
+    resp = client.post("/mcp/strengths-summary", data={})
+    assert resp.status_code == 200
+    assert "do not have profiles" in resp.get_data(as_text=True).lower()

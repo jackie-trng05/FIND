@@ -432,6 +432,10 @@ Leave this process running alongside `docker-compose up` for as long as you want
 or AI-Mode features. See [`mcp-server/README.md`](mcp-server/README.md) for tool details and the
 retrieval-context contract.
 
+> **Note:** This process does **not** hot-reload. After editing any file under `mcp-server/`
+> (e.g. `tools.py`, `server.py`, `students/*.py`), stop it (`Ctrl+C`) and run `python server.py`
+> again for the change to take effect.
+
 ---
 
 ## Stop FIND

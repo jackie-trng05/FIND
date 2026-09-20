@@ -2,10 +2,10 @@
 
 These exercise ``tools.get_applicant_profile`` directly with the outbound HTTP
 calls mocked, verifying the grounded retrieval-context contract: the profile
-fields and resume metadata are returned, citations point at the real
-``profiles``/``resumes`` fields, and the confidence category follows the
-shared rule (complete profile + resume -> High, partial -> Medium,
-none/unreachable/bad-id -> Low).
+fields, resume metadata and extracted resume text are returned, citations
+point at the real ``profiles``/``resumes`` fields, and the confidence category
+follows the shared rule (complete profile + readable resume -> High,
+partial -> Medium, none/unreachable/bad-id -> Low).
 """
 
 import os
@@ -23,9 +23,10 @@ import tools  # noqa: E402 (path is set up above)
 
 
 class _FakeResponse:
-    def __init__(self, payload, status_code=200):
+    def __init__(self, payload, status_code=200, content=b""):
         self._payload = payload
         self.status_code = status_code
+        self.content = content
 
     def json(self):
         return self._payload
@@ -53,13 +54,22 @@ def _resume_record():
     }
 
 
-def test_complete_profile_with_resume_is_high_confidence_with_citations(monkeypatch):
+def _get_with_resume(file_content=b"%PDF fake bytes"):
     def _get(url, timeout=None, **kwargs):
         if url.endswith("/resumes"):
             return _FakeResponse([_resume_record()])
+        if url.endswith("/file"):
+            return _FakeResponse(None, content=file_content)
         return _FakeResponse(_complete_profile())
 
-    monkeypatch.setattr(tools.requests, "get", _get)
+    return _get
+
+
+def test_complete_profile_with_readable_resume_is_high_confidence_with_citations(monkeypatch):
+    monkeypatch.setattr(tools.requests, "get", _get_with_resume())
+    monkeypatch.setattr(
+        tools, "_extract_resume_text", lambda data, mimetype: "Experienced engineer with Python skills."
+    )
     ctx = tools.get_applicant_profile(6)
 
     assert ctx["confidence"] == "High"
@@ -67,13 +77,26 @@ def test_complete_profile_with_resume_is_high_confidence_with_citations(monkeypa
     assert data["user_id"] == 6
     assert data["profile"]["professional_title"] == "Software Engineer"
     assert data["resume"]["file_name"] == "resume_profile_1.pdf"
+    assert data["resume"]["text"] == "Experienced engineer with Python skills."
 
     fields = {s["field"] for s in ctx["sources"]}
     assert "professional_title" in fields
     assert "summary" in fields
     assert "file_name" in fields
+    assert "file_data" in fields
     assert any(s["table"] == "profiles" for s in ctx["sources"])
     assert any(s["table"] == "resumes" for s in ctx["sources"])
+
+
+def test_resume_with_unreadable_text_is_medium_confidence(monkeypatch):
+    monkeypatch.setattr(tools.requests, "get", _get_with_resume())
+    monkeypatch.setattr(tools, "_extract_resume_text", lambda data, mimetype: "")
+    ctx = tools.get_applicant_profile(6)
+
+    assert ctx["confidence"] == "Medium"
+    assert ctx["answer_data"]["resume"]["text"] == ""
+    fields = {s["field"] for s in ctx["sources"]}
+    assert "file_data" not in fields
 
 
 def test_profile_without_resume_is_medium_confidence(monkeypatch):
@@ -93,11 +116,14 @@ def test_incomplete_profile_is_medium_confidence(monkeypatch):
     def _get(url, timeout=None, **kwargs):
         if url.endswith("/resumes"):
             return _FakeResponse([_resume_record()])
+        if url.endswith("/file"):
+            return _FakeResponse(None, content=b"%PDF fake bytes")
         record = _complete_profile()
         record["interests"] = ""
         return _FakeResponse(record)
 
     monkeypatch.setattr(tools.requests, "get", _get)
+    monkeypatch.setattr(tools, "_extract_resume_text", lambda data, mimetype: "Some resume text.")
     ctx = tools.get_applicant_profile(6)
 
     assert ctx["confidence"] == "Medium"
@@ -127,3 +153,26 @@ def test_non_numeric_user_id_is_low_confidence():
     ctx = tools.get_applicant_profile("not-a-number")
     assert ctx["confidence"] == "Low"
     assert "error" in ctx["answer_data"]
+
+
+def test_extract_resume_text_rejects_non_pdf_mimetype():
+    assert tools._extract_resume_text(b"some bytes", "text/plain") == ""
+
+
+def test_extract_resume_text_truncates_long_text(monkeypatch):
+    long_page_text = "A" * (tools._RESUME_TEXT_MAX_CHARS + 500)
+
+    class _FakePage:
+        def extract_text(self):
+            return long_page_text
+
+    class _FakeReader:
+        def __init__(self, _data):
+            self.pages = [_FakePage()]
+
+    monkeypatch.setattr(tools, "PdfReader", _FakeReader)
+    text = tools._extract_resume_text(b"%PDF bytes", "application/pdf")
+
+    assert text.startswith("A" * 100)
+    assert text.endswith("[...truncated...]")
+    assert len(text) <= tools._RESUME_TEXT_MAX_CHARS + len("\n[...truncated...]")

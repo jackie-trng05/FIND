@@ -21,6 +21,7 @@ from html import escape
 from flask import Blueprint, request
 
 from services import integration_api, mcp_client
+from views.html_formatters import render_message
 
 mcp_bp = Blueprint("mcp_mode", __name__)
 
@@ -130,6 +131,8 @@ def mcp_applicant_profile():
     user = integration_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
+    if user["role"] == "staff":
+        return render_message("Staff accounts do not have profiles to retrieve.", "error"), 200
     return _run_tool(
         f"MCP Tool: applicant_profile (user {user['user_id']})",
         "applicant_profile",
@@ -149,6 +152,7 @@ def _grounded_strengths_summary(context: dict) -> str:
     data = context.get("answer_data", {}) or {}
     profile = data.get("profile")
     resume = data.get("resume")
+    resume_text = (resume or {}).get("text")
 
     if not profile:
         return "No profile is on record for this user, so a strengths summary cannot be grounded in profile data yet."
@@ -162,7 +166,11 @@ def _grounded_strengths_summary(context: dict) -> str:
         parts.append(f"Interests: {profile['interests']}.")
     summary = " ".join(parts) if parts else "The profile has no summary, title, or interests recorded yet."
     if resume:
-        summary += f" A resume is on file ({resume.get('file_name')})."
+        if resume_text:
+            excerpt = resume_text if len(resume_text) <= 300 else resume_text[:300] + "..."
+            summary += f" Resume on file ({resume.get('file_name')}) adds: {excerpt}"
+        else:
+            summary += f" A resume is on file ({resume.get('file_name')}), but its text could not be read."
     else:
         summary += " No resume has been uploaded yet."
 
@@ -209,6 +217,8 @@ def mcp_strengths_summary():
     user = integration_api.get_session_user()
     if not user:
         return {"error": "Not authenticated"}, 401
+    if user["role"] == "staff":
+        return render_message("Staff accounts do not have profiles to summarise.", "error"), 200
 
     try:
         context = mcp_client.call_tool("applicant_profile", {"user_id": user["user_id"]})
