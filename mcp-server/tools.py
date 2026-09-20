@@ -18,6 +18,7 @@ testing (mirrors the lab's ``if __name__ == '__main__'`` smoke test).
 """
 
 import json
+from io import BytesIO
 from pathlib import Path
 
 import requests
@@ -25,8 +26,16 @@ import requests
 import config
 import retrieval
 
+try:
+    from pypdf import PdfReader  # type: ignore
+except Exception:  # pragma: no cover
+    PdfReader = None  # type: ignore
+
 # Guard project_files against escaping the repository root.
 _REPO_ROOT = config.REPO_ROOT.resolve()
+
+# Resume text is truncated to keep retrieval contexts (and LLM prompts) small.
+_RESUME_TEXT_MAX_CHARS = 4000
 
 # Database column -> friendly score key for the evaluation_scores tool.
 _EVALUATION_SCORE_FIELDS = {
@@ -96,6 +105,146 @@ def read_ci_report(report_path: str | None = None) -> dict:
         [retrieval.source(table="ci_evidence", record_id=resolved.name)],
         retrieval.HIGH,
     )
+
+
+# --- Student 1: Applicant Profile -----------------------------------------
+_PROFILE_FIELDS = ("phone", "location", "professional_title", "summary", "interests")
+
+
+def _extract_resume_text(data: bytes, mimetype: str) -> str:
+    """Best-effort PDF text extraction (only PDF resumes are accepted). Returns
+    "" when the file can't be parsed. Truncated to ``_RESUME_TEXT_MAX_CHARS``."""
+    text = ""
+    if "pdf" in (mimetype or "").lower() and PdfReader is not None:
+        try:
+            reader = PdfReader(BytesIO(data))
+            pages = []
+            for page in reader.pages[:10]:
+                try:
+                    pages.append(page.extract_text() or "")
+                except Exception:
+                    continue
+            text = "\n".join(p.strip() for p in pages if p.strip())
+        except Exception:
+            text = ""
+    text = text.strip()
+    if len(text) > _RESUME_TEXT_MAX_CHARS:
+        text = text[:_RESUME_TEXT_MAX_CHARS] + "\n[...truncated...]"
+    return text
+
+
+def get_applicant_profile(user_id: int | str) -> dict:
+    """Retrieve an applicant's profile fields plus their resume text/metadata.
+
+    Grounds the student-1 AI-Mode question "Summarise this applicant's
+    strengths": given a ``user_id`` it returns the profile fields (phone,
+    location, professional_title, summary, interests) and the linked resume's
+    metadata (file_name, file_type, uploaded_at) plus its extracted text
+    (best-effort PDF extraction, truncated), each backed by a citation to the
+    ``profiles``/``resumes`` record/field so the answer stays grounded.
+
+    Confidence (per the shared rule, driven by field completeness):
+        High   = a profile exists with title/summary/interests all filled AND
+                 a resume is on file with its text successfully extracted
+        Medium = a profile exists but some of those fields are missing, no
+                 resume has been uploaded yet, or its text couldn't be read
+        Low    = no profile on record for the user (or the service is
+                 unreachable / the id is invalid)
+    """
+    try:
+        uid = int(user_id)
+    except (TypeError, ValueError):
+        return retrieval.empty_context(
+            f"user_id must be an integer, got: {user_id!r}",
+            [retrieval.source(table="profiles")],
+        )
+
+    base_url = config.db_url("student-1")
+    try:
+        response = requests.get(
+            f"{base_url}/profiles/by-user/{uid}", timeout=config.REQUEST_TIMEOUT
+        )
+    except Exception as exc:  # noqa: BLE001 - surface any transport failure as Low
+        return retrieval.empty_context(
+            f"Profile service unreachable for user {uid}: {exc}",
+            [retrieval.source(table="profiles")],
+        )
+
+    if response.status_code != 200:
+        return retrieval.build_context(
+            {
+                "user_id": uid,
+                "profile": None,
+                "resume": None,
+                "message": "No profile has been created for this user yet.",
+            },
+            [retrieval.source(table="profiles", field="user_id")],
+            retrieval.LOW,
+        )
+
+    profile = response.json()
+    profile_id = profile.get("profile_id")
+
+    resume = None
+    try:
+        resumes_resp = requests.get(
+            f"{base_url}/profiles/{profile_id}/resumes", timeout=config.REQUEST_TIMEOUT
+        )
+        if resumes_resp.status_code == 200:
+            records = resumes_resp.json()
+            if records:
+                resume = records[0]
+    except Exception:  # noqa: BLE001 - resume lookup is best-effort
+        resume = None
+
+    resume_text = None
+    if resume:
+        try:
+            file_resp = requests.get(
+                f"{base_url}/resumes/{resume['resume_id']}/file", timeout=config.REQUEST_TIMEOUT
+            )
+            if file_resp.status_code == 200:
+                resume_text = _extract_resume_text(file_resp.content, resume.get("file_type", ""))
+        except Exception:  # noqa: BLE001 - resume text extraction is best-effort
+            resume_text = None
+
+    answer_data = {
+        "user_id": uid,
+        "profile": {field: profile.get(field) for field in _PROFILE_FIELDS},
+        "resume": (
+            {
+                "file_name": resume.get("file_name"),
+                "file_type": resume.get("file_type"),
+                "uploaded_at": resume.get("uploaded_at"),
+                "text": resume_text,
+            }
+            if resume
+            else None
+        ),
+    }
+
+    # Cite each populated profile field plus the resume file, when present.
+    sources = [
+        retrieval.source(table="profiles", record_id=profile_id, field=field)
+        for field in _PROFILE_FIELDS
+        if profile.get(field)
+    ]
+    if resume:
+        sources.append(
+            retrieval.source(table="resumes", record_id=resume.get("resume_id"), field="file_name")
+        )
+        if resume_text:
+            sources.append(
+                retrieval.source(table="resumes", record_id=resume.get("resume_id"), field="file_data")
+            )
+
+    fields_complete = all(profile.get(field) for field in ("professional_title", "summary", "interests"))
+    resume_ok = resume is not None and bool(resume_text)
+    confidence = retrieval.derive_confidence(
+        exact=fields_complete and resume_ok,
+        partial=not (fields_complete and resume_ok),
+    )
+    return retrieval.build_context(answer_data, sources, confidence)
 
 
 # --- Student 5: Candidate Evaluation -------------------------------------
@@ -382,6 +531,7 @@ def get_interview_details(application_id: int | str) -> dict:
 if __name__ == "__main__":
     print(json.dumps(list_project_files("."), indent=2))
     print(json.dumps(read_ci_report(), indent=2))
+    print(json.dumps(get_applicant_profile(1), indent=2))
     print(json.dumps(get_applications_for_job(1), indent=2))
     print(json.dumps(get_evaluation_scores(13), indent=2))
     print(json.dumps(get_interview_details(4), indent=2))

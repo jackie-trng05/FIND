@@ -2,6 +2,23 @@
 {% block title %}My Profile — FIND{% endblock %}
 
 {% block content %}
+<style>
+    .mcp-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .mcp-toggle-row { display: flex; align-items: center; gap: 0.5rem; }
+    .mcp-state { font-weight: 700; font-size: 0.8rem; }
+    .mcp-on { color: #16a34a; }
+    .mcp-off { color: #dc2626; }
+    .mcp-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .mcp-panel { padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--primary-light); font-size: 0.85rem; }
+    .mcp-panel h3 { font-size: 0.9rem; margin: 0 0 0.4rem; }
+    .mcp-panel h4 { font-size: 0.78rem; margin: 0.6rem 0 0.2rem; color: var(--text-muted); }
+    .mcp-answer { white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin: 0.4rem 0; }
+    .mcp-citations { margin: 0.2rem 0 0 1rem; font-size: 0.78rem; color: var(--text-muted); }
+    .badge-danger { background: #fde8e8; color: #991b1b; }
+    /* MCP Insights are grounded in the applicant's profile/resume; staff have neither. */
+    body.role-staff .applicant-only { display: none !important; }
+</style>
+
 <div class="page-head">
     <h1 class="page-title">My Profile</h1>
 </div>
@@ -21,5 +38,85 @@
          hx-swap="innerHTML">
     </div>
 </div>
+
+<div class="card applicant-only" style="margin-bottom:2rem;">
+    <div class="mcp-head">
+        <h2 style="font-size:1rem;margin:0;">MCP Insights</h2>
+        <div class="mcp-toggle-row">
+            <label class="toggle-switch" for="mcp-toggle" title="Enable or disable MCP Mode">
+                <input id="mcp-toggle" type="checkbox" checked onchange="onMcpToggle()">
+                <span class="toggle-label"></span>
+            </label>
+            <span id="mcp-state" class="mcp-state mcp-on">ON</span>
+        </div>
+    </div>
+    <p class="muted">
+        Grounded retrieval through the shared MCP server (<code>applicant_profile</code>).
+        Answers cite their source fields and a confidence level.
+    </p>
+    <div class="mcp-actions">
+        <button type="button" class="btn btn-secondary btn-sm" id="mcp-profile-btn" onclick="runMcpTool('/mcp/applicant-profile')">Applicant profile</button>
+        <button type="button" class="btn btn-primary btn-sm" id="mcp-strengths-btn" onclick="runMcpTool('/mcp/strengths-summary')">Summarise strengths</button>
+    </div>
+    <div id="mcp-result" class="mcp-panel">MCP responses will appear here.</div>
+</div>
+
+<script>
+    const MCP_KEY = "mcp_mode_enabled";
+
+    function isMcpEnabled() { return document.getElementById("mcp-toggle").checked; }
+
+    function renderMcpState() {
+        const state = document.getElementById("mcp-state");
+        const on = isMcpEnabled();
+        state.textContent = on ? "ON" : "OFF";
+        state.classList.toggle("mcp-on", on);
+        state.classList.toggle("mcp-off", !on);
+        document.getElementById("mcp-profile-btn").disabled = !on;
+        document.getElementById("mcp-strengths-btn").disabled = !on;
+    }
+
+    function onMcpToggle() {
+        localStorage.setItem(MCP_KEY, String(isMcpEnabled()));
+        renderMcpState();
+        document.getElementById("mcp-result").innerHTML = isMcpEnabled()
+            ? "MCP responses will appear here."
+            : '<p class="mcp-off">MCP Mode is OFF. Enable it to run MCP tools.</p>';
+    }
+
+    function loadMcpMode() {
+        const persisted = localStorage.getItem(MCP_KEY);
+        document.getElementById("mcp-toggle").checked = persisted === null ? true : persisted === "true";
+        renderMcpState();
+        if (!isMcpEnabled()) {
+            document.getElementById("mcp-result").innerHTML = '<p class="mcp-off">MCP Mode is OFF. Enable it to run MCP tools.</p>';
+        }
+    }
+
+    async function runMcpTool(path) {
+        if (!isMcpEnabled()) {
+            document.getElementById("mcp-result").innerHTML = '<p class="mcp-off">MCP Mode is OFF. Enable it to run MCP tools.</p>';
+            return;
+        }
+        const panel = document.getElementById("mcp-result");
+        panel.innerHTML = "Contacting MCP server…";
+        try {
+            const resp = await fetch("{{ backend_url }}" + path, {
+                method: "POST",
+                credentials: "include",
+                headers: { "X-MCP-Mode": isMcpEnabled() ? "on" : "off" },
+            });
+            if (resp.status === 503) {
+                panel.innerHTML = '<p class="mcp-off">MCP server unavailable. Ensure the shared MCP server is running on port 16050.</p>';
+                return;
+            }
+            panel.innerHTML = await resp.text();
+        } catch (e) {
+            panel.innerHTML = '<p class="mcp-off">Failed to reach the MCP server. Is it running on port 16050?</p>';
+        }
+    }
+
+    document.body.addEventListener("authReady", loadMcpMode);
+</script>
 {% endblock %}
 
