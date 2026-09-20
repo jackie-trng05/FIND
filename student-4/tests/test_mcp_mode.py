@@ -1,4 +1,4 @@
-"""Guard tests for Student 2 MCP-Mode endpoints.
+"""Guard tests for Student 4 MCP-Mode endpoints.
 
 These assert the CI/CD contract: when ``MCP_ENABLED=false`` (as set by the
 GitHub Actions workflow) the MCP endpoints return a disabled response and never
@@ -44,3 +44,29 @@ def test_ci_report_disabled_when_mcp_off(client, monkeypatch):
     resp = client.post("/mcp/ci-report", data={})
     assert resp.status_code == 403
     assert "disabled" in resp.get_data(as_text=True).lower()
+
+
+def test_interview_details_disabled_when_mcp_off(client, monkeypatch):
+    monkeypatch.setenv("MCP_ENABLED", "false")
+    resp = client.post("/mcp/interview-details", data={"application_id": "4"})
+    assert resp.status_code == 403
+    assert "disabled" in resp.get_data(as_text=True).lower()
+
+
+def test_interview_summary_disabled_when_mcp_off(client, monkeypatch):
+    monkeypatch.setenv("MCP_ENABLED", "false")
+    resp = client.post("/mcp/interview-summary", data={"application_id": "4"})
+    assert resp.status_code == 403
+    assert "disabled" in resp.get_data(as_text=True).lower()
+
+
+def test_interview_details_rejects_non_numeric_id(client, monkeypatch):
+    monkeypatch.setenv("MCP_ENABLED", "true")
+    resp = client.post("/mcp/interview-details", data={"application_id": "abc"})
+    assert resp.status_code == 400
+
+
+def test_interview_summary_rejects_non_numeric_id(client, monkeypatch):
+    monkeypatch.setenv("MCP_ENABLED", "true")
+    resp = client.post("/mcp/interview-summary", data={"application_id": ""})
+    assert resp.status_code == 400
