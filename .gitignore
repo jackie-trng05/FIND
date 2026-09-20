@@ -6,6 +6,12 @@ __pycache__/
 # Test artefacts
 cookies.txt
 
+# RAG server generated artefacts (shared, non-containerised RAG server)
+rag-server/chroma/
+rag-server/corpus/corpus.jsonl
+rag-server/rag-audit.jsonl
+rag-server/retrieval-metrics.md
+
 # C extensions
 *.so
 

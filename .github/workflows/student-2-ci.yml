@@ -17,11 +17,13 @@ on:
       - ".github/workflows/student-2-ci.yml"
   workflow_dispatch:
 
-# AI-Mode and MCP are disabled during CI/CD: the pipeline never needs
-# Ollama or the shared MCP server. Guard tests assert the disabled response.
+# AI-Mode, MCP and RAG are disabled during CI/CD: the pipeline never needs
+# Ollama, the shared MCP server, or the shared RAG server. Guard tests assert
+# the disabled response.
 env:
   AI_MODE_ENABLED: "false"
   MCP_ENABLED: "false"
+  RAG_ENABLED: "false"
 
 jobs:
   build-images:
