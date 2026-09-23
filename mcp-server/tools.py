@@ -37,6 +37,15 @@ _EVALUATION_SCORE_FIELDS = {
     "Evaluation_ProfessionalismScore": "professionalism",
 }
 
+# Fields surfaced for each application by the applications_for_job tool.
+_APPLICATION_FIELDS = (
+    "application_id",
+    "user_id",
+    "resume_id",
+    "application_status",
+    "submitted_at",
+)
+
 
 def list_project_files(directory_path: str = ".") -> dict:
     """List files/folders under a repository-relative directory.
@@ -176,6 +185,91 @@ def get_evaluation_scores(application_id: int | str) -> dict:
     return retrieval.build_context(answer_data, sources, confidence)
 
 
+# --- Student 3: Applications / Screening ---------------------------------
+def get_applications_for_job(job_posting_id: int | str, status: str | None = None) -> dict:
+    """Retrieve the applications submitted for a job posting.
+
+    Grounds the student-3 AI-Mode question "Who should be shortlisted for job X?":
+    given a ``job_posting_id`` (and an optional ``status`` filter) it returns the
+    matching application records — including the soft ``resume_id`` link to
+    student-1's resume — each backed by a citation to the ``applications`` record
+    so the shortlist answer stays grounded.
+
+    Confidence (per the shared rule):
+        High   = a status filter was supplied and matching records were returned
+                 (a precise, filtered query)
+        Medium = no status filter, but the job has applications (a broader set
+                 that still needs a human shortlisting decision)
+        Low    = no applications for the job (or the service is unreachable /
+                 the id is invalid)
+    """
+    try:
+        job_id = int(job_posting_id)
+    except (TypeError, ValueError):
+        return retrieval.empty_context(
+            f"job_posting_id must be an integer, got: {job_posting_id!r}",
+            [retrieval.source(table="applications")],
+        )
+
+    status_filter = (status or "").strip()
+    params: dict = {"job_posting_id": job_id}
+    if status_filter:
+        params["status"] = status_filter
+
+    url = f"{config.db_url('student-3')}/applications"
+    try:
+        response = requests.get(url, params=params, timeout=config.REQUEST_TIMEOUT)
+        response.raise_for_status()
+        records = response.json()
+    except Exception as exc:  # noqa: BLE001 - surface any transport/parse failure as Low
+        return retrieval.empty_context(
+            f"Application service unreachable for job {job_id}: {exc}",
+            [retrieval.source(table="applications")],
+        )
+
+    if not records:
+        return retrieval.build_context(
+            {
+                "job_posting_id": job_id,
+                "status_filter": status_filter or None,
+                "count": 0,
+                "applications": [],
+                "message": "No applications match this job posting yet.",
+            },
+            [retrieval.source(table="applications", field="job_posting_id")],
+            retrieval.LOW,
+        )
+
+    applications = [
+        {field: record.get(field) for field in _APPLICATION_FIELDS}
+        for record in records
+    ]
+
+    answer_data = {
+        "job_posting_id": job_id,
+        "status_filter": status_filter or None,
+        "count": len(applications),
+        "applications": applications,
+    }
+
+    # Cite each application's status and its soft resume link.
+    sources = []
+    for app in applications:
+        app_id = app["application_id"]
+        sources.append(
+            retrieval.source(table="applications", record_id=app_id, field="application_status")
+        )
+        if app.get("resume_id") is not None:
+            sources.append(
+                retrieval.source(table="applications", record_id=app_id, field="resume_id")
+            )
+
+    confidence = retrieval.derive_confidence(
+        exact=bool(status_filter), partial=not status_filter
+    )
+    return retrieval.build_context(answer_data, sources, confidence)
+
+
 # --- Student 2: Job Posting Management -----------------------------------
 # Cap the postings echoed back so answer_data / citations stay bounded.
 _POSTING_LIMIT = 10
@@ -275,5 +369,6 @@ def get_job_postings(
 if __name__ == "__main__":
     print(json.dumps(list_project_files("."), indent=2))
     print(json.dumps(read_ci_report(), indent=2))
+    print(json.dumps(get_applications_for_job(1), indent=2))
     print(json.dumps(get_evaluation_scores(13), indent=2))
     print(json.dumps(get_job_postings(query="python"), indent=2))
