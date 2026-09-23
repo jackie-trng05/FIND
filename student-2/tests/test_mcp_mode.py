@@ -44,3 +44,23 @@ def test_ci_report_disabled_when_mcp_off(client, monkeypatch):
     resp = client.post("/mcp/ci-report", data={})
     assert resp.status_code == 403
     assert "disabled" in resp.get_data(as_text=True).lower()
+
+
+def test_job_postings_disabled_when_mcp_off(client, monkeypatch):
+    monkeypatch.setenv("MCP_ENABLED", "false")
+    resp = client.post("/mcp/job-postings", data={"query": "python"})
+    assert resp.status_code == 403
+    assert "disabled" in resp.get_data(as_text=True).lower()
+
+
+def test_role_recommendation_disabled_when_mcp_off(client, monkeypatch):
+    monkeypatch.setenv("MCP_ENABLED", "false")
+    resp = client.post("/mcp/role-recommendation", data={"query": "python"})
+    assert resp.status_code == 403
+    assert "disabled" in resp.get_data(as_text=True).lower()
+
+
+def test_role_recommendation_requires_query(client, monkeypatch):
+    monkeypatch.setenv("MCP_ENABLED", "true")
+    resp = client.post("/mcp/role-recommendation", data={"query": "  "})
+    assert resp.status_code == 400

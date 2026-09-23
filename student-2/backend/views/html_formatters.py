@@ -231,6 +231,139 @@ def _ai_section(backend_url: str) -> str:
         </div>"""
 
 
+def _mcp_section(backend_url: str) -> str:
+    """MCP Insights panel rendered next to the AI helper in the posting form.
+
+    Grounded retrieval through the shared MCP server: find existing published
+    roles that match a profile. Self-contained (markup + scoped CSS + IIFE) so
+    it works when HTMX swaps the form fragment into the page.
+    """
+    markup = """
+        <div class="mcp-panel-wrap" id="mcp-insights">
+            <div class="mcp-head">
+                <span class="ai-panel-title">MCP Insights</span>
+                <div class="mcp-toggle-row">
+                    <label class="switch" for="mcp-toggle" title="Enable or disable MCP Mode">
+                        <input id="mcp-toggle" type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span id="mcp-state" class="mcp-state mcp-on">ON</span>
+                </div>
+            </div>
+            <p class="mcp-desc">Find existing published roles that match a profile,
+                grounded in the shared MCP server (cites posting records + confidence).</p>
+            <div class="mcp-form-row">
+                <input id="mcp-query" class="form-input" type="text"
+                       placeholder="e.g. Python backend engineer">
+                <button type="button" class="btn btn-primary btn-sm" id="mcp-roles-btn">Which roles fit?</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="mcp-list-btn">List matching postings</button>
+            </div>
+            <div id="mcp-result" class="mcp-panel">MCP responses will appear here.</div>
+        </div>
+        <style>
+            .mcp-panel-wrap { margin-top: 1rem; padding: 0.9rem 1rem; border: 1px solid var(--color-border, #e5e7eb); border-radius: 8px; }
+            .mcp-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+            .mcp-toggle-row { display: flex; align-items: center; gap: 0.5rem; }
+            .mcp-state { font-weight: 700; font-size: 0.8rem; }
+            .mcp-on { color: #16a34a; }
+            .mcp-off { color: #dc2626; }
+            .mcp-desc { font-size: 0.82rem; color: var(--color-text-muted, #6b7280); margin-bottom: 0.6rem; }
+            .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+            .switch input { opacity: 0; width: 0; height: 0; }
+            .switch .slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 999px; transition: 0.2s; }
+            .switch .slider::before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+            .switch input:checked + .slider { background: #16a34a; }
+            .switch input:checked + .slider::before { transform: translateX(18px); }
+            .mcp-form-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.5rem 0; }
+            .mcp-form-row .form-input { flex: 1 1 220px; }
+            .mcp-panel { padding: 0.7rem 0.9rem; border: 1px solid var(--color-border, #e5e7eb); border-radius: 8px; font-size: 0.83rem; background: var(--color-surface, #f9fafb); }
+            .mcp-panel h3 { font-size: 0.88rem; margin-bottom: 0.4rem; }
+            .mcp-panel h4 { font-size: 0.76rem; margin: 0.6rem 0 0.2rem; color: var(--color-text-muted, #6b7280); }
+            .mcp-answer { white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin: 0.4rem 0; max-height: 260px; overflow: auto; }
+            .mcp-citations { margin: 0.2rem 0 0 1rem; font-size: 0.76rem; color: var(--color-text-muted, #6b7280); }
+            .badge-success { background: #d1fae5; color: #065f46; }
+            .badge-warning { background: #fef3c7; color: #92400e; }
+            .badge-danger { background: #fde8e8; color: #991b1b; }
+            .mcp-spinner { display: inline-block; width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; border: 2px solid #cbd5e1; border-top-color: #16a34a; border-radius: 50%; animation: mcp-spin 0.7s linear infinite; }
+            @keyframes mcp-spin { to { transform: rotate(360deg); } }
+        </style>
+        <script>
+        (function () {
+            const BACKEND = '__BACKEND__';
+            const MCP_KEY = 'mcp_mode_enabled';
+            const toggle = document.getElementById('mcp-toggle');
+            const stateEl = document.getElementById('mcp-state');
+            const rolesBtn = document.getElementById('mcp-roles-btn');
+            const listBtn = document.getElementById('mcp-list-btn');
+            const queryEl = document.getElementById('mcp-query');
+            const panel = document.getElementById('mcp-result');
+            if (!toggle || !panel) return;
+
+            function isEnabled() { return toggle.checked; }
+
+            function renderState() {
+                const on = isEnabled();
+                stateEl.textContent = on ? 'ON' : 'OFF';
+                stateEl.classList.toggle('mcp-on', on);
+                stateEl.classList.toggle('mcp-off', !on);
+                rolesBtn.disabled = !on;
+                listBtn.disabled = !on;
+            }
+
+            function disabledMsg() {
+                panel.innerHTML = '<p class="mcp-off">MCP Mode is OFF. Enable it to run MCP tools.</p>';
+            }
+
+            function onToggle() {
+                localStorage.setItem(MCP_KEY, String(isEnabled()));
+                renderState();
+                if (isEnabled()) { panel.innerHTML = 'MCP responses will appear here.'; }
+                else { disabledMsg(); }
+            }
+
+            async function runTool(path) {
+                if (!isEnabled()) { disabledMsg(); return; }
+                const query = (queryEl.value || '').trim();
+                panel.innerHTML = '<span class="mcp-spinner"></span> Contacting MCP server…';
+                rolesBtn.disabled = true;
+                listBtn.disabled = true;
+                try {
+                    const resp = await fetch(BACKEND + path, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-MCP-Mode': isEnabled() ? 'on' : 'off'
+                        },
+                        body: new URLSearchParams({ query: query, status: 'Published' })
+                    });
+                    const html = await resp.text();
+                    if (resp.status === 503) {
+                        panel.innerHTML = '<p class="mcp-off">MCP server unavailable. Ensure the shared MCP server is running on port 16050.</p>';
+                        return;
+                    }
+                    panel.innerHTML = html;
+                } catch (e) {
+                    panel.innerHTML = '<p class="mcp-off">Failed to reach the MCP server. Is it running on port 16050?</p>';
+                } finally {
+                    renderState();
+                }
+            }
+
+            toggle.addEventListener('change', onToggle);
+            rolesBtn.addEventListener('click', function () { runTool('/mcp/role-recommendation'); });
+            listBtn.addEventListener('click', function () { runTool('/mcp/job-postings'); });
+
+            const persisted = localStorage.getItem(MCP_KEY);
+            toggle.checked = persisted === null ? true : persisted === 'true';
+            renderState();
+            if (!isEnabled()) { disabledMsg(); }
+        })();
+        </script>"""
+    return markup.replace("__BACKEND__", backend_url)
+
+
+
 
 
 
@@ -311,6 +444,7 @@ def render_posting_form(backend_url: str, posting: dict | None = None, *, error:
             <textarea class="form-textarea" name="Requirements" rows="3" required maxlength="2000">{_e(p.get('Requirements', ''))}</textarea>
             {ai_section}
         </div>
+        {_mcp_section(backend_url)}
         <div class="form-actions">
             <button class="btn btn-primary" type="submit">{_e(submit_label)}</button>
             {cancel_btn}
