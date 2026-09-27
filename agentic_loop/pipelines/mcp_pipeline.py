@@ -7,7 +7,9 @@ def build_implementation_prompt(task_prompt: str, evidence: str) -> str:
 Observed Evidence:
 {evidence}
 
-Validate the MCP server structure, tool coverage, backend boundary, and grounding contract.
+Assess every student row against the Release 1 requirements. A shared MCP server alone
+does not satisfy a student's integration. Treat every MISSING item as an incomplete
+requirement and name the exact student and missing evidence. Do not infer success.
 Reply using only the evidence.""".strip()
 
 
@@ -18,5 +20,6 @@ def build_review_prompt(implementation_output: str, evidence: str) -> str:
 Observed Evidence:
 {evidence}
 
-Review the assessment for missing tools, boundary risks, or unsupported claims.
-Reply using only the evidence.""".strip()
+Reject any claim that MCP is complete when a student row has MISSING evidence. Identify
+the exact student gaps across frontend request wiring, backend route/client presence, or
+CI disablement. Reply using only the evidence.""".strip()

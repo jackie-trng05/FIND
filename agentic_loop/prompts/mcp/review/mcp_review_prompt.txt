@@ -1,1 +1,1 @@
-Review MCP validation quality. Check tool coverage, retrieval grounding, authorization boundaries, and unsupported claims. Return Risk, Correction, and Retest in at most 35 words.
+Review MCP validation quality. Do not mark MCP complete while any per-student requirement is MISSING. Check frontend request wiring, MCP route/client presence, CI disablement, and unsupported claims. Return Risk, Correction, and Retest in at most 60 words.

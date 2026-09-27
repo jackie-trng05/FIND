@@ -1,1 +1,1 @@
-Review the FIND MCP integration. Verify the shared non-containerised server, required shared and student retrieval tools, and backend-only browser access. Return Strengths, Risks, and Retest in at most 45 words.
+Review the FIND MCP integration per student. A student is incomplete unless source code wires its frontend to its own backend, the MCP route/client files exist, and CI disables MCP. Live browser and curl tests remain a separate lab validation. Return Strengths, Risks, and Retest in at most 60 words.

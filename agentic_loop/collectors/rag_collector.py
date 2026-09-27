@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from collectors.feature_integration_collector import collect_feature_matrix
+
 
 REQUIRED_TOOLS = ("refresh_corpus", "retrieve_context", "answer_question")
 
@@ -23,7 +25,8 @@ def collect(app_dir: Path, repo_root: Path) -> tuple[bool, str]:
     if missing_tools:
         return False, "rag_pipeline.py is missing tools: " + ", ".join(missing_tools)
 
-    return True, (
+    shared_evidence = (
         "RAG evidence: rag-server contains the pipeline, MCP server, HTTP server, and requirements; "
         "3 required tools are defined (refresh_corpus, retrieve_context, answer_question)."
     )
+    return True, f"{shared_evidence}\n\n{collect_feature_matrix(app_dir, repo_root, 'rag')}"

@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from collectors.feature_integration_collector import collect_feature_matrix
+
 
 REQUIRED_TOOLS = (
     "project_files",
@@ -29,7 +31,8 @@ def collect(app_dir: Path, repo_root: Path) -> tuple[bool, str]:
     if missing_tools:
         return False, "MCP implementation is missing tools: " + ", ".join(missing_tools)
 
-    return True, (
+    shared_evidence = (
         "MCP evidence: mcp-server contains server.py, tools.py, and requirements.txt; "
         f"{len(REQUIRED_TOOLS)} required shared and student retrieval tools are declared."
     )
+    return True, f"{shared_evidence}\n\n{collect_feature_matrix(app_dir, repo_root, 'mcp')}"
