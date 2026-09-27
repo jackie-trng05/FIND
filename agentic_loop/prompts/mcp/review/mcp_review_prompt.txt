@@ -1,0 +1,1 @@
+Review MCP validation quality. Check tool coverage, retrieval grounding, authorization boundaries, and unsupported claims. Return Risk, Correction, and Retest in at most 35 words.

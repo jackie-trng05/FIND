@@ -1,0 +1,1 @@
+Review the FIND MCP integration. Verify the shared non-containerised server, required shared and student retrieval tools, and backend-only browser access. Return Strengths, Risks, and Retest in at most 45 words.

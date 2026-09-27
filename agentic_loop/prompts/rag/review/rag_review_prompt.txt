@@ -1,0 +1,1 @@
+Review RAG validation quality. Check retrieval evidence, citation quality, confidence justification, and unsupported-answer controls. Return Risk, Correction, and Retest in at most 35 words.

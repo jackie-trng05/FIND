@@ -4,9 +4,9 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class ModeConfig:
-    key: str  # collector selector: "db" | "endpoints" | "architecture" | "devops"
+    key: str  # collector selector
     label: str
-    kind: str  # pipeline selector: "service" | "architecture" | "devops"
+    kind: str  # pipeline selector
     prompt_family: str
     review_target: str = ""
     scope: str | None = None  # student directory name for scoped architecture/devops evidence
@@ -34,6 +34,18 @@ def build_base_modes() -> list[ModeConfig]:
             kind="architecture",
             prompt_family="architecture",
             scope=None,
+        ),
+        ModeConfig(
+            key="mcp",
+            label="MCP",
+            kind="mcp",
+            prompt_family="mcp",
+        ),
+        ModeConfig(
+            key="rag",
+            label="RAG",
+            kind="rag",
+            prompt_family="rag",
         ),
     ]
 
