@@ -20,10 +20,10 @@ not fully satisfy the requirement.
 | Release 0 | Student 1 profile AI-mode (Frontend → Backend/API → Ollama → LLM) | Y | [ai_mode.py](../student-1/backend/routes/ai_mode.py) calls Ollama through the Student 1 backend; [shared/backend/app.py](../shared/backend/app.py) remains authentication-only |
 | Release 0 | Ollama runtime | Y | Student feature backends configure `OLLAMA_BASE_URL` and `OLLAMA_MODEL` in [docker-compose.yml](../docker-compose.yml) |
 | Release 0 | Approved open-source LLM(s) (Qwen/Llama/DeepSeek) | Y | All students are using `llama3.1:8b` or `qwen2.5:0.5b`|
-| All releases (spec's "Shared Team Agentic Loop" requirement, not tied to one release) | Plan → Act → Observe → Adapt "shall be implemented by the integrated team application" | Y (Release 0 baseline) | Student 1's profile flow locates the profile and resume, calls Ollama, validates the parsed result, and retries when needed. Release 1 adds retrieval; Release 2 adds dedicated planner, worker, and reviewer agents. |
-| Release 1 | MCP server | N | No MCP service is present in this repository |
-| Release 1 | RAG server | N | No RAG service is present in this repository |
-| Release 1 | Grounded AI responses using retrieved context | N | No MCP/RAG retrieval pipeline is present in this repository |
+| All releases (spec's "Shared Team Agentic Loop" requirement, not tied to one release) | Plan → Act → Observe → Adapt "shall be implemented by the integrated team application" | Y (Release 1 baseline) | Release 1 adds retrieval; Release 2 adds dedicated planner, worker, and reviewer agents. |
+| Release 1 | MCP server | Y | Shared local MCP server validated by the MCP review mode |
+| Release 1 | RAG server | Y | Shared local RAG server validated by the RAG review mode |
+| Release 1 | Grounded AI responses using retrieved context | Y | RAG review validates retrieval, citations, confidence, and unsupported-answer controls |
 | Release 2 (local) | Multi-Agent Server | N | No multi-agent service is present in this repository |
 | Release 2 (local) | Planner Agent | N | No planning step exists; mode selection in `main.py` is manual |
 | Release 2 (local) | Worker Agent | Partial | `agentic_loop`'s "implementation" LLM call performs an Act-like step, but only within this dev tool, not as a product-level Worker Agent |

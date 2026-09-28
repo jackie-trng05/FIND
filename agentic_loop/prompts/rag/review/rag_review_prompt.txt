@@ -1,0 +1,1 @@
+Review RAG validation quality. Do not mark RAG complete while any per-student requirement is MISSING. Check frontend request wiring, RAG route/client presence, CI disablement, retrieval grounding, citations, confidence, and insufficient-context controls. Return Risk, Correction, and Retest in at most 60 words.

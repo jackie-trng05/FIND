@@ -1,0 +1,1 @@
+Evaluate RAG architecture. Check corpus design, chunking, embedding strategy, vector-store fallback, and governance risks. Return Strengths, Risks, and Recommendations in at most 45 words.
