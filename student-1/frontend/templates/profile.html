@@ -179,16 +179,32 @@
         }
     }
 
+    // RAG retrieval has no session concept, so a first-person query ("my", "me", "I")
+    // is ambiguous across every applicant's profile. Rewrite it with the signed-in
+    // user's full name — the literal token their profile chunk is grounded in —
+    // without touching what the user typed in the input.
+    const PERSONAL_PRONOUN_PATTERN = /\b(my|mine|myself|me|i)\b/i;
+
+    function personalizeQuery(rawQuery) {
+        const user = window.__findUser;
+        if (!user || !user.first_name || !user.last_name) return rawQuery;
+        if (!PERSONAL_PRONOUN_PATTERN.test(rawQuery)) return rawQuery;
+        const fullName = `${user.first_name} ${user.last_name}`;
+        if (rawQuery.toLowerCase().includes(fullName.toLowerCase())) return rawQuery;
+        return `${rawQuery} (Referring to applicant ${fullName}.)`;
+    }
+
     async function runRag(path) {
         if (!isRagEnabled()) {
             document.getElementById("rag-result").innerHTML = '<p class="mcp-off">RAG Mode is OFF. Enable it to run RAG tools.</p>';
             return;
         }
-        const query = document.getElementById("rag-query").value.trim();
-        if (path !== "/rag/refresh" && !query) {
+        const rawQuery = document.getElementById("rag-query").value.trim();
+        if (path !== "/rag/refresh" && !rawQuery) {
             document.getElementById("rag-result").innerHTML = '<p class="mcp-off">Enter a question first.</p>';
             return;
         }
+        const query = personalizeQuery(rawQuery);
         const panel = document.getElementById("rag-result");
         const buttons = ["rag-answer-btn", "rag-retrieve-btn", "rag-refresh-btn"].map(id => document.getElementById(id));
         panel.innerHTML = path === "/rag/answer"
