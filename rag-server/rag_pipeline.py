@@ -706,6 +706,23 @@ def retrieve_context(query: str, k: int = 5, caller: str = "student") -> dict[st
 
 
 # --- Answering -----------------------------------------------------------
+# Chunk text is prefixed/tagged for retrieval grounding (e.g. "student-1 database,
+# profiles record 6: user_id = 6; ...") but that internal labelling must never
+# reach the user-facing answer — citations already carry the same provenance.
+# Prompt instructions alone are not reliable (small local models still copy
+# whatever is in their context), so this is stripped deterministically before
+# the text ever reaches the LLM or the non-AI fallback.
+_INTERNAL_CHUNK_PREFIX = re.compile(r"^[\w-]+\s+database,\s+[\w-]+\s+record\s+[\w-]+:\s*", re.IGNORECASE)
+_INTERNAL_ID_FIELD = re.compile(r"\b(?:\w+_id|id)\s*=\s*[^;]+;\s*", re.IGNORECASE)
+
+
+def _sanitize_for_display(text: str) -> str:
+    """Strip internal grounding labels before a chunk is shown/generated for a user."""
+    text = _INTERNAL_CHUNK_PREFIX.sub("", text)
+    text = _INTERNAL_ID_FIELD.sub("", text)
+    return text
+
+
 def confidence_from_results(results: list[dict[str, Any]]) -> str:
     """Map retrieval quality onto a confidence category (retrieval = safety)."""
     if not results:
@@ -725,8 +742,9 @@ def generate_with_ollama(query: str, context: str, model: str | None = None) -> 
         "OLLAMA_GENERATE_URL", "http://localhost:11434/api/generate"
     )
     prompt = f"""
-You are a retrieval-grounded assistant for the FIND platform.
+You are a friendly, user-facing, retrieval-grounded assistant for the FIND platform.
 Use ONLY the provided context. If evidence is missing, return exactly: Insufficient evidence.
+Never mention database names, table names, or internal record/chunk identifiers in the answer.
 
 QUESTION:
 {query}
@@ -794,7 +812,7 @@ def answer_question(
     # Lab 08: no query term matched anything -> refuse instead of guessing.
     if retrieval.get("query_coverage", 0) == 0:
         results = []
-    context = "\n\n".join(r.get("text", "") for r in results)
+    context = "\n\n".join(_sanitize_for_display(r.get("text", "")) for r in results)
 
     answer = deterministic_answer(query, results)
     if not results:
@@ -803,7 +821,7 @@ def answer_question(
         if os.getenv("AI_MODE_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on"):
             answer = generate_with_ollama(query, context, model)
         else:
-            answer = "Answer:\n" + (results[0].get("text", "") if results else "Insufficient evidence.")
+            answer = "Answer:\n" + (_sanitize_for_display(results[0].get("text", "")) if results else "Insufficient evidence.")
 
     citations = [
         {
