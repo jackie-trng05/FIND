@@ -13,6 +13,7 @@ from flask_cors import CORS
 from routes.ai_mode import ai_mode_bp
 from routes.profiles import profiles_bp
 from routes.mcp_mode import mcp_bp
+from routes.rag_mode import rag_bp
 from services.config import FRONTEND_PUBLIC_URL, MAX_FILE_SIZE, PORT
 
 
@@ -30,6 +31,7 @@ def create_app() -> Flask:
     app.register_blueprint(profiles_bp)
     app.register_blueprint(ai_mode_bp)
     app.register_blueprint(mcp_bp)
+    app.register_blueprint(rag_bp)
 
     @app.get("/health")
     def health():

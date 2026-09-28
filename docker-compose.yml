@@ -84,6 +84,8 @@ services:
       FRONTEND_PUBLIC_URL: http://localhost:16004
       OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
       OLLAMA_MODEL: llama3.1:8b
+      RAG_ENABLED: "true"
+      RAG_SERVER_URL: http://host.docker.internal:16070
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
