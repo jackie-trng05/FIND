@@ -56,6 +56,43 @@ def render_tool(tool: str, result: dict) -> str:
     )
 
 
+# --- Grounded answer rendering (citations + confidence, matching MCP Insights) --
+def _confidence_badge(confidence: str) -> str:
+    css = {
+        "High": "badge-success",
+        "Medium": "badge-warning",
+        "Low": "badge-danger",
+    }.get(confidence, "badge-warning")
+    return f'<span class="badge {css}">Confidence: {escape(confidence or "Low")}</span>'
+
+
+def _rag_citations_list(citations) -> str:
+    if not citations:
+        return "<p class=\"muted\">No citations.</p>"
+    items = []
+    for citation in citations:
+        tier = escape(str(citation.get("authority_tier", "")))
+        source = escape(str(citation.get("source_id", "")))
+        chunk_id = escape(str(citation.get("chunk_id", "")))
+        items.append(f"<li>[{tier}] {source} ({chunk_id})</li>")
+    return "<ul class=\"mcp-citations\">" + "".join(items) + "</ul>"
+
+
+def render_answer(result: dict) -> str:
+    """Render answer_question with citations + confidence, like MCP Insights."""
+    if result.get("status") != "success":
+        return render_tool("answer_question", result)
+    answer = result.get("answer", "")
+    citations = result.get("citations", [])
+    confidence = result.get("confidence_category", "Low")
+    return (
+        "<h3>RAG Answer</h3>"
+        f"{_confidence_badge(confidence)}"
+        f"<pre class=\"mcp-answer\" style=\"white-space:pre-wrap;overflow-wrap:anywhere;\">{escape(answer)}</pre>"
+        f"<h4>Citations</h4>{_rag_citations_list(citations)}"
+    )
+
+
 # --- Helpers ---------------------------------------------------------------
 def _parse_k(raw: str, default: int = 5) -> int:
     try:
@@ -112,4 +149,4 @@ def rag_answer():
         result = rag_api.answer_question(query, k=k)
     except rag_api.RAGServiceError as exc:
         return f"<p>RAG answer failed.</p><pre>{escape(str(exc))}</pre>", 503
-    return render_tool("answer_question", result), 200
+    return render_answer(result), 200

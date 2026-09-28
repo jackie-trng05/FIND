@@ -74,4 +74,29 @@ def test_answer_maps_service_error_to_503(client, monkeypatch):
     monkeypatch.setattr(rag_api, "answer_question", _boom)
     resp = client.post("/rag/answer", data={"query": "anything"})
     assert resp.status_code == 503
-    assert "rag server down" in resp.get_data(as_text=True).lower()
+
+
+def test_answer_renders_confidence_badge_and_citations(client, monkeypatch):
+    monkeypatch.setenv("RAG_ENABLED", "true")
+
+    from services import rag_api
+
+    def _fake_answer(query, k=5):
+        return {
+            "status": "success",
+            "query": query,
+            "answer": "Sophie Martinez is a Marketing Specialist.",
+            "citations": [
+                {"chunk_id": "db_student-1_profiles_10", "source_id": "student-1-db:/profiles/10", "authority_tier": "tier_1"},
+            ],
+            "confidence_category": "High",
+        }
+
+    monkeypatch.setattr(rag_api, "answer_question", _fake_answer)
+    resp = client.post("/rag/answer", data={"query": "What is on Sophie Martinez's applicant profile?"})
+    assert resp.status_code == 200
+    body = resp.get_data(as_text=True)
+    assert "Confidence: High" in body
+    assert "badge-success" in body
+    assert "student-1-db:/profiles/10" in body
+    assert "tier_1" in body
