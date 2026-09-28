@@ -27,7 +27,9 @@ environments without the vector store installed.
 
 import hashlib
 import json
+import math
 import os
+import re
 import time
 import uuid
 from datetime import datetime, timezone
@@ -54,21 +56,25 @@ CHROMA_PATH = BASE_DIR / "chroma"
 # CI evidence file names produced by each student feature workflow.
 REPORT_FILES = ["report.json", "report.md", "run-view.md"]
 
-# --- Database microservice locations (host-mapped ports per the README) --
-# The RAG server is a host process, so it reaches each containerised database
-# service through its host-mapped port (mirrors mcp-server/config.py).
-DB_SERVICE_URLS: dict[str, str] = {
-    "shared": os.getenv("SHARED_DB_URL", "http://localhost:16003"),
-    "student-1": os.getenv("STUDENT_1_DB_URL", "http://localhost:16006"),
-    "student-2": os.getenv("STUDENT_2_DB_URL", "http://localhost:16009"),
-    "student-3": os.getenv("STUDENT_3_DB_URL", "http://localhost:16012"),
-    "student-4": os.getenv("STUDENT_4_DB_URL", "http://localhost:16015"),
-    "student-5": os.getenv("STUDENT_5_DB_URL", "http://localhost:16018"),
-}
-DB_PROBE_TIMEOUT = int(os.getenv("RAG_DB_PROBE_TIMEOUT", "2"))
+# --- Shared MCP server (the live-database source for tier_1 chunks) ------
+# Both AI modes read the same records: MCP Mode calls these tools per request,
+# and the RAG corpus is built by walking them at refresh time. Both the RAG
+# server and the MCP server are local host processes, so this is localhost.
+MCP_SERVER_URL = os.getenv("MCP_SERVER_URL", "http://localhost:16050/mcp")
+# job_postings caps each response, so the catalogue is walked per status.
+MCP_POSTING_STATUSES = ("Published", "Draft", "Closed", "Archived")
+# Columns that must never enter the corpus (credentials / session secrets).
+SENSITIVE_COLUMN_MARKERS = ("password", "hash", "token", "secret", "salt")
 
 COLLECTION_NAME = "find_enterprise_context"
-EMBED_VECTOR_SIZE = 256
+EMBED_VECTOR_SIZE = 384
+# Tokeniser (Lab 08 rag_pipeline._TOKEN_PATTERN / _STOP_WORDS).
+_TOKEN_PATTERN = re.compile(r"[a-z0-9]+", re.IGNORECASE)
+_STOP_WORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
+    "how", "i", "in", "is", "it", "of", "on", "or", "that", "the",
+    "to", "what", "which", "who", "with",
+}
 
 _collection = None
 _last_corpus_chunks: list[dict[str, Any]] = []
@@ -78,26 +84,31 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-# --- Embeddings (dependency-free, deterministic) -------------------------
+# --- Tokenisation + embeddings (Lab 08) ---------------------------------
+def _tokens(text: str) -> list[str]:
+    return [
+        token.lower()
+        for token in _TOKEN_PATTERN.findall(text or "")
+        if token.lower() not in _STOP_WORDS
+    ]
+
+
+def _embedding(text: str) -> list[float]:
+    """Signed feature-hash embedding (no external model required)."""
+    vector = [0.0] * EMBED_VECTOR_SIZE
+    for token in _tokens(text):
+        digest = hashlib.blake2b(token.encode("utf-8"), digest_size=8).digest()
+        index = int.from_bytes(digest[:4], "big") % EMBED_VECTOR_SIZE
+        sign = 1.0 if digest[4] & 1 else -1.0
+        vector[index] += sign
+    norm = math.sqrt(sum(value * value for value in vector))
+    if norm:
+        vector = [value / norm for value in vector]
+    return vector
+
+
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Hash-based bag-of-tokens embedding (no external model required)."""
-    vectors: list[list[float]] = []
-    for text in texts:
-        values = [0.0] * EMBED_VECTOR_SIZE
-        tokens = (text or "").lower().split()
-        if not tokens:
-            vectors.append(values)
-            continue
-        for token in tokens:
-            digest = hashlib.sha256(token.encode("utf-8")).digest()
-            for i, byte in enumerate(digest):
-                idx = i % EMBED_VECTOR_SIZE
-                values[idx] += (byte / 255.0) - 0.5
-        norm = sum(v * v for v in values) ** 0.5
-        if norm > 0:
-            values = [v / norm for v in values]
-        vectors.append(values)
-    return vectors
+    return [_embedding(text) for text in texts]
 
 
 # --- Vector store --------------------------------------------------------
@@ -107,7 +118,9 @@ def get_collection():
         raise RuntimeError("chromadb_unavailable")
     if _collection is None:
         client = chromadb.PersistentClient(path=str(CHROMA_PATH))
-        _collection = client.get_or_create_collection(name=COLLECTION_NAME)
+        _collection = client.get_or_create_collection(
+            name=COLLECTION_NAME, metadata={"hnsw:space": "cosine"}
+        )
     return _collection
 
 
@@ -120,7 +133,9 @@ def reset_collection() -> None:
         client.delete_collection(name=COLLECTION_NAME)
     except Exception:  # noqa: BLE001 - collection may not exist yet
         pass
-    _collection = client.get_or_create_collection(name=COLLECTION_NAME)
+    _collection = client.get_or_create_collection(
+            name=COLLECTION_NAME, metadata={"hnsw:space": "cosine"}
+        )
 
 
 # --- Audit logging -------------------------------------------------------
@@ -210,41 +225,173 @@ def load_platform_chunks() -> list[dict[str, Any]]:
     return chunks
 
 
-def load_db_service_chunks() -> list[dict[str, Any]]:
-    """tier_1 facts probed live from each FIND database microservice.
-
-    Best-effort and resilient: unreachable services (e.g. containers stopped)
-    are simply skipped so corpus refresh never fails on network state.
-    """
-    chunks: list[dict[str, Any]] = []
-    for feature, base_url in DB_SERVICE_URLS.items():
-        try:
-            response = requests.get(f"{base_url}/health", timeout=DB_PROBE_TIMEOUT)
-            healthy = response.status_code == 200
-        except Exception:  # noqa: BLE001 - unreachable service is not an error here
+def _db_record_chunk(
+    feature: str, table: str, key: str, record: dict[str, Any], tool: str = ""
+) -> dict[str, Any]:
+    record_id = record.get(key, "?")
+    fields = []
+    for column, value in record.items():
+        if any(marker in column.lower() for marker in SENSITIVE_COLUMN_MARKERS):
             continue
+        if isinstance(value, (dict, list)):
+            value = json.dumps(value, ensure_ascii=False)
+        fields.append(f"{column} = {value}")
+    return {
+        "chunk_id": f"db_{feature}_{table}_{record_id}",
+        "source_id": f"{feature}-db:/{table}/{record_id}",
+        "authority_tier": "tier_1",
+        "text": f"{feature} database, {table} record {record_id}: " + "; ".join(fields) + ".",
+        "metadata": {
+            "source_type": "database_record",
+            "feature": feature,
+            "table": table,
+            "record_id": str(record_id),
+            "retrieved_via": f"mcp:{tool}" if tool else "mcp",
+        },
+        "indexed_at": now_iso(),
+    }
 
-        service_name = feature
-        try:
-            index = requests.get(f"{base_url}/", timeout=DB_PROBE_TIMEOUT).json()
-            service_name = index.get("service", feature)
-        except Exception:  # noqa: BLE001 - index route is optional
-            pass
 
-        chunks.append(
-            {
-                "chunk_id": f"db_service_{feature}",
-                "source_id": f"{feature}:/health",
-                "authority_tier": "tier_1",
-                "text": (
-                    f"The {feature} database microservice '{service_name}' is "
-                    f"{'healthy' if healthy else 'unhealthy'} and reachable at {base_url}."
-                ),
-                "metadata": {"source_type": "database_service", "feature": feature},
-                "indexed_at": now_iso(),
-            }
-        )
-    return chunks
+def _mcp_answer_data(result: Any) -> dict[str, Any]:
+    """Unwrap an MCP CallToolResult into its retrieval-context answer_data."""
+    payload: Any = getattr(result, "structuredContent", None)
+    if isinstance(payload, dict):
+        payload = payload.get("result", payload)
+    else:
+        payload = None
+        for item in getattr(result, "content", None) or []:
+            text = getattr(item, "text", None)
+            if not text:
+                continue
+            try:
+                payload = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+            break
+    if not isinstance(payload, dict):
+        return {}
+    answer_data = payload.get("answer_data")
+    return answer_data if isinstance(answer_data, dict) else {}
+
+
+async def _walk_mcp_records() -> list[tuple[str, str, str, dict[str, Any], str]]:
+    """Walk every MCP retrieval tool and return the records they ground.
+
+    The MCP tools are keyed lookups, so the walk is driven from the job
+    postings outwards: postings -> applications -> interviews / evaluations,
+    and the applicants behind those applications -> profiles.
+    """
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
+
+    records: list[tuple[str, str, str, dict[str, Any], str]] = []
+
+    async with streamablehttp_client(MCP_SERVER_URL) as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+
+            async def call(tool: str, **arguments: Any) -> dict[str, Any]:
+                return _mcp_answer_data(await session.call_tool(tool, arguments))
+
+            # Student 2 — job postings. The tool caps each response, so the
+            # catalogue is collected one status at a time and merged by id.
+            postings: dict[Any, dict[str, Any]] = {}
+            for status in MCP_POSTING_STATUSES:
+                data = await call("job_postings", status=status)
+                for posting in data.get("postings", []) or []:
+                    if isinstance(posting, dict) and posting.get("job_posting_id") is not None:
+                        postings[posting["job_posting_id"]] = posting
+            for posting in postings.values():
+                records.append(
+                    ("student-2", "job_postings", "job_posting_id", posting, "job_postings")
+                )
+
+            # Student 3 — the applications submitted for each posting.
+            application_ids: list[Any] = []
+            user_ids: list[Any] = []
+            for posting_id in postings:
+                data = await call("applications_for_job", job_posting_id=posting_id)
+                for application in data.get("applications", []) or []:
+                    if not isinstance(application, dict):
+                        continue
+                    application = {"job_posting_id": posting_id, **application}
+                    records.append(
+                        (
+                            "student-3",
+                            "applications",
+                            "application_id",
+                            application,
+                            "applications_for_job",
+                        )
+                    )
+                    app_id = application.get("application_id")
+                    if app_id is not None and app_id not in application_ids:
+                        application_ids.append(app_id)
+                    user_id = application.get("user_id")
+                    if user_id is not None and user_id not in user_ids:
+                        user_ids.append(user_id)
+
+            # Students 4 and 5 — the interview and evaluation for each application.
+            for app_id in application_ids:
+                interview = await call("interview_details", application_id=app_id)
+                if interview.get("interview_id") is not None:
+                    records.append(
+                        ("student-4", "interviews", "interview_id", interview, "interview_details")
+                    )
+                evaluation = await call("evaluation_scores", application_id=app_id)
+                if evaluation.get("evaluation_id") is not None:
+                    scores = evaluation.pop("scores", None)
+                    if isinstance(scores, dict):
+                        evaluation.update(scores)
+                    records.append(
+                        (
+                            "student-5",
+                            "evaluations",
+                            "evaluation_id",
+                            evaluation,
+                            "evaluation_scores",
+                        )
+                    )
+
+            # Student 1 — the profile and resume behind each applicant.
+            for user_id in user_ids:
+                data = await call("applicant_profile", user_id=user_id)
+                profile = data.get("profile")
+                if not isinstance(profile, dict):
+                    continue
+                record = {"user_id": user_id, **profile}
+                resume = data.get("resume")
+                if isinstance(resume, dict):
+                    record.update(
+                        {f"resume_{field}": value for field, value in resume.items()}
+                    )
+                records.append(
+                    ("student-1", "profiles", "user_id", record, "applicant_profile")
+                )
+
+    return records
+
+
+def load_db_service_chunks() -> list[dict[str, Any]]:
+    """tier_1 records read live through the shared FIND MCP server.
+
+    The RAG corpus is grounded in exactly the records the MCP retrieval tools
+    expose, so both AI modes cite the same data. One chunk per record, so rows
+    created through the UI are grounded on the next refresh. If the MCP server
+    is not running the database chunks are skipped rather than failing the
+    refresh.
+    """
+    try:
+        import anyio
+
+        records = anyio.run(_walk_mcp_records)
+    except Exception:  # noqa: BLE001 - MCP server down/SDK missing is not fatal here
+        return []
+
+    return [
+        _db_record_chunk(feature, table, key, record, tool)
+        for feature, table, key, record, tool in records
+    ]
 
 
 def load_report_chunks() -> list[dict[str, Any]]:
@@ -268,7 +415,7 @@ def load_report_chunks() -> list[dict[str, Any]]:
         for i, chunk in enumerate(chunk_text(text), start=1):
             chunks.append(
                 {
-                    "chunk_id": f"{report_path.parent.name}_{report_path.stem}_{i}",
+                    "chunk_id": f"{report_path.parent.name}_{report_path.name}_{i}",
                     "source_id": rel,
                     "authority_tier": "tier_2",
                     "text": chunk,
@@ -356,37 +503,79 @@ def read_corpus() -> list[dict[str, Any]]:
 
 
 # --- Retrieval -----------------------------------------------------------
-def lexical_fallback_retrieve(query: str, k: int) -> list[dict[str, Any]]:
-    corpus = _last_corpus_chunks or read_corpus()
-    query_tokens = set((query or "").lower().split())
-    tier_weight = {"tier_1": 3, "tier_2": 2, "tier_3": 1}
+def _lexical_scores(query: str, chunks: list[dict[str, Any]]) -> dict[str, float]:
+    """BM25 keyword scores, normalised to 0..1 (Lab 08 _lexical_scores)."""
+    query_terms = _tokens(query)
+    if not query_terms:
+        return {}
+    tokenized = [_tokens(chunk.get("text", "")) for chunk in chunks]
+    average_length = sum(map(len, tokenized)) / max(len(tokenized), 1)
+    document_frequency = {
+        term: sum(term in set(terms) for terms in tokenized)
+        for term in set(query_terms)
+    }
+    scores: dict[str, float] = {}
+    for chunk, terms in zip(chunks, tokenized):
+        frequencies = {term: terms.count(term) for term in set(query_terms)}
+        score = 0.0
+        for term, frequency in frequencies.items():
+            if not frequency:
+                continue
+            inverse_frequency = math.log(
+                1 + (len(chunks) - document_frequency[term] + 0.5)
+                / (document_frequency[term] + 0.5)
+            )
+            denominator = frequency + 1.2 * (
+                1 - 0.75 + 0.75 * len(terms) / max(average_length, 1)
+            )
+            score += inverse_frequency * frequency * 2.2 / denominator
+        # Authority boosts (Lab 08: authoritative 1.5x, specification 0.7x).
+        if chunk.get("authority_tier") == "tier_1" and score:
+            score *= 1.5
+        elif chunk.get("authority_tier") == "tier_3" and score:
+            score *= 0.7
+        scores[chunk["chunk_id"]] = score
+    max_score = max(scores.values(), default=0.0)
+    if max_score:
+        return {chunk_id: score / max_score for chunk_id, score in scores.items()}
+    return scores
 
-    scored = []
-    for chunk in corpus:
-        text = chunk.get("text", "")
-        text_tokens = set(text.lower().split())
-        overlap = len(query_tokens.intersection(text_tokens))
-        scored.append(
-            {
-                "rank": 0,
-                "chunk_id": chunk.get("chunk_id"),
-                "source_id": chunk.get("source_id"),
-                "authority_tier": chunk.get("authority_tier"),
-                "distance": None,
-                "text": text,
-                "_score": overlap,
-            }
+
+def _hashed_vector_scores(query: str, chunks: list[dict[str, Any]]) -> dict[str, float]:
+    query_vector = _embedding(query)
+    return {
+        chunk["chunk_id"]: max(
+            0.0,
+            sum(
+                left * right
+                for left, right in zip(query_vector, _embedding(chunk.get("text", "")))
+            ),
         )
+        for chunk in chunks
+    }
 
-    scored.sort(
-        key=lambda r: (r.get("_score", 0), tier_weight.get(r.get("authority_tier"), 0)),
-        reverse=True,
-    )
-    top = scored[: max(k, 1)]
-    for i, row in enumerate(top, start=1):
-        row["rank"] = i
-        row.pop("_score", None)
-    return top
+
+def _chroma_scores(query: str, k: int) -> dict[str, float] | None:
+    if chromadb is None:
+        return None
+    try:
+        collection = get_collection()
+        count = collection.count()
+        if not count:
+            return {}
+        result = collection.query(
+            query_embeddings=[_embedding(query)],
+            n_results=min(k, count),
+            include=["distances"],
+        )
+    except Exception:  # noqa: BLE001 - vector store optional
+        return None
+    ids = result["ids"][0]
+    distances = result["distances"][0]
+    return {
+        chunk_id: max(0.0, min(1.0, 1.0 - float(distance)))
+        for chunk_id, distance in zip(ids, distances)
+    }
 
 
 def refresh_corpus(caller: str = "student") -> dict[str, Any]:
@@ -438,56 +627,52 @@ def refresh_corpus(caller: str = "student") -> dict[str, Any]:
 
 
 def retrieve_context(query: str, k: int = 5, caller: str = "student") -> dict[str, Any]:
+    """Hybrid retrieval (Lab 08): BM25 keyword score + vector similarity."""
     start = time.time()
     try:
-        retrieval_mode = "vector"
-        ranked: list[dict[str, Any]] = []
+        chunks = _last_corpus_chunks or read_corpus()
+        if not chunks:
+            refreshed = refresh_corpus(caller="auto_refresh")
+            if refreshed.get("status") != "success":
+                return {"status": "error", "error": "corpus_unavailable", "query": query}
+            chunks = _last_corpus_chunks
 
-        try:
-            if chromadb is None:
-                raise RuntimeError("chromadb_unavailable")
-            collection = get_collection()
-            if collection.count() == 0:
-                refreshed = refresh_corpus(caller="auto_refresh")
-                if refreshed.get("status") != "success":
-                    raise RuntimeError("empty_collection")
-
-            query_embedding = embed_texts([query])
-            results = collection.query(query_embeddings=query_embedding, n_results=k)
-
-            ids = (results.get("ids") or [[]])[0]
-            docs = (results.get("documents") or [[]])[0]
-            metas = (results.get("metadatas") or [[]])[0]
-            distances = (results.get("distances") or [[]])[0]
-
-            for i, chunk_id in enumerate(ids):
-                row_meta = metas[i] if i < len(metas) and isinstance(metas[i], dict) else {}
-                ranked.append(
-                    {
-                        "rank": i + 1,
-                        "chunk_id": chunk_id,
-                        "source_id": row_meta.get("source_id"),
-                        "authority_tier": row_meta.get("authority_tier"),
-                        "distance": distances[i] if i < len(distances) else None,
-                        "text": docs[i] if i < len(docs) else "",
-                    }
-                )
-
-            tier_weight = {"tier_1": 3, "tier_2": 2, "tier_3": 1}
-            ranked.sort(
-                key=lambda x: (
-                    tier_weight.get(x.get("authority_tier"), 0),
-                    -(x.get("distance") if isinstance(x.get("distance"), (int, float)) else 1e9),
-                ),
-                reverse=True,
-            )
-        except Exception:  # noqa: BLE001 - fall back to lexical retrieval
-            retrieval_mode = "lexical_fallback"
-            if not _last_corpus_chunks and not CORPUS_PATH.exists():
-                refreshed = refresh_corpus(caller="auto_refresh")
-                if refreshed.get("status") != "success":
-                    return {"status": "error", "error": "corpus_unavailable"}
-            ranked = lexical_fallback_retrieve(query, k)
+        lexical_scores = _lexical_scores(query, chunks)
+        vector_scores = _chroma_scores(query, k)
+        if vector_scores is None:
+            retrieval_mode = "lexical-hash"
+            hash_scores = _hashed_vector_scores(query, chunks)
+            combined = {
+                c["chunk_id"]: 0.8 * lexical_scores.get(c["chunk_id"], 0.0)
+                + 0.2 * hash_scores.get(c["chunk_id"], 0.0)
+                for c in chunks
+            }
+        else:
+            retrieval_mode = "chromadb"
+            combined = {
+                c["chunk_id"]: 0.65 * lexical_scores.get(c["chunk_id"], 0.0)
+                + 0.35 * vector_scores.get(c["chunk_id"], 0.0)
+                for c in chunks
+            }
+        top = sorted(
+            chunks,
+            key=lambda c: (combined.get(c["chunk_id"], 0.0), c["chunk_id"]),
+            reverse=True,
+        )[:k]
+        ranked = [
+            {
+                "rank": i,
+                "chunk_id": c.get("chunk_id"),
+                "source_id": c.get("source_id"),
+                "authority_tier": c.get("authority_tier"),
+                "score": round(combined.get(c["chunk_id"], 0.0), 4),
+                "text": c.get("text", ""),
+            }
+            for i, c in enumerate(top, start=1)
+        ]
+        query_terms = set(_tokens(query))
+        matched_terms = query_terms & {t for r in ranked for t in _tokens(r["text"])}
+        coverage = len(matched_terms) / max(len(query_terms), 1)
 
         output = {
             "status": "success",
@@ -495,6 +680,7 @@ def retrieve_context(query: str, k: int = 5, caller: str = "student") -> dict[st
             "caller": caller,
             "k": k,
             "retrieval_mode": retrieval_mode,
+            "query_coverage": round(coverage, 4),
             "results": ranked,
         }
         append_audit(
@@ -533,10 +719,10 @@ def confidence_from_results(results: list[dict[str, Any]]) -> str:
     return "Low"
 
 
-def generate_with_ollama(query: str, context: str) -> str:
-    model_name = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+def generate_with_ollama(query: str, context: str, model: str | None = None) -> str:
+    model_name = model or os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
     ollama_generate_url = os.getenv(
-        "OLLAMA_GENERATE_URL", "http://host.docker.internal:11434/api/generate"
+        "OLLAMA_GENERATE_URL", "http://localhost:11434/api/generate"
     )
     prompt = f"""
 You are a retrieval-grounded assistant for the FIND platform.
@@ -580,14 +766,12 @@ def deterministic_answer(query: str, results: list[dict[str, Any]]) -> str | Non
         repo = next((r for r in results if r.get("source_id") == "repository"), None)
         if repo:
             return "Answer:\n" + repo.get("text", "")
-    if any(term in q for term in ("healthy", "service status", "which services", "reachable")):
-        services = [r.get("text", "") for r in results if (r.get("source_id") or "").endswith(":/health")]
-        if services:
-            return "Answer:\n" + "\n".join(services)
     return None
 
 
-def answer_question(query: str, k: int = 5, caller: str = "student") -> dict[str, Any]:
+def answer_question(
+    query: str, k: int = 5, caller: str = "student", model: str | None = None
+) -> dict[str, Any]:
     start = time.time()
     retrieval = retrieve_context(query=query, k=k, caller=caller)
     if retrieval.get("status") != "success":
@@ -607,12 +791,17 @@ def answer_question(query: str, k: int = 5, caller: str = "student") -> dict[str
         return output
 
     results = retrieval.get("results", [])
+    # Lab 08: no query term matched anything -> refuse instead of guessing.
+    if retrieval.get("query_coverage", 0) == 0:
+        results = []
     context = "\n\n".join(r.get("text", "") for r in results)
 
     answer = deterministic_answer(query, results)
-    if answer is None:
+    if not results:
+        answer = "Insufficient evidence."
+    elif answer is None:
         if os.getenv("AI_MODE_ENABLED", "true").strip().lower() in ("1", "true", "yes", "on"):
-            answer = generate_with_ollama(query, context)
+            answer = generate_with_ollama(query, context, model)
         else:
             answer = "Answer:\n" + (results[0].get("text", "") if results else "Insufficient evidence.")
 
@@ -634,6 +823,8 @@ def answer_question(query: str, k: int = 5, caller: str = "student") -> dict[str
         "retrieval_summary": {
             "k": k,
             "retrieved_count": len(results),
+            "query_coverage": retrieval.get("query_coverage"),
+            "retrieval_mode": retrieval.get("retrieval_mode"),
             "top_chunk": results[0].get("chunk_id") if results else None,
         },
     }
