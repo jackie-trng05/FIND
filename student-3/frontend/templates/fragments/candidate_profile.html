@@ -88,6 +88,32 @@
     <div id="mcp-result" class="mcp-panel">MCP responses will appear here.</div>
 </section>
 
+<section class="ai-section mcp-section rag-section">
+    <div class="mcp-head">
+        <h3>RAG Assistant</h3>
+        <div class="mcp-toggle-row">
+            <label class="switch" for="rag-toggle" title="Enable or disable RAG Mode">
+                <input id="rag-toggle" type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
+            <span id="rag-state" class="mcp-state mcp-on">ON</span>
+        </div>
+    </div>
+    <p class="mcp-desc">Grounded question answering through the shared RAG server. Answers are drawn only
+        from retrieved FIND evidence and cite their sources with a confidence category.</p>
+    <div class="rag-query-row">
+        <input type="text" id="rag-query" class="rag-input"
+               placeholder="Ask a question about the FIND platform…"
+               value="What is the status of application {{ application.application_id }}?">
+    </div>
+    <div class="mcp-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="rag-answer-btn">Ask With Citations</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="rag-retrieve-btn">Retrieve context</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="rag-refresh-btn">Refresh corpus</button>
+    </div>
+    <div id="rag-result" class="mcp-panel">RAG responses will appear here.</div>
+</section>
+
 <style>
     .mcp-section { margin-top: 1.5rem; }
     .mcp-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
@@ -114,6 +140,8 @@
     .badge-danger { background: #fde8e8; color: #991b1b; }
     .mcp-spinner { display: inline-block; width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; border: 2px solid #cbd5e1; border-top-color: #16a34a; border-radius: 50%; animation: mcp-spin 0.7s linear infinite; }
     @keyframes mcp-spin { to { transform: rotate(360deg); } }
+    .rag-query-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    .rag-input { flex: 1; min-width: 220px; padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 0.85rem; }
 </style>
 
 <script>
@@ -187,6 +215,88 @@
     shortlistBtn.addEventListener('click', () => runTool('/mcp/shortlist-recommendation'));
 
     const persisted = localStorage.getItem(MCP_KEY);
+    toggle.checked = persisted === null ? true : persisted === 'true';
+    renderState();
+    if (!isEnabled()) { disabledMsg(); }
+})();
+</script>
+
+<script>
+(function () {
+    const BACKEND = '{{ backend_url }}';
+    const RAG_KEY = 'rag_mode_enabled';
+
+    const toggle = document.getElementById('rag-toggle');
+    const stateEl = document.getElementById('rag-state');
+    const answerBtn = document.getElementById('rag-answer-btn');
+    const retrieveBtn = document.getElementById('rag-retrieve-btn');
+    const refreshBtn = document.getElementById('rag-refresh-btn');
+    const queryInput = document.getElementById('rag-query');
+    const panel = document.getElementById('rag-result');
+    if (!toggle || !panel) return;
+
+    const buttons = [answerBtn, retrieveBtn, refreshBtn];
+
+    function isEnabled() { return toggle.checked; }
+
+    function renderState() {
+        const on = isEnabled();
+        stateEl.textContent = on ? 'ON' : 'OFF';
+        stateEl.classList.toggle('mcp-on', on);
+        stateEl.classList.toggle('mcp-off', !on);
+        buttons.forEach(b => { b.disabled = !on; });
+    }
+
+    function disabledMsg() {
+        panel.innerHTML = '<p class="mcp-off">RAG Mode is OFF. Enable it to run RAG tools.</p>';
+    }
+
+    function onToggle() {
+        localStorage.setItem(RAG_KEY, String(isEnabled()));
+        renderState();
+        if (isEnabled()) { panel.innerHTML = 'RAG responses will appear here.'; }
+        else { disabledMsg(); }
+    }
+
+    async function runRag(path) {
+        if (!isEnabled()) { disabledMsg(); return; }
+        const query = queryInput.value.trim();
+        if (path !== '/rag/refresh' && !query) {
+            panel.innerHTML = '<p class="mcp-off">Enter a question first.</p>';
+            return;
+        }
+        panel.innerHTML = path === '/rag/answer'
+            ? '<span class="mcp-spinner"></span> Generating grounded answer — the local AI model can take up to a minute…'
+            : '<span class="mcp-spinner"></span> Contacting RAG server…';
+        buttons.forEach(b => { b.disabled = true; });
+        try {
+            const resp = await fetch(BACKEND + path, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-RAG-Mode': isEnabled() ? 'on' : 'off'
+                },
+                body: new URLSearchParams({ query: query, k: '5' })
+            });
+            if (resp.status === 503) {
+                panel.innerHTML = '<p class="mcp-off">RAG server unavailable. Ensure the shared RAG server is running on port 16070.</p>';
+                return;
+            }
+            panel.innerHTML = await resp.text();
+        } catch (e) {
+            panel.innerHTML = '<p class="mcp-off">Failed to reach the RAG server. Is it running on port 16070?</p>';
+        } finally {
+            renderState();
+        }
+    }
+
+    toggle.addEventListener('change', onToggle);
+    answerBtn.addEventListener('click', () => runRag('/rag/answer'));
+    retrieveBtn.addEventListener('click', () => runRag('/rag/retrieve'));
+    refreshBtn.addEventListener('click', () => runRag('/rag/refresh'));
+
+    const persisted = localStorage.getItem(RAG_KEY);
     toggle.checked = persisted === null ? true : persisted === 'true';
     renderState();
     if (!isEnabled()) { disabledMsg(); }
