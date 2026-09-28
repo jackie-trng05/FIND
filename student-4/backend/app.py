@@ -11,6 +11,7 @@ if str(BASE_DIR) not in sys.path:
 from routes.ai_mode import ai_mode_bp
 from routes.interviews import interviews_bp
 from routes.mcp_mode import mcp_bp
+from routes.rag_mode import rag_bp
 from services.config import FRONTEND_PUBLIC_URL, PORT
 
 
@@ -29,6 +30,7 @@ def create_app():
     app.register_blueprint(interviews_bp)
     app.register_blueprint(ai_mode_bp)
     app.register_blueprint(mcp_bp)
+    app.register_blueprint(rag_bp)
 
     return app
 

@@ -503,21 +503,24 @@ The port mappings follow the course-provided architecture and should not be chan
 Database links are provided for local inspection and debugging only; they are not end-user entry points.
 
 | Shared MCP | MCP Server    |   `16050` |          n/a   |    N (local host)     |
+| Shared RAG | RAG Server    |   `16070` |          n/a   |    N (local host)     |
 
 ---
 
 # AI-Mode, MCP & RAG (shared, local, non-containerised)
 
-Release 1 adds **one shared MCP server** used by **all five** student features
-to ground AI-Mode answers with source citations and a confidence category.
+Release 1 adds **one shared MCP server** and **one shared RAG server** used by
+**all five** student features to ground AI-Mode answers with source citations
+and a confidence category.
 
 ## Not in Docker Compose (by design)
 
-The MCP server, AI-Mode, and the agentic loop run as **local host processes**.
-`docker-compose.yml` continues to run only the Release 0 containerised feature
-microservices and is **not** extended with MCP, AI-Mode, or the agentic loop.
-Containerised backends reach the local MCP server at
-`http://host.docker.internal:16050`.
+The MCP server, RAG server, AI-Mode, and the agentic loop run as **local host
+processes**. `docker-compose.yml` continues to run only the Release 0
+containerised feature microservices and is **not** extended with MCP, RAG,
+AI-Mode, or the agentic loop. Containerised backends reach the local servers at
+`http://host.docker.internal:16050` (MCP) and
+`http://host.docker.internal:16070` (RAG).
 
 ## Shared MCP server
 
@@ -530,6 +533,24 @@ Containerised backends reach the local MCP server at
 cd mcp-server
 pip install -r requirements.txt   # installs mcp<2 (FastMCP) + requests
 python server.py
+```
+
+## Shared RAG server
+
+- Location: [`rag-server/`](rag-server/README.md)
+- Transport: JSON/HTTP, fixed port **16070** (`http://localhost:16070`)
+- Tools: `refresh_corpus`, `retrieve_context`, `answer_question`
+- Corpus authority tiers: **tier_1** live database records + platform facts,
+  **tier_2** CI evidence reports, **tier_3** repository file index
+- The tier_1 database records are read **through the shared MCP server**, so both
+  AI modes cite the same records — start the MCP server before refreshing the corpus
+- Start it:
+
+```powershell
+cd rag-server
+pip install -r requirements.txt   # requests + optional chromadb (hashed-vector fallback if absent)
+python rag_http_server.py         # HTTP transport for containerised backends (port 16070)
+# or: python rag_server.py        # MCP (stdio) transport for MCP clients / the agentic loop
 ```
 
 ## Grounding contract (RAG)
@@ -545,18 +566,22 @@ retrieved MCP context and must emit citations + a confidence category
 
 ## Frontend access (through the backend only)
 
-The browser reaches the shared MCP **only** through each feature's backend/API.
-Each student frontend serves an **MCP tab at `/mcp`** that POSTs (via HTMX) to
-its own backend `POST /mcp/*` endpoints (`routes/mcp_mode.py`), which proxy to
-the shared MCP server through `services/mcp_client.py`. The browser never calls
-the MCP server directly.
+The browser reaches the shared MCP and RAG servers **only** through each
+feature's backend/API. Each student frontend serves an **MCP tab at `/mcp`**
+that POSTs (via HTMX) to its own backend `POST /mcp/*` endpoints
+(`routes/mcp_mode.py`), which proxy to the shared MCP server through
+`services/mcp_client.py`. RAG access follows the same pattern: the frontend
+POSTs to its backend `POST /rag/*` endpoints (`routes/rag_mode.py`), which proxy
+to the shared RAG server through `services/rag_api.py`. The browser never calls
+the MCP or RAG servers directly.
 
 ## Feature flags
 
-`MCP_ENABLED` and `AI_MODE_ENABLED` (default `true` locally) gate the backend
-MCP/AI endpoints. GitHub Actions per-student workflows set both to `false`, so
-**CI/CD never needs Ollama or the MCP process**; the endpoints return a clear
-disabled response, verified by guard tests (`tests/test_mcp_mode.py`).
+`MCP_ENABLED`, `RAG_ENABLED` and `AI_MODE_ENABLED` (default `true` locally) gate
+the backend MCP/RAG/AI endpoints. GitHub Actions per-student workflows set all
+three to `false`, so **CI/CD never needs Ollama, the MCP process, or the RAG
+process**; the endpoints return a clear disabled response, verified by guard
+tests (`tests/test_mcp_mode.py`, `tests/test_rag_mode.py`).
 
 ---
 

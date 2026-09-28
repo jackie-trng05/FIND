@@ -9,7 +9,7 @@ Endpoints:
     GET  /health    -> {"status": "ok", "service": "rag-server"}
     POST /refresh   -> refresh_corpus(caller)
     POST /retrieve  -> retrieve_context(query, k, caller)
-    POST /answer    -> answer_question(query, k, caller)
+    POST /answer    -> answer_question(query, k, caller, model)
 
 This server is intentionally NOT added to docker-compose: the Release 0
 containerised feature microservices keep running unchanged, and AI-Mode / RAG /
@@ -82,7 +82,8 @@ class RAGHandler(BaseHTTPRequestHandler):
                     return
                 k = int(payload.get("k", 5))
                 caller = (payload.get("caller") or "student").strip() or "student"
-                result = answer_question(query=query, k=k, caller=caller)
+                model = (payload.get("model") or "").strip() or None
+                result = answer_question(query=query, k=k, caller=caller, model=model)
                 self._send_json(200 if result.get("status") == "success" else 500, result)
                 return
 

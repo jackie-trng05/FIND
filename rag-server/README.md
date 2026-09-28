@@ -29,8 +29,17 @@ server runs as a local host process and is reached from the containers via
 - `retrieve_context(query, k)` — top-k grounded chunks.
 - `answer_question(query, k)` — grounded answer + citations + confidence.
 
-Corpus authority tiers: **tier_1** live database services + platform facts,
+Corpus authority tiers: **tier_1** live database records + platform facts,
 **tier_2** CI evidence reports, **tier_3** repository file index.
+
+The tier_1 database records are **read through the shared MCP server** rather
+than from the database services directly, so MCP Mode and RAG Mode ground their
+answers in exactly the same records. `refresh_corpus` walks the MCP retrieval
+tools — `job_postings` → `applications_for_job` → `interview_details` /
+`evaluation_scores` / `applicant_profile` — over one streamable-HTTP session at
+`MCP_SERVER_URL` (default `http://localhost:16050/mcp`). Start the MCP server
+before refreshing; if it is not running the database chunks are simply skipped
+and the refresh still succeeds with the remaining tiers.
 
 ## Setup
 
