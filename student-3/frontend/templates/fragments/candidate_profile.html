@@ -79,8 +79,6 @@
             <span id="mcp-state" class="mcp-state mcp-on">ON</span>
         </div>
     </div>
-    <p class="mcp-desc">Grounded retrieval through the shared MCP server for job
-        {{ application.job_posting_id }}. Answers cite their source records and a confidence level.</p>
     <div class="mcp-actions">
         <button type="button" class="btn btn-primary btn-sm" id="mcp-apps-btn">Applications for this job</button>
         <button type="button" class="btn btn-primary btn-sm" id="mcp-shortlist-btn">Who should be shortlisted?</button>
@@ -99,8 +97,6 @@
             <span id="rag-state" class="mcp-state mcp-on">ON</span>
         </div>
     </div>
-    <p class="mcp-desc">Grounded question answering through the shared RAG server. Answers are drawn only
-        from retrieved FIND evidence and cite their sources with a confidence category.</p>
     <div class="rag-query-row">
         <input type="text" id="rag-query" class="rag-input"
                placeholder="Ask a question about the FIND platform…"
