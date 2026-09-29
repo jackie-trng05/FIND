@@ -1,8 +1,9 @@
 from collectors import architecture_collector, db_collector, devops_collector, endpoints_collector, mcp_collector, rag_collector
+from collectors.feature_integration_collector import summarize_feature_matrix
 from config.review_config import ModeConfig
 from core.ai_runner import AIRunner
 from core.prompt_registry import PromptRegistry
-from pipelines import architecture_pipeline, devops_pipeline, mcp_pipeline, rag_pipeline, service_pipeline
+from pipelines import architecture_pipeline, devops_pipeline, service_pipeline
 
 
 COLLECTORS = {
@@ -141,37 +142,63 @@ def _run_devops_mode(mode: ModeConfig, prompts: PromptRegistry, ai: AIRunner, ev
     )
 
 
-def _run_validation_mode(mode: ModeConfig, prompts: PromptRegistry, ai: AIRunner, evidence: str) -> str:
-    pipeline = mcp_pipeline if mode.kind == "mcp" else rag_pipeline
+def _run_validation_mode(mode: ModeConfig, evidence: str, ai: AIRunner) -> str:
     label = mode.label
-    _stage(label, "PROMPTS", f"Loading {label} prompt family")
-    task_prompt = prompts.read(mode.prompt_family, f"implementation/{mode.kind}_implementation_prompt.txt")
-    implementation_prompt = pipeline.build_implementation_prompt(task_prompt, evidence)
-    _stage(label, "LLM", "Running implementation model")
-    implementation_output, err = ai.call(
-        f"You are a precise {label} validator. Use only supplied evidence and reply in at most 45 words.",
-        implementation_prompt,
-        review=False,
+    _stage(label, "ASSESS", "Evaluating per-student source evidence")
+    result = summarize_feature_matrix(evidence, mode.kind)
+
+    suggestion_system_prompt = (
+        f"You are a senior {label} improvement agent. Use the supplied evidence to suggest "
+        "practical future enhancements. Suggestions are advisory and must not change the "
+        "source-evidence verdict."
     )
-    if err:
-        _stage(label, "LLM", "Failed")
-        return f"MODEL FAILED: {err}"
+    suggestion_prompt = f"""Regardless of whether the evidence matrix is fully passing, propose exactly three distinct, concrete improvements for the shared {label} service and its student integrations.
 
-    review_system_prompt = prompts.read(mode.prompt_family, f"review/{mode.kind}_review_prompt.txt")
-    if mode.kind == "rag":
-        reasoning_prompt = prompts.read("rag", "review/rag_reasoning_prompt.txt")
-        review_system_prompt = f"{review_system_prompt}\n\n{reasoning_prompt}"
-    review_prompt = pipeline.build_review_prompt(implementation_output, evidence)
-    _stage(label, "LLM", "Running review model")
-    review_output, review_err = ai.call(review_system_prompt, review_prompt, review=True)
-    if review_err:
-        review_output = review_err
-        _stage(label, "LLM", "Review model failed")
+Treat these as optional enhancements, not claims that a requirement is missing. Do not reassess completeness or describe passing requirements as defects. Return only three numbered suggestions (1, 2, 3), one or two sentences each.
+
+Observed evidence:
+{evidence}"""
+    _stage(label, "LLM", "Running improvement agent")
+    suggestions, suggestion_error = ai.call(
+        suggestion_system_prompt,
+        suggestion_prompt,
+        review=False,
+        max_tokens=350,
+    )
+    if suggestion_error:
+        suggestions = f"Improvement suggestions unavailable: {suggestion_error}"
     else:
-        _stage(label, "LLM", "Review model complete")
+        review_system_prompt = (
+            f"You are the independent reviewer for {label} improvement suggestions. "
+            "Preserve exactly three distinct, actionable future enhancements. Do not "
+            "reassess or change the source-evidence verdict, and do not call passing "
+            "requirements incomplete. Return only suggestions numbered 1, 2, and 3."
+        )
+        review_prompt = f"""Refine the draft into exactly three concise, useful improvements. Keep them relevant to the observed service and integrations. They must remain optional enhancements even if every requirement passes.
 
-    _stage(label, "DONE", "Review complete")
-    return f"OBSERVE: {evidence}\n\nIMPLEMENTATION: {implementation_output}\nREVIEW: {review_output}"
+Observed evidence:
+{evidence}
+
+Draft suggestions:
+{suggestions}"""
+        _stage(label, "LLM", "Running improvement reviewer")
+        reviewed_suggestions, review_error = ai.call(
+            review_system_prompt,
+            review_prompt,
+            review=True,
+            max_tokens=350,
+        )
+        if review_error:
+            _stage(label, "LLM", "Improvement review failed; using draft suggestions")
+        else:
+            suggestions = reviewed_suggestions
+
+    _stage(label, "DONE", "Source-evidence review complete")
+    return (
+        f"OBSERVE: {evidence}\n\n"
+        f"IMPLEMENTATION: {result}\n"
+        f"REVIEW: {result} Live browser and curl validation is separate and was not run.\n\n {suggestions}"
+    )
 
 
 def run_mode(mode: ModeConfig, app_dir, repo_root, prompts: PromptRegistry, ai: AIRunner) -> str:
@@ -196,5 +223,5 @@ def run_mode(mode: ModeConfig, app_dir, repo_root, prompts: PromptRegistry, ai: 
     if mode.kind == "devops":
         return _run_devops_mode(mode, prompts, ai, evidence)
     if mode.kind in ("mcp", "rag"):
-        return _run_validation_mode(mode, prompts, ai, evidence)
+        return _run_validation_mode(mode, evidence, ai)
     return "Unknown mode."
