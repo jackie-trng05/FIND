@@ -142,15 +142,62 @@ def _run_devops_mode(mode: ModeConfig, prompts: PromptRegistry, ai: AIRunner, ev
     )
 
 
-def _run_validation_mode(mode: ModeConfig, evidence: str) -> str:
+def _run_validation_mode(mode: ModeConfig, evidence: str, ai: AIRunner) -> str:
     label = mode.label
     _stage(label, "ASSESS", "Evaluating per-student source evidence")
     result = summarize_feature_matrix(evidence, mode.kind)
+
+    suggestion_system_prompt = (
+        f"You are a senior {label} improvement agent. Use the supplied evidence to suggest "
+        "practical future enhancements. Suggestions are advisory and must not change the "
+        "source-evidence verdict."
+    )
+    suggestion_prompt = f"""Regardless of whether the evidence matrix is fully passing, propose exactly three distinct, concrete improvements for the shared {label} service and its student integrations.
+
+Treat these as optional enhancements, not claims that a requirement is missing. Do not reassess completeness or describe passing requirements as defects. Return only three numbered suggestions (1, 2, 3), one or two sentences each.
+
+Observed evidence:
+{evidence}"""
+    _stage(label, "LLM", "Running improvement agent")
+    suggestions, suggestion_error = ai.call(
+        suggestion_system_prompt,
+        suggestion_prompt,
+        review=False,
+        max_tokens=350,
+    )
+    if suggestion_error:
+        suggestions = f"Improvement suggestions unavailable: {suggestion_error}"
+    else:
+        review_system_prompt = (
+            f"You are the independent reviewer for {label} improvement suggestions. "
+            "Preserve exactly three distinct, actionable future enhancements. Do not "
+            "reassess or change the source-evidence verdict, and do not call passing "
+            "requirements incomplete. Return only suggestions numbered 1, 2, and 3."
+        )
+        review_prompt = f"""Refine the draft into exactly three concise, useful improvements. Keep them relevant to the observed service and integrations. They must remain optional enhancements even if every requirement passes.
+
+Observed evidence:
+{evidence}
+
+Draft suggestions:
+{suggestions}"""
+        _stage(label, "LLM", "Running improvement reviewer")
+        reviewed_suggestions, review_error = ai.call(
+            review_system_prompt,
+            review_prompt,
+            review=True,
+            max_tokens=350,
+        )
+        if review_error:
+            _stage(label, "LLM", "Improvement review failed; using draft suggestions")
+        else:
+            suggestions = reviewed_suggestions
+
     _stage(label, "DONE", "Source-evidence review complete")
     return (
         f"OBSERVE: {evidence}\n\n"
         f"IMPLEMENTATION: {result}\n"
-        f"REVIEW: {result} Live browser and curl validation is separate and was not run."
+        f"REVIEW: {result} Live browser and curl validation is separate and was not run.\n\n {suggestions}"
     )
 
 
@@ -176,5 +223,5 @@ def run_mode(mode: ModeConfig, app_dir, repo_root, prompts: PromptRegistry, ai: 
     if mode.kind == "devops":
         return _run_devops_mode(mode, prompts, ai, evidence)
     if mode.kind in ("mcp", "rag"):
-        return _run_validation_mode(mode, evidence)
+        return _run_validation_mode(mode, evidence, ai)
     return "Unknown mode."
