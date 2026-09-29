@@ -50,10 +50,6 @@
             <span id="mcp-state" class="mcp-state mcp-on">ON</span>
         </div>
     </div>
-    <p class="muted">
-        Grounded retrieval through the shared MCP server (<code>applicant_profile</code>).
-        Answers cite their source fields and a confidence level.
-    </p>
     <div class="mcp-actions">
         <button type="button" class="btn btn-secondary btn-sm" id="mcp-profile-btn" onclick="runMcpTool('/mcp/applicant-profile')">Applicant profile</button>
         <button type="button" class="btn btn-primary btn-sm" id="mcp-strengths-btn" onclick="runMcpTool('/mcp/strengths-summary')">Summarise strengths</button>
@@ -72,10 +68,6 @@
             <span id="rag-state" class="mcp-state mcp-on">ON</span>
         </div>
     </div>
-    <p class="muted">
-        Grounded question answering through the shared RAG server. Answers are drawn only
-        from retrieved FIND evidence and cite their sources with a confidence category.
-    </p>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
         <input type="text" id="rag-query" class="input" placeholder="Ask a question about the FIND platform…"
                value="What is on my applicant profile?"

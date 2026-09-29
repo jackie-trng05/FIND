@@ -55,7 +55,6 @@
             <span id="mcp-state" class="mcp-state mcp-on">ON</span>
         </div>
     </div>
-    <p style="font-size:0.85rem;color:var(--text-muted,#64748b);margin-bottom:0.75rem;">Grounded retrieval through the shared MCP server. Answers cite their source records and a confidence level.</p>
     <div class="mcp-actions">
         <button type="button" class="btn btn-primary btn-sm" id="mcp-details-btn" onclick="runMcpTool('/mcp/interview-details')">Interview details</button>
         <button type="button" class="btn btn-primary btn-sm" id="mcp-summary-btn" onclick="runMcpTool('/mcp/interview-summary')">Summarise feedback</button>
@@ -74,10 +73,9 @@
             <span id="rag-state" class="mcp-state mcp-on">ON</span>
         </div>
     </div>
-    <p style="font-size:0.85rem;color:var(--text-muted,#64748b);margin-bottom:0.75rem;">Grounded question answering through the shared RAG server. Answers are drawn only from retrieved FIND evidence and cite their sources with a confidence category.</p>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
         <input type="text" id="rag-query" class="input" placeholder="Ask a question about the FIND platform…"
-               value="Which repository files make up the FIND platform?"
+               value="Which completed interviews have positive notes?"
                style="flex:1;min-width:220px;padding:0.4rem 0.6rem;border:1px solid var(--border,#e5e7eb);border-radius:8px;font-size:0.85rem;">
     </div>
     <div class="mcp-actions">

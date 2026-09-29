@@ -250,8 +250,6 @@ def _mcp_section(backend_url: str) -> str:
                     <span id="mcp-state" class="mcp-state mcp-on">ON</span>
                 </div>
             </div>
-            <p class="mcp-desc">Find existing published roles that match a profile,
-                grounded in the shared MCP server (cites posting records + confidence).</p>
             <div class="mcp-form-row">
                 <input id="mcp-query" class="form-input" type="text"
                        placeholder="e.g. Python backend engineer">
@@ -383,9 +381,6 @@ def _rag_section(backend_url: str) -> str:
                     <span id="rag-state" class="mcp-state mcp-on">ON</span>
                 </div>
             </div>
-            <p class="mcp-desc">Grounded question answering through the shared RAG server.
-                Answers are drawn only from retrieved FIND evidence and cite their sources
-                with a confidence category.</p>
             <div class="mcp-form-row">
                 <input id="rag-query" class="form-input" type="text"
                        placeholder="Ask a question about the FIND platform…"
