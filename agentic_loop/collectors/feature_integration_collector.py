@@ -54,3 +54,33 @@ def collect_feature_matrix(app_dir: Path, repo_root: Path, mode: str) -> str:
         "Run the lab's browser and curl workflow separately to prove live interactions."
     )
     return "\n".join(lines)
+
+
+def summarize_feature_matrix(evidence: str, mode: str) -> str:
+    """Return the source-tree verdict, independent of model-generated summaries."""
+    variable = "MCP" if mode == "mcp" else "RAG"
+    rows = {
+        student: line
+        for line in evidence.splitlines()
+        for student in STUDENTS
+        if line.startswith(f"- {student}:")
+    }
+    missing_rows = [student for student in STUDENTS if student not in rows]
+    incomplete = {
+        student: re.findall(r"([a-z_]+)=MISSING", rows[student])
+        for student in STUDENTS
+        if student in rows and "=MISSING" in rows[student]
+    }
+
+    if missing_rows:
+        incomplete.update({student: ["student row missing"] for student in missing_rows})
+    if incomplete:
+        details = "; ".join(
+            f"{student}: {', '.join(requirements)}"
+            for student, requirements in incomplete.items()
+        )
+        return f"{variable} source-tree validation INCOMPLETE. {details}."
+    return (
+        f"{variable} source-tree validation PASS: all five students meet the "
+        "frontend wiring, backend route/client, and CI-disablement checks."
+    )
