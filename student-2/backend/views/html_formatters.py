@@ -363,6 +363,126 @@ def _mcp_section(backend_url: str) -> str:
     return markup.replace("__BACKEND__", backend_url)
 
 
+def _rag_section(backend_url: str) -> str:
+    """RAG Assistant panel rendered below the MCP Insights panel.
+
+    Grounded question answering through the shared RAG server: answers are drawn
+    only from retrieved FIND evidence and cite their sources with a confidence
+    category. Self-contained (markup + scoped CSS + IIFE) so it works when HTMX
+    swaps the form fragment into the page.
+    """
+    markup = """
+        <div class="rag-panel-wrap" id="rag-assistant">
+            <div class="mcp-head">
+                <span class="ai-panel-title">RAG Assistant</span>
+                <div class="mcp-toggle-row">
+                    <label class="switch" for="rag-toggle" title="Enable or disable RAG Mode">
+                        <input id="rag-toggle" type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span id="rag-state" class="mcp-state mcp-on">ON</span>
+                </div>
+            </div>
+            <p class="mcp-desc">Grounded question answering through the shared RAG server.
+                Answers are drawn only from retrieved FIND evidence and cite their sources
+                with a confidence category.</p>
+            <div class="mcp-form-row">
+                <input id="rag-query" class="form-input" type="text"
+                       placeholder="Ask a question about the FIND platform…"
+                       value="Which job postings are currently published on FIND?">
+            </div>
+            <div class="mcp-form-row">
+                <button type="button" class="btn btn-primary btn-sm" id="rag-answer-btn">Ask With Citations</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="rag-retrieve-btn">Retrieve context</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="rag-refresh-btn">Refresh corpus</button>
+            </div>
+            <div id="rag-result" class="mcp-panel">RAG responses will appear here.</div>
+        </div>
+        <style>
+            .rag-panel-wrap { margin-top: 1rem; padding: 0.9rem 1rem; border: 1px solid var(--color-border, #e5e7eb); border-radius: 8px; }
+        </style>
+        <script>
+        (function () {
+            const BACKEND = '__BACKEND__';
+            const RAG_KEY = 'rag_mode_enabled';
+            const toggle = document.getElementById('rag-toggle');
+            const stateEl = document.getElementById('rag-state');
+            const answerBtn = document.getElementById('rag-answer-btn');
+            const retrieveBtn = document.getElementById('rag-retrieve-btn');
+            const refreshBtn = document.getElementById('rag-refresh-btn');
+            const queryEl = document.getElementById('rag-query');
+            const panel = document.getElementById('rag-result');
+            if (!toggle || !panel) return;
+
+            const buttons = [answerBtn, retrieveBtn, refreshBtn];
+
+            function isEnabled() { return toggle.checked; }
+
+            function renderState() {
+                const on = isEnabled();
+                stateEl.textContent = on ? 'ON' : 'OFF';
+                stateEl.classList.toggle('mcp-on', on);
+                stateEl.classList.toggle('mcp-off', !on);
+                buttons.forEach(function (b) { if (b) b.disabled = !on; });
+            }
+
+            function disabledMsg() {
+                panel.innerHTML = '<p class="mcp-off">RAG Mode is OFF. Enable it to ask grounded questions.</p>';
+            }
+
+            function onToggle() {
+                localStorage.setItem(RAG_KEY, String(isEnabled()));
+                renderState();
+                if (isEnabled()) { panel.innerHTML = 'RAG responses will appear here.'; }
+                else { disabledMsg(); }
+            }
+
+            async function runRag(path, needsQuery, waiting) {
+                if (!isEnabled()) { disabledMsg(); return; }
+                const query = (queryEl.value || '').trim();
+                if (needsQuery && !query) {
+                    panel.innerHTML = '<p class="mcp-off">Enter a question first.</p>';
+                    return;
+                }
+                panel.innerHTML = '<span class="mcp-spinner"></span> ' + waiting;
+                buttons.forEach(function (b) { if (b) b.disabled = true; });
+                try {
+                    const resp = await fetch(BACKEND + path, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-RAG-Mode': isEnabled() ? 'on' : 'off'
+                        },
+                        body: new URLSearchParams({ query: query })
+                    });
+                    const html = await resp.text();
+                    if (resp.status === 503) {
+                        panel.innerHTML = '<p class="mcp-off">RAG server unavailable. Ensure the shared RAG server is running on port 16070.</p>';
+                        return;
+                    }
+                    panel.innerHTML = html;
+                } catch (e) {
+                    panel.innerHTML = '<p class="mcp-off">Failed to reach the RAG server. Is it running on port 16070?</p>';
+                } finally {
+                    renderState();
+                }
+            }
+
+            toggle.addEventListener('change', onToggle);
+            answerBtn.addEventListener('click', function () { runRag('/rag/answer', true, 'Generating a grounded answer…'); });
+            retrieveBtn.addEventListener('click', function () { runRag('/rag/retrieve', true, 'Retrieving context…'); });
+            refreshBtn.addEventListener('click', function () { runRag('/rag/refresh', false, 'Refreshing the corpus…'); });
+
+            const persisted = localStorage.getItem(RAG_KEY);
+            toggle.checked = persisted === null ? true : persisted === 'true';
+            renderState();
+            if (!isEnabled()) { disabledMsg(); }
+        })();
+        </script>"""
+    return markup.replace("__BACKEND__", backend_url)
+
+
 
 
 
@@ -445,6 +565,7 @@ def render_posting_form(backend_url: str, posting: dict | None = None, *, error:
             {ai_section}
         </div>
         {_mcp_section(backend_url)}
+        {_rag_section(backend_url)}
         <div class="form-actions">
             <button class="btn btn-primary" type="submit">{_e(submit_label)}</button>
             {cancel_btn}
