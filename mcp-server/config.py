@@ -38,8 +38,12 @@ DB_SERVICE_URLS: dict[str, str] = {
 
 # --- Shared-tool paths ----------------------------------------------------
 # ci_report reads a student's CI evidence JSON produced by the GitHub Actions
-# "evidence-pack" job (reports/report.json at the repository root by default).
-DEFAULT_CI_REPORT = os.getenv("CI_REPORT_PATH", str(REPO_ROOT / "reports" / "report.json"))
+# "evidence-pack" job. Each student's report lives at
+# docs/release-0/reports/student-N/report.json; pointing the default at the
+# reports directory lets read_ci_report discover every report.json beneath it.
+DEFAULT_CI_REPORT = os.getenv(
+    "CI_REPORT_PATH", str(REPO_ROOT / "docs" / "release-0" / "reports")
+)
 
 # HTTP timeout for outbound calls to database services (seconds).
 REQUEST_TIMEOUT = int(os.getenv("MCP_REQUEST_TIMEOUT", "5"))
