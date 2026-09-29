@@ -81,8 +81,21 @@ def list_project_files(directory_path: str = ".") -> dict:
     )
 
 
+def _load_ci_report(path: Path) -> dict:
+    """Read and parse a single CI evidence JSON file."""
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
 def read_ci_report(report_path: str | None = None) -> dict:
-    """Read a CI evidence JSON file produced by the GitHub Actions workflow."""
+    """Read CI evidence JSON produced by the GitHub Actions workflow.
+
+    ``report_path`` may point at a ``report.json`` file **or** at a directory:
+    when a directory is given, every ``report.json`` beneath it is discovered
+    (e.g. ``docs/release-0/reports`` returns all per-student reports, while
+    ``docs/release-0/reports/student-4`` returns that student's single report).
+    A relative path is resolved against the FIND repository root.
+    """
     resolved = Path(report_path) if report_path else Path(config.DEFAULT_CI_REPORT)
     if not resolved.is_absolute():
         resolved = (_REPO_ROOT / resolved).resolve()
@@ -98,8 +111,40 @@ def read_ci_report(report_path: str | None = None) -> dict:
             retrieval.LOW,
         )
 
-    with resolved.open("r", encoding="utf-8") as handle:
-        payload = json.load(handle)
+    # Directory: discover every report.json beneath it (sorted for stability).
+    if resolved.is_dir():
+        found = sorted(resolved.rglob("report.json"))
+        if not found:
+            return retrieval.build_context(
+                {
+                    "error": "No report.json files found",
+                    "path": str(resolved),
+                    "hint": "Run the student CI workflow_dispatch to generate report.json",
+                },
+                [retrieval.source(table="ci_evidence", record_id=str(resolved))],
+                retrieval.LOW,
+            )
+
+        reports = []
+        sources = []
+        for report_file in found:
+            try:
+                rel = report_file.relative_to(_REPO_ROOT).as_posix()
+            except ValueError:
+                rel = report_file.as_posix()
+            reports.append({"path": rel, "report": _load_ci_report(report_file)})
+            sources.append(retrieval.source(table="ci_evidence", record_id=rel))
+
+        # A single discovered report keeps the flat single-report shape.
+        if len(reports) == 1:
+            return retrieval.build_context(
+                reports[0]["report"], sources, retrieval.HIGH
+            )
+        return retrieval.build_context(
+            {"count": len(reports), "reports": reports}, sources, retrieval.HIGH
+        )
+
+    payload = _load_ci_report(resolved)
     return retrieval.build_context(
         payload,
         [retrieval.source(table="ci_evidence", record_id=resolved.name)],
