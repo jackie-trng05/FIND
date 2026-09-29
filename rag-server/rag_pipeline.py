@@ -46,15 +46,15 @@ except Exception:  # noqa: BLE001 - any import failure disables the vector store
 # --- Paths ---------------------------------------------------------------
 BASE_DIR = Path(__file__).resolve().parent          # rag-server/
 APP_DIR = BASE_DIR.parent                             # FIND repository root
-REPORTS_DIR = APP_DIR / "docs" / "release-0" / "reports"
+REPORTS_DIR = APP_DIR / "docs"
 README_PATH = APP_DIR / "README.md"
 COMPOSE_PATH = APP_DIR / "docker-compose.yml"
 CORPUS_PATH = BASE_DIR / "corpus" / "corpus.jsonl"
 AUDIT_PATH = BASE_DIR / "rag-audit.jsonl"
 CHROMA_PATH = BASE_DIR / "chroma"
 
-# CI evidence file names produced by each student feature workflow.
-REPORT_FILES = ["report.json", "report.md", "run-view.md"]
+# Text file extensions indexed from the docs folder as tier_2 evidence.
+REPORT_FILE_SUFFIXES = {".json", ".md", ".txt", ".xml"}
 
 # --- Shared MCP server (the live-database source for tier_1 chunks) ------
 # Both AI modes read the same records: MCP Mode calls these tools per request,
@@ -401,7 +401,7 @@ def load_report_chunks() -> list[dict[str, Any]]:
         return chunks
 
     for report_path in sorted(REPORTS_DIR.rglob("*")):
-        if not report_path.is_file() or report_path.name not in REPORT_FILES:
+        if not report_path.is_file() or report_path.suffix.lower() not in REPORT_FILE_SUFFIXES:
             continue
         rel = report_path.relative_to(APP_DIR).as_posix()
         try:
