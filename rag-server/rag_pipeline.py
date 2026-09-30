@@ -56,6 +56,10 @@ CHROMA_PATH = BASE_DIR / "chroma"
 # Text file extensions indexed from the docs folder as tier_2 evidence.
 REPORT_FILE_SUFFIXES = {".json", ".md", ".txt", ".xml"}
 
+# Report files excluded from the corpus: these document the RAG/MCP run itself,
+# so ingesting them would ground answers on self-referential evidence.
+EXCLUDED_REPORT_FILES = {"rag-report.md", "rag-validation-report.md"}
+
 # --- Shared MCP server (the live-database source for tier_1 chunks) ------
 # Both AI modes read the same records: MCP Mode calls these tools per request,
 # and the RAG corpus is built by walking them at refresh time. Both the RAG
@@ -403,6 +407,8 @@ def load_report_chunks() -> list[dict[str, Any]]:
     for report_path in sorted(REPORTS_DIR.rglob("*")):
         if not report_path.is_file() or report_path.suffix.lower() not in REPORT_FILE_SUFFIXES:
             continue
+        if report_path.name in EXCLUDED_REPORT_FILES:
+            continue
         rel = report_path.relative_to(APP_DIR).as_posix()
         try:
             if report_path.suffix == ".json":
@@ -737,7 +743,7 @@ def confidence_from_results(results: list[dict[str, Any]]) -> str:
 
 
 def generate_with_ollama(query: str, context: str, model: str | None = None) -> str:
-    model_name = model or os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+    model_name = model or os.getenv("OLLAMA_MODEL", "llama3.1:8b")
     ollama_generate_url = os.getenv(
         "OLLAMA_GENERATE_URL", "http://localhost:11434/api/generate"
     )
