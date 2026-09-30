@@ -16,9 +16,11 @@ it into the complete application.
 | --- | --- |
 | `.github/workflows/` | GitHub Actions and CI/CD workflows |
 | `docs/` | Project documentation, architecture diagrams, and reports |
-| `shared/` | Integrated home page, shared CSS, JavaScript, assets, and common configuration |
+| `shared/` | Integrated home page, shared CSS, JavaScript, assets, grounded-answer prompts, and common configuration |
 | `student-1/` through `student-5/` | Student-owned frontend, backend, database, tests, and Docker artefacts |
-| `agentic_loop/` | Development-time architecture and service review tooling and prompts |
+| `agentic_loop/` | Development-time architecture, service, DevOps, MCP, and RAG review tooling and prompts |
+| `mcp-server/` | Shared non-containerised MCP server exposing grounded retrieval tools |
+| `rag-server/` | Shared non-containerised RAG server for grounded answers, citations, and confidence |
 | `docker-compose.yml` | Shared local orchestration for the integrated application |
 
 Feature-specific AI integrations belong to their owning student backend; `agentic_loop/` is
@@ -55,7 +57,10 @@ FIND/
 │   │   ├── architecture_collector.py # inspects Compose services and boundaries
 │   │   ├── db_collector.py           # checks database service evidence
 │   │   ├── devops_collector.py       # checks CI/CD workflow evidence
-│   │   └── endpoints_collector.py    # checks API endpoint evidence
+│   │   ├── endpoints_collector.py    # checks API endpoint evidence
+│   │   ├── feature_integration_collector.py # checks cross-feature integration evidence
+│   │   ├── mcp_collector.py          # checks shared MCP server tool evidence
+│   │   └── rag_collector.py          # checks RAG server grounding evidence
 │   ├── config/
 │   │   ├── __init__.py
 │   │   └── review_config.py          # review modes, prompt paths, and models
@@ -69,6 +74,8 @@ FIND/
 │   │   ├── __init__.py
 │   │   ├── architecture_pipeline.py  # architecture review steps
 │   │   ├── devops_pipeline.py        # DevOps review steps
+│   │   ├── mcp_pipeline.py           # MCP server review steps
+│   │   ├── rag_pipeline.py           # RAG server review steps
 │   │   └── service_pipeline.py       # service implementation review steps
 │   └── prompts/
 │       ├── architecture/
@@ -86,6 +93,14 @@ FIND/
 │       ├── devops/
 │       │   ├── implementation/devops_pipeline_review_prompt.txt
 │       │   └── review/devops_evidence_review_prompt.txt
+│       ├── mcp/
+│       │   ├── implementation/mcp_implementation_prompt.txt
+│       │   └── review/mcp_review_prompt.txt
+│       ├── rag/
+│       │   ├── implementation/rag_implementation_prompt.txt
+│       │   └── review/
+│       │       ├── rag_reasoning_prompt.txt
+│       │       └── rag_review_prompt.txt
 │       └── service/
 │           └── implementation/
 │               ├── context_prompt.txt
@@ -104,20 +119,49 @@ FIND/
 │   │   ├── Dockerfile
 │   │   ├── init_db.py                # creates shared tables and seed data
 │   │   └── requirements.txt
-│   └── frontend/
-│       ├── app.py                    # shared frontend Flask entrypoint
-│       ├── Dockerfile
-│       ├── requirements.txt
-│       ├── css/styles.css
-│       ├── js/app.js
-│       ├── static/js/
-│       │   ├── auth.js
-│       │   └── find-app.js
-│       └── templates/
-│           ├── dashboard.html
-│           ├── index.html
-│           ├── login.html
-│           └── register.html
+│   ├── frontend/
+│   │   ├── app.py                    # shared frontend Flask entrypoint
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   ├── css/styles.css
+│   │   ├── js/app.js
+│   │   ├── static/js/
+│   │   │   ├── auth.js
+│   │   │   └── find-app.js
+│   │   └── templates/
+│   │       ├── dashboard.html
+│   │       ├── index.html
+│   │       ├── login.html
+│   │       └── register.html
+│   └── prompts/
+│       └── rag/
+│           └── grounded_answer_prompt.txt # shared grounded RAG answer prompt
+│
+├── mcp-server/                       # shared non-containerised MCP server (local host process)
+│   ├── README.md
+│   ├── config.py                     # host/port and MCP server settings
+│   ├── requirements.txt
+│   ├── retrieval.py                  # builds the shared retrieval-context contract
+│   ├── server.py                     # streamable-HTTP server and tool registration
+│   ├── tools.py                      # shared retrieval tools (project_files, ci_report)
+│   └── students/
+│       ├── __init__.py
+│       ├── student_1.py              # applicant_profile retrieval tool
+│       ├── student_2.py              # job_postings retrieval tool
+│       ├── student_3.py              # applications_for_job retrieval tool
+│       ├── student_4.py              # interview_details retrieval tool
+│       └── student_5.py              # evaluation_scores retrieval tool
+│
+├── rag-server/                       # shared non-containerised RAG server (local host process)
+│   ├── README.md
+│   ├── mcp-config.json               # MCP client launch config
+│   ├── rag_eval.py                   # P@5 / R@5 retrieval metrics
+│   ├── rag_http_server.py            # HTTP server (port 16070) called by backends
+│   ├── rag_pipeline.py               # corpus build, retrieval, grounded answering, audit
+│   ├── rag_server.py                 # MCP (stdio) server exposing RAG tools
+│   ├── requirements.txt
+│   ├── tool-contracts.md             # tool input/output contracts and authority tiers
+│   └── corpus/.gitkeep               # generated corpus/vector store are git-ignored
 │
 ├── student-1/                        # profiles and resumes
 │   ├── backend/
@@ -130,14 +174,18 @@ FIND/
 │   │   ├── routes/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_mode.py            # AI profile suggestions endpoint
-│   │   │   └── profiles.py           # profile CRUD endpoints
+│   │   │   ├── mcp_mode.py           # MCP-Mode grounded endpoints
+│   │   │   ├── profiles.py           # profile CRUD endpoints
+│   │   │   └── rag_mode.py           # RAG-Mode grounded endpoints
 │   │   ├── services/
 │   │   │   ├── __init__.py
 │   │   │   ├── config.py             # service URLs and settings
 │   │   │   ├── database_api.py       # profile database client
 │   │   │   ├── integration_api.py    # calls other FIND services
 │   │   │   ├── llm_client.py         # Ollama/LLM client
-│   │   │   └── prompt_loader.py      # reads prompt text files
+│   │   │   ├── mcp_client.py         # shared MCP server client
+│   │   │   ├── prompt_loader.py      # reads prompt text files
+│   │   │   └── rag_api.py            # shared RAG server client
 │   │   └── views/
 │   │       ├── __init__.py
 │   │       └── html_formatters.py    # shared HTML response helpers
@@ -158,9 +206,12 @@ FIND/
 │   └── tests/
 │       ├── conftest.py
 │       ├── requirements.txt
+│       ├── test_applicant_profile_tool.py
 │       ├── test_backend.py
 │       ├── test_database.py
-│       └── test_frontend.py
+│       ├── test_frontend.py
+│       ├── test_mcp_mode.py
+│       └── test_rag_mode.py
 │
 ├── student-2/                        # job postings
 │   ├── backend/
@@ -173,14 +224,18 @@ FIND/
 │   │   ├── routes/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_mode.py            # AI job posting helper endpoints
-│   │   │   └── job_postings.py       # job posting CRUD endpoints
+│   │   │   ├── job_postings.py       # job posting CRUD endpoints
+│   │   │   ├── mcp_mode.py           # MCP-Mode grounded endpoints
+│   │   │   └── rag_mode.py           # RAG-Mode grounded endpoints
 │   │   ├── services/
 │   │   │   ├── __init__.py
 │   │   │   ├── config.py             # service URLs and settings
 │   │   │   ├── database_api.py       # job posting database client
 │   │   │   ├── integration_api.py    # calls other FIND services
 │   │   │   ├── llm_client.py         # Ollama/LLM client
-│   │   │   └── prompt_loader.py      # reads prompt text files
+│   │   │   ├── mcp_client.py         # shared MCP server client
+│   │   │   ├── prompt_loader.py      # reads prompt text files
+│   │   │   └── rag_api.py            # shared RAG server client
 │   │   └── views/
 │   │       ├── __init__.py
 │   │       └── html_formatters.py    # shared HTML response helpers
@@ -204,7 +259,10 @@ FIND/
 │       ├── conftest.py
 │       ├── requirements.txt
 │       ├── test_backend.py
-│       └── test_database.py
+│       ├── test_database.py
+│       ├── test_job_postings_tool.py
+│       ├── test_mcp_mode.py
+│       └── test_rag_mode.py
 │
 ├── student-3/                        # applications
 │   ├── backend/
@@ -217,14 +275,18 @@ FIND/
 │   │   ├── routes/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_mode.py            # AI application helper endpoints
-│   │   │   └── applications.py       # application workflow endpoints
+│   │   │   ├── applications.py       # application workflow endpoints
+│   │   │   ├── mcp_mode.py           # MCP-Mode grounded endpoints
+│   │   │   └── rag_mode.py           # RAG-Mode grounded endpoints
 │   │   ├── services/
 │   │   │   ├── __init__.py
 │   │   │   ├── config.py             # service URLs and settings
 │   │   │   ├── database_api.py       # application database client
 │   │   │   ├── integration_api.py    # calls other FIND services
 │   │   │   ├── llm_client.py         # Ollama/LLM client
-│   │   │   └── prompt_loader.py      # reads prompt text files
+│   │   │   ├── mcp_client.py         # shared MCP server client
+│   │   │   ├── prompt_loader.py      # reads prompt text files
+│   │   │   └── rag_api.py            # shared RAG server client
 │   │   └── views/
 │   │       ├── __init__.py
 │   │       └── html_formatters.py    # shared HTML response helpers
@@ -251,8 +313,11 @@ FIND/
 │   └── tests/
 │       ├── conftest.py
 │       ├── requirements.txt
+│       ├── test_applications_for_job_tool.py
 │       ├── test_backend.py
-│       └── test_database.py
+│       ├── test_database.py
+│       ├── test_mcp_mode.py
+│       └── test_rag_mode.py
 │
 ├── student-4/                        # interviews
 │   ├── backend/
@@ -265,14 +330,18 @@ FIND/
 │   │   ├── routes/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_mode.py            # AI interview helper endpoints
-│   │   │   └── interviews.py         # interview scheduling endpoints
+│   │   │   ├── interviews.py         # interview scheduling endpoints
+│   │   │   ├── mcp_mode.py           # MCP-Mode grounded endpoints
+│   │   │   └── rag_mode.py           # RAG-Mode grounded endpoints
 │   │   ├── services/
 │   │   │   ├── __init__.py
 │   │   │   ├── config.py             # service URLs and settings
 │   │   │   ├── database_api.py       # interview database client
 │   │   │   ├── integration_api.py    # calls other FIND services
 │   │   │   ├── llm_client.py         # Ollama/LLM client
-│   │   │   └── prompt_loader.py      # reads prompt text files
+│   │   │   ├── mcp_client.py         # shared MCP server client
+│   │   │   ├── prompt_loader.py      # reads prompt text files
+│   │   │   └── rag_api.py            # shared RAG server client
 │   │   └── views/
 │   │       ├── __init__.py
 │   │       └── html_formatters.py    # shared HTML response helpers
@@ -299,7 +368,10 @@ FIND/
 │       ├── conftest.py
 │       ├── requirements.txt
 │       ├── test_backend.py
-│       └── test_database.py
+│       ├── test_database.py
+│       ├── test_interview_details_tool.py
+│       ├── test_mcp_mode.py
+│       └── test_rag_mode.py
 │
 ├── student-5/                        # evaluations
 │   ├── backend/
@@ -312,14 +384,18 @@ FIND/
 │   │   ├── routes/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_mode.py            # AI evaluation helper endpoints
-│   │   │   └── evaluations.py        # candidate evaluation endpoints
+│   │   │   ├── evaluations.py        # candidate evaluation endpoints
+│   │   │   ├── mcp_mode.py           # MCP-Mode grounded endpoints
+│   │   │   └── rag_mode.py           # RAG-Mode grounded endpoints
 │   │   ├── services/
 │   │   │   ├── __init__.py
 │   │   │   ├── config.py             # service URLs and settings
 │   │   │   ├── database_api.py       # evaluation database client
 │   │   │   ├── integration_api.py    # calls other FIND services
 │   │   │   ├── llm_client.py         # Ollama/LLM client
-│   │   │   └── prompt_loader.py      # reads prompt text files
+│   │   │   ├── mcp_client.py         # shared MCP server client
+│   │   │   ├── prompt_loader.py      # reads prompt text files
+│   │   │   └── rag_api.py            # shared RAG server client
 │   │   └── views/
 │   │       ├── __init__.py
 │   │       └── html_formatters.py    # shared HTML response helpers
@@ -340,16 +416,26 @@ FIND/
 │       ├── requirements.txt
 │       ├── test_backend.py
 │       ├── test_database.py
-│       └── test_frontend.py
+│       ├── test_evaluation_scores_tool.py
+│       ├── test_frontend.py
+│       ├── test_mcp_mode.py
+│       └── test_rag_mode.py
 │
 └── docs/
-    └── release-0/reports/            # CI evidence reports
-        └── student-1/ ... student-5/
-            ├── pytest-output.txt
-            ├── pytest-results.xml
-            ├── report.json
-            ├── report.md
-            └── run-view.md
+    ├── release-0/reports/            # Release 0 CI evidence reports
+    │   └── student-1/ ... student-5/
+    │       ├── pytest-output.txt
+    │       ├── pytest-results.xml
+    │       ├── report.json
+    │       ├── report.md
+    │       └── run-view.md
+    └── release-1/reports/            # Release 1 integration, MCP, and RAG reports
+        ├── boundary-analysis.md
+        ├── integration-report.md
+        ├── rag-report.md
+        ├── rag-validation-report.md
+        ├── run-report.md
+        └── tool-review.md
 ```
 
 
