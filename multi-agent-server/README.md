@@ -12,7 +12,7 @@ student backend container at `http://host.docker.internal:16080`.
 | Planner  | `qwen2.5:0.5b` (`OLLAMA_MODEL`) | Create a short, structured workflow plan |
 | Worker   | `qwen2.5:0.5b` (`OLLAMA_MODEL`) | Retrieve DB evidence and generate grounded output |
 | Reviewer | `llama3.1:8b` (`OLLAMA_REVIEW_MODEL`) | Assess risk, correction, retest, recommendation |
-| Human    | — | Final decision: Accept / Partially Accept / Reject |
+| Human    | — | Final decision: Accept / Correction / Reject |
 
 The Worker grounds its output in **real application records** fetched over HTTP
 from a FIND database service (`MULTI_AGENT_DB_URL`, default the student-3

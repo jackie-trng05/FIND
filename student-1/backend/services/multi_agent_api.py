@@ -61,11 +61,28 @@ def _parse(response, path: str) -> dict:
     return data
 
 
-def run_workflow(user_request: str) -> dict:
-    """Run the coordinated planner -> worker -> reviewer workflow."""
-    return _post("/workflow", {"user_request": user_request, "caller": CALLER})
+def run_workflow(user_request: str, user_id: int | str | None = None) -> dict:
+    """Run the coordinated planner -> worker -> reviewer workflow.
+
+    Always requests the "profile" evidence domain — this feature is User
+    Profile Management, so the Worker grounds every call in profile/resume
+    data (the shared Worker has no built-in knowledge of student features;
+    that mapping lives here). ``user_id`` scopes evidence to one applicant's
+    own records (the database already supports this filter) so personal
+    requests ground correctly instead of blending in every other applicant's
+    data.
+    """
+    payload = {"user_request": user_request, "caller": CALLER, "evidence_domain": "profile"}
+    if user_id is not None:
+        payload["user_id"] = user_id
+    return _post("/workflow", payload)
 
 
 def workflow_status() -> dict:
     """Return workflow history/audit counts and the latest workflow record."""
     return _get("/workflow/status")
+
+
+def submit_decision(workflow_id: str, decision: str, reason: str = "") -> dict:
+    """Record the human reviewer's Accept / Partially Accept / Reject decision."""
+    return _post(f"/workflow/{workflow_id}/decision", {"decision": decision, "reason": reason, "caller": CALLER})
