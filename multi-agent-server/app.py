@@ -10,7 +10,7 @@ Endpoints:
     GET  /health                    -> {"status": "ok", "service": "multi-agent-server"}
     POST /workflow                  -> run_workflow(user_request, caller, user_id, evidence_domain)
     GET  /workflow/status            -> workflow_status()
-    POST /workflow/<id>/decision     -> record_decision(workflow_id, decision, reason)
+    POST /workflow/<id>/decision     -> record_decision(workflow_id, decision, reason, evidence_used)
 
 This server is intentionally NOT added to docker-compose: the Release 0
 containerised feature microservices keep running unchanged, and MCP / RAG / the
@@ -82,11 +82,14 @@ class MultiAgentHandler(BaseHTTPRequestHandler):
             workflow_id = self.path[len("/workflow/"):-len("/decision")].strip("/")
             decision = (payload.get("decision") or "").strip()
             reason = (payload.get("reason") or "").strip()
+            evidence_used = (payload.get("evidence_used") or "").strip()
             if not workflow_id or not decision:
                 self._send_json(400, {"status": "error", "error": "workflow_id and decision are required"})
                 return
             try:
-                result = record_decision(workflow_id=workflow_id, decision=decision, reason=reason)
+                result = record_decision(
+                    workflow_id=workflow_id, decision=decision, reason=reason, evidence_used=evidence_used
+                )
                 self._send_json(200 if result.get("status") == "success" else 404, result)
             except Exception as exc:  # noqa: BLE001
                 self._send_json(500, {"status": "error", "error": str(exc)})

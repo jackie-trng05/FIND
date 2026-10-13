@@ -163,7 +163,7 @@ def workflow_status() -> Dict[str, Any]:
 ALLOWED_DECISIONS = ("Accept", "Correction", "Reject")
 
 
-def record_decision(workflow_id: str, decision: str, reason: str = "") -> Dict[str, Any]:
+def record_decision(workflow_id: str, decision: str, reason: str = "", evidence_used: str = "") -> Dict[str, Any]:
     """Record the human reviewer's final call against a completed workflow.
 
     workflow_history.jsonl is append-only, so recording a decision means reading
@@ -183,6 +183,7 @@ def record_decision(workflow_id: str, decision: str, reason: str = "") -> Dict[s
                 "required": True,
                 "status": decision,
                 "reason": reason,
+                "evidence_used": evidence_used,
                 "decided_at": now_iso(),
                 "allowed_values": list(ALLOWED_DECISIONS),
             }
@@ -204,6 +205,7 @@ def record_decision(workflow_id: str, decision: str, reason: str = "") -> Dict[s
             "event": "human_decision_recorded",
             "decision": decision,
             "reason": reason,
+            "evidence_used": evidence_used,
         },
     )
 
