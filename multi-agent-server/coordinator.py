@@ -55,7 +55,7 @@ def run_workflow(
     user_request: str,
     caller: str = "student",
     user_id: int | str | None = None,
-    evidence_domain: str = "applications",
+    evidence_domain: str = "",
 ) -> Dict[str, Any]:
     start_time = time.time()
     workflow_id = str(uuid.uuid4())
@@ -84,7 +84,6 @@ def run_workflow(
             worker_result = {
                 "status": "timeout",
                 "agent": "worker_agent",
-                "job_posting_id": None,
                 "evidence_count": 0,
                 "evidence": [],
                 "output": "Worker timed out before generating output.",
@@ -149,11 +148,18 @@ def run_workflow(
     return workflow_result
 
 
-def workflow_status() -> Dict[str, Any]:
+def workflow_status(caller: str | None = None) -> Dict[str, Any]:
     history = read_jsonl(HISTORY_PATH)
     audit = read_jsonl(AUDIT_PATH)
+    # All student features share one history file, so scope the status to the
+    # calling feature when a caller is supplied — otherwise "latest_workflow"
+    # would surface whichever student happened to run last.
+    if caller:
+        history = [record for record in history if record.get("caller") == caller]
+        audit = [record for record in audit if record.get("caller") == caller]
     return {
         "status": "success",
+        "caller": caller,
         "workflow_history_count": len(history),
         "audit_record_count": len(audit),
         "latest_workflow": history[-1] if history else None,
@@ -213,5 +219,5 @@ def record_decision(workflow_id: str, decision: str, reason: str = "", evidence_
 
 
 if __name__ == "__main__":
-    result = run_workflow("Summarise the applications submitted for job posting 1.")
+    result = run_workflow("Summarise the available evidence and flag any risks.")
     print(json.dumps(result, indent=2))
