@@ -412,6 +412,41 @@
         }
     }
 
+    async function submitDecision(workflowId, decision) {
+        if (!isEnabled()) { disabledMsg(); return; }
+        const reasonInput = document.getElementById('multi-agent-reason');
+        const reason = reasonInput ? reasonInput.value.trim() : '';
+        const evidenceInput = document.getElementById('multi-agent-evidence');
+        const evidenceUsed = evidenceInput ? evidenceInput.value.trim() : '';
+        const reasonWarn = document.getElementById('multi-agent-reason-warn');
+        const evidenceWarn = document.getElementById('multi-agent-evidence-warn');
+        const setWarn = (el, msg) => { if (el) { el.textContent = msg; el.style.display = msg ? 'block' : 'none'; } };
+        setWarn(reasonWarn, '');
+        setWarn(evidenceWarn, '');
+        if (!reason) {
+            if (reasonInput) reasonInput.focus();
+            setWarn(reasonWarn, 'Enter a reason before recording a decision.');
+            return;
+        }
+        if (!evidenceUsed) {
+            if (evidenceInput) evidenceInput.focus();
+            setWarn(evidenceWarn, 'Enter the evidence used before recording a decision.');
+            return;
+        }
+        panel.innerHTML = '<span class="mcp-spinner"></span> Recording decision…';
+        buttons.forEach(b => { b.disabled = true; });
+        try {
+            const html = await callBackend('POST', '/multi-agent/decision',
+                new URLSearchParams({ workflow_id: workflowId, decision: decision, reason: reason, evidence_used: evidenceUsed }));
+            if (html !== null) { panel.innerHTML = html; }
+        } catch (e) {
+            panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
+        } finally {
+            renderState();
+        }
+    }
+    window.submitMultiAgentDecision = submitDecision;
+
     toggle.addEventListener('change', onToggle);
     runBtn.addEventListener('click', runWorkflow);
     statusBtn.addEventListener('click', getStatus);
