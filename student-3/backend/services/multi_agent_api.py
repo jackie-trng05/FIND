@@ -63,12 +63,12 @@ def _parse(response, path: str) -> dict:
 
 def run_workflow(user_request: str) -> dict:
     """Run the coordinated planner -> worker -> reviewer workflow."""
-    return _post("/workflow", {"user_request": user_request, "caller": CALLER})
+    return _post("/workflow", {"user_request": user_request, "caller": CALLER, "evidence_domain": "applications"})
 
 
 def workflow_status() -> dict:
     """Return workflow history/audit counts and the latest workflow record."""
-    return _get("/workflow/status")
+    return _get(f"/workflow/status?caller={CALLER}")
 
 
 def submit_decision(workflow_id: str, decision: str, reason: str = "", evidence_used: str = "") -> dict:
