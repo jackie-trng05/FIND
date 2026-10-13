@@ -3,11 +3,12 @@
 Retrieves grounded evidence from a FIND database microservice over HTTP and then
 asks the local Ollama worker model to produce an output that uses only that
 evidence. Like the shared MCP / RAG servers, this agent runs as a host process
-and reaches the containerised database through its host-mapped port (default the
-student-3 application database on ``http://localhost:16012``).
+and reaches each containerised database through its host-mapped port.
 
-The evidence domain is configurable with ``MULTI_AGENT_DB_URL`` so the same
-shared server can ground workflows for any student's database service.
+The ``evidence_domain`` chosen by the caller decides which student's database is
+queried (``profile`` -> student-1, ``applications`` -> student-3,
+``interview`` -> student-4); every domain is grounded in real records, never
+invented. The per-domain database URLs are configurable via ``STUDENT_*_DB_URL``.
 """
 
 import os
@@ -26,12 +27,14 @@ except Exception:  # pragma: no cover
 BASE_DIR = Path(__file__).resolve().parents[1]
 PROMPT_PATH = BASE_DIR / "prompts" / "worker_prompt.txt"
 
-# The shared server is a host process, so it reaches the database service via its
-# host-mapped port. Defaults to student-3's application database (host 16012).
-MULTI_AGENT_DB_URL = os.getenv("MULTI_AGENT_DB_URL", "http://localhost:16012")
-# Student-1's domain is profile + resume, not applications (mirrors mcp-server's
-# STUDENT_1_DB_URL / applicant_profile tool, same host-mapped port 16006).
+# Each evidence domain is grounded in its owning student's database service,
+# reached via that service's host-mapped port (mirrors mcp-server's per-student URLs).
+# student-1 -> profile + resume (applicant_profile tool, host 16006)
 STUDENT_1_DB_URL = os.getenv("STUDENT_1_DB_URL", "http://localhost:16006")
+# student-3 -> job applications (host 16012)
+STUDENT_3_DB_URL = os.getenv("STUDENT_3_DB_URL", "http://localhost:16012")
+# student-4 -> interview scheduling (interview_details tool, host 16015)
+STUDENT_4_DB_URL = os.getenv("STUDENT_4_DB_URL", "http://localhost:16015")
 DB_TIMEOUT_SECONDS = float(os.getenv("MULTI_AGENT_DB_TIMEOUT_SECONDS", "10"))
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
@@ -53,6 +56,7 @@ _APPLICATION_FIELDS = (
 # Resume text is truncated to keep the evidence (and LLM prompt) small.
 _RESUME_TEXT_MAX_CHARS = 4000
 _PROFILE_FIELDS = ("phone", "location", "professional_title", "summary", "interests")
+_INTERVIEW_FIELDS = ("interview_id", "application_id", "user_id", "interview_datetime", "interview_link", "interview_notes")
 
 client = OpenAI(
     base_url=OLLAMA_BASE_URL,
@@ -85,7 +89,7 @@ def get_applications(
     if user_id:
         params["user_id"] = user_id
 
-    url = f"{MULTI_AGENT_DB_URL.rstrip('/')}/applications"
+    url = f"{STUDENT_3_DB_URL.rstrip('/')}/applications"
     response = requests.get(url, params=params, timeout=DB_TIMEOUT_SECONDS)
     response.raise_for_status()
     records = response.json() or []
@@ -95,7 +99,7 @@ def get_applications(
     ]
 
 
-def format_evidence(applications: List[Dict[str, Any]], job_posting_id: str | None) -> str:
+def format_application_evidence(applications: List[Dict[str, Any]], job_posting_id: str | None) -> str:
     if not applications:
         scope = f"job posting {job_posting_id}" if job_posting_id else "the platform"
         return f"No applications found for {scope}."
@@ -210,6 +214,49 @@ def format_profile_evidence(profile_data: Dict[str, Any] | None, user_id: int | 
     return "; ".join(fields) + "."
 
 
+def get_interviews(interview_id: str | None = None) -> List[Dict[str, Any]]:
+    """Retrieve interview records from the student-4 database service over HTTP.
+
+    Mirrors mcp-server's interview domain: the shared server is a host process,
+    so it reaches the containerised interview DB via its host-mapped port
+    (STUDENT_4_DB_URL). A specific ``interview_id`` narrows to one row; otherwise
+    the full schedule is returned as evidence.
+    """
+    base_url = STUDENT_4_DB_URL.rstrip("/")
+    if interview_id:
+        response = requests.get(f"{base_url}/interviews/{interview_id}", timeout=DB_TIMEOUT_SECONDS)
+        if response.status_code == 404:
+            return []
+        response.raise_for_status()
+        record = response.json() or {}
+        return [{field: record.get(field) for field in _INTERVIEW_FIELDS}] if record else []
+
+    response = requests.get(f"{base_url}/interviews", timeout=DB_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    records = response.json() or []
+    return [
+        {field: record.get(field) for field in _INTERVIEW_FIELDS}
+        for record in records
+    ]
+
+
+def format_interview_evidence(interviews: List[Dict[str, Any]], interview_id: str | None) -> str:
+    if not interviews:
+        scope = f"interview {interview_id}" if interview_id else "the interview schedule"
+        return f"No interviews found for {scope}."
+
+    lines = []
+    for interview in interviews:
+        lines.append(
+            f"- interview {interview['interview_id']} | "
+            f"application {interview['application_id']} | "
+            f"staff user {interview['user_id']} | "
+            f"at {interview['interview_datetime']} | "
+            f"link {interview.get('interview_link') or 'n/a'}"
+        )
+    return "\n".join(lines)
+
+
 def call_model(user_request: str, evidence_text: str, evidence_label: str = "Application Evidence") -> str:
     prompt = f"""
 {load_prompt()}
@@ -261,7 +308,7 @@ def _worker_result(output: str, evidence: List[Any], evidence_count: int, **extr
 
 
 def generate_output(
-    user_request: str, user_id: int | str | None = None, evidence_domain: str = "applications"
+    user_request: str, user_id: int | str | None = None, evidence_domain: str = ""
 ) -> Dict[str, Any]:
     """Generate the Worker's output, grounded in the requested evidence domain.
 
@@ -305,12 +352,33 @@ def generate_output(
                 "error": str(exc),
                 "human_approval_required": True,
             }
-        evidence_text = format_evidence(applications, job_posting_id)
+        evidence_text = format_application_evidence(applications, job_posting_id)
         output = call_model(user_request, evidence_text, "Application Evidence")
         return _worker_result(output, applications, len(applications), job_posting_id=job_posting_id)
 
+    if evidence_domain == "interview":
+        interview_id = extract_job_posting_id(user_request)
+        try:
+            interviews = get_interviews(interview_id)
+        except requests.RequestException as exc:
+            return {
+                "status": "error",
+                "agent": "worker_agent",
+                "interview_id": interview_id,
+                "evidence_count": 0,
+                "evidence": [],
+                "output": "Database evidence could not be retrieved.",
+                "error": str(exc),
+                "human_approval_required": True,
+            }
+        evidence_text = format_interview_evidence(interviews, interview_id)
+        output = call_model(user_request, evidence_text, "Interview Evidence")
+        return _worker_result(output, interviews, len(interviews), interview_id=interview_id)
+
+    domain_label = f"'{evidence_domain}'" if evidence_domain else "none specified"
     return _worker_result(
-        f"Unknown evidence domain '{evidence_domain}'; no evidence could be retrieved.",
+        f"Unknown evidence domain ({domain_label}); the caller must request a known "
+        "domain. No evidence could be retrieved.",
         [], 0, evidence_domain=evidence_domain,
     )
 
@@ -318,5 +386,8 @@ def generate_output(
 if __name__ == "__main__":
     import json
 
-    result = generate_output("Summarise the applications submitted for job posting 1.")
+    # Explicitly exercise one concrete domain so the DB fetch path is smoke-tested.
+    result = generate_output(
+        "Summarise the applications submitted for job posting 1.", evidence_domain="applications"
+    )
     print(json.dumps(result, indent=2))
