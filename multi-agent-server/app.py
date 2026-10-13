@@ -20,6 +20,7 @@ multi-agent workflow stay local host processes.
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlparse
 
 from coordinator import record_decision, run_workflow, workflow_status
 
@@ -46,11 +47,13 @@ class MultiAgentHandler(BaseHTTPRequestHandler):
         return
 
     def do_GET(self) -> None:
-        if self.path == "/health":
+        parsed = urlparse(self.path)
+        if parsed.path == "/health":
             self._send_json(200, {"status": "ok", "service": "multi-agent-server"})
             return
-        if self.path == "/workflow/status":
-            self._send_json(200, workflow_status())
+        if parsed.path == "/workflow/status":
+            caller = parse_qs(parsed.query).get("caller", [None])[0]
+            self._send_json(200, workflow_status(caller))
             return
         self._send_json(404, {"status": "error", "error": "not_found"})
 
@@ -68,7 +71,7 @@ class MultiAgentHandler(BaseHTTPRequestHandler):
                 return
             caller = (payload.get("caller") or "student").strip() or "student"
             user_id = payload.get("user_id")
-            evidence_domain = (payload.get("evidence_domain") or "applications").strip() or "applications"
+            evidence_domain = (payload.get("evidence_domain") or "").strip()
             try:
                 result = run_workflow(
                     user_request=user_request, caller=caller, user_id=user_id, evidence_domain=evidence_domain
