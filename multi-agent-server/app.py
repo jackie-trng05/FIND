@@ -7,9 +7,10 @@ student backends proxy to it through ``services/multi_agent_api.py``; the browse
 never talks to this server directly.
 
 Endpoints:
-    GET  /health            -> {"status": "ok", "service": "multi-agent-server"}
-    POST /workflow          -> run_workflow(user_request, caller)
-    GET  /workflow/status   -> workflow_status()
+    GET  /health                    -> {"status": "ok", "service": "multi-agent-server"}
+    POST /workflow                  -> run_workflow(user_request, caller, user_id, evidence_domain)
+    GET  /workflow/status            -> workflow_status()
+    POST /workflow/<id>/decision     -> record_decision(workflow_id, decision, reason)
 
 This server is intentionally NOT added to docker-compose: the Release 0
 containerised feature microservices keep running unchanged, and MCP / RAG / the
@@ -20,7 +21,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from coordinator import run_workflow, workflow_status
+from coordinator import record_decision, run_workflow, workflow_status
 
 
 class MultiAgentHandler(BaseHTTPRequestHandler):
@@ -66,9 +67,27 @@ class MultiAgentHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {"status": "error", "error": "user_request is required"})
                 return
             caller = (payload.get("caller") or "student").strip() or "student"
+            user_id = payload.get("user_id")
+            evidence_domain = (payload.get("evidence_domain") or "applications").strip() or "applications"
             try:
-                result = run_workflow(user_request=user_request, caller=caller)
+                result = run_workflow(
+                    user_request=user_request, caller=caller, user_id=user_id, evidence_domain=evidence_domain
+                )
                 self._send_json(200, result)
+            except Exception as exc:  # noqa: BLE001
+                self._send_json(500, {"status": "error", "error": str(exc)})
+            return
+
+        if self.path.startswith("/workflow/") and self.path.endswith("/decision"):
+            workflow_id = self.path[len("/workflow/"):-len("/decision")].strip("/")
+            decision = (payload.get("decision") or "").strip()
+            reason = (payload.get("reason") or "").strip()
+            if not workflow_id or not decision:
+                self._send_json(400, {"status": "error", "error": "workflow_id and decision are required"})
+                return
+            try:
+                result = record_decision(workflow_id=workflow_id, decision=decision, reason=reason)
+                self._send_json(200 if result.get("status") == "success" else 404, result)
             except Exception as exc:  # noqa: BLE001
                 self._send_json(500, {"status": "error", "error": str(exc)})
             return

@@ -51,14 +51,19 @@ def read_jsonl(path: Path) -> list[Dict[str, Any]]:
     return records
 
 
-def run_workflow(user_request: str, caller: str = "student") -> Dict[str, Any]:
+def run_workflow(
+    user_request: str,
+    caller: str = "student",
+    user_id: int | str | None = None,
+    evidence_domain: str = "applications",
+) -> Dict[str, Any]:
     start_time = time.time()
     workflow_id = str(uuid.uuid4())
 
     # Planner and worker do not depend on each other; run them concurrently.
     executor = ThreadPoolExecutor(max_workers=2)
     planner_future = executor.submit(plan_workflow, user_request)
-    worker_future = executor.submit(generate_output, user_request)
+    worker_future = executor.submit(generate_output, user_request, user_id, evidence_domain)
 
     try:
         try:
@@ -121,7 +126,7 @@ def run_workflow(user_request: str, caller: str = "student") -> Dict[str, Any]:
         "human_decision": {
             "required": True,
             "status": "pending",
-            "allowed_values": ["Accept", "Partially Accept", "Reject"],
+            "allowed_values": ["Accept", "Correction", "Reject"],
         },
     }
 
@@ -131,6 +136,7 @@ def run_workflow(user_request: str, caller: str = "student") -> Dict[str, Any]:
         "duration_ms": duration_ms,
         "status": workflow_result["status"],
         "caller": caller,
+        "user_id": user_id,
         "participating_agents": workflow_result["participating_agents"],
         "human_approval_required": True,
         "worker_status": worker_result.get("status"),
@@ -152,6 +158,56 @@ def workflow_status() -> Dict[str, Any]:
         "audit_record_count": len(audit),
         "latest_workflow": history[-1] if history else None,
     }
+
+
+ALLOWED_DECISIONS = ("Accept", "Correction", "Reject")
+
+
+def record_decision(workflow_id: str, decision: str, reason: str = "") -> Dict[str, Any]:
+    """Record the human reviewer's final call against a completed workflow.
+
+    workflow_history.jsonl is append-only, so recording a decision means reading
+    every record, updating the one matching ``workflow_id``, and rewriting the
+    file — fine at this server's scale (local demo evidence, not a database).
+    """
+    if decision not in ALLOWED_DECISIONS:
+        return {"status": "error", "error": f"decision must be one of {ALLOWED_DECISIONS}"}
+    if decision == "Correction" and not reason.strip():
+        return {"status": "error", "error": "a reason is required for a Correction decision"}
+
+    history = read_jsonl(HISTORY_PATH)
+    updated = None
+    for record in history:
+        if record.get("workflow_id") == workflow_id:
+            record["human_decision"] = {
+                "required": True,
+                "status": decision,
+                "reason": reason,
+                "decided_at": now_iso(),
+                "allowed_values": list(ALLOWED_DECISIONS),
+            }
+            updated = record
+            break
+
+    if updated is None:
+        return {"status": "error", "error": f"workflow_id '{workflow_id}' not found"}
+
+    with HISTORY_PATH.open("w", encoding="utf-8") as file:
+        for record in history:
+            file.write(json.dumps(record) + "\n")
+
+    append_jsonl(
+        AUDIT_PATH,
+        {
+            "workflow_id": workflow_id,
+            "timestamp": now_iso(),
+            "event": "human_decision_recorded",
+            "decision": decision,
+            "reason": reason,
+        },
+    )
+
+    return {"status": "success", "workflow": updated}
 
 
 if __name__ == "__main__":

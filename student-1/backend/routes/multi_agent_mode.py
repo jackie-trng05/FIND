@@ -21,7 +21,7 @@ from html import escape
 
 from flask import Blueprint, request
 
-from services import multi_agent_api
+from services import integration_api, multi_agent_api
 
 multi_agent_bp = Blueprint("multi_agent_mode", __name__)
 
@@ -56,24 +56,45 @@ def render_workflow(result: dict) -> str:
     worker = result.get("worker_result", {}) or {}
     reviewer = result.get("reviewer_result", {}) or {}
     decision = result.get("human_decision", {}) or {}
+    workflow_id = str(result.get("workflow_id", ""))
 
     evidence_count = worker.get("evidence_count", 0)
-    allowed = ", ".join(decision.get("allowed_values", [])) or "Accept, Partially Accept, Reject"
+    status = str(decision.get("status", "pending"))
 
     header = (
         f"<h3>Multi-Agent Workflow</h3>"
-        f"<p class=\"mcp-desc\">Workflow <code>{escape(str(result.get('workflow_id', '')))}</code> · "
+        f"<p class=\"mcp-desc\">Workflow <code>{escape(workflow_id)}</code> · "
         f"{escape(str(result.get('duration_ms', 0)))} ms · "
         f"<strong>{escape(str(evidence_count))}</strong> grounded evidence record(s)</p>"
     )
     planner_block = _agent_block("Planner Agent", str(planner.get("plan", "")))
     worker_block = _agent_block("Worker Agent", str(worker.get("output", "")))
     reviewer_block = _agent_block("Reviewer Agent", str(reviewer.get("review", "")))
-    decision_block = (
-        "<h4>Human Decision (required)</h4>"
-        f"<p class=\"mcp-desc\">Status: <strong>{escape(str(decision.get('status', 'pending')))}</strong> · "
-        f"Choose one: {escape(allowed)}</p>"
-    )
+
+    if status == "pending":
+        reason_input = (
+            "<input type=\"text\" id=\"multi-agent-reason\" class=\"input\" placeholder=\"Reason (required for Correction)\" "
+            "style=\"width:100%;margin-bottom:0.5rem;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;\">"
+        )
+        decision_block = (
+            "<h4>Human Decision (required)</h4>"
+            "<p class=\"mcp-desc\">Status: <strong>pending</strong> — choose one:</p>"
+            f"{reason_input}"
+            "<div class=\"mcp-actions\">"
+            f"<button type=\"button\" class=\"btn btn-primary btn-sm\" onclick=\"submitMultiAgentDecision('{escape(workflow_id)}','Accept')\">Accept</button>"
+            f"<button type=\"button\" class=\"btn btn-secondary btn-sm\" onclick=\"submitMultiAgentDecision('{escape(workflow_id)}','Correction')\">Correction</button>"
+            f"<button type=\"button\" class=\"btn btn-ghost btn-sm\" onclick=\"submitMultiAgentDecision('{escape(workflow_id)}','Reject')\">Reject</button>"
+            "</div>"
+        )
+    else:
+        reason = escape(str(decision.get("reason", "")))
+        decided_at = escape(str(decision.get("decided_at", "")))
+        reason_html = f" — {reason}" if reason else ""
+        decision_block = (
+            "<h4>Human Decision</h4>"
+            f"<p class=\"mcp-desc\">Status: <strong>{escape(status)}</strong>{reason_html} "
+            f"<span class=\"mcp-state mcp-off\">(recorded {decided_at})</span></p>"
+        )
     return header + planner_block + worker_block + reviewer_block + decision_block
 
 
@@ -98,8 +119,13 @@ def multi_agent_workflow():
     user_request = (request.form.get("user_request") or "").strip()
     if not user_request:
         return "<p>Enter a request to run the workflow.</p>", 400
+    # The shared Worker routes student-1 calls to the profile/resume domain,
+    # keyed by this id (profiles/by-user/{id} is single-user, so a missing id
+    # just yields "no evidence" — never another applicant's data).
+    user = integration_api.get_session_user()
+    user_id = user["user_id"] if user else None
     try:
-        result = multi_agent_api.run_workflow(user_request)
+        result = multi_agent_api.run_workflow(user_request, user_id=user_id)
     except multi_agent_api.MultiAgentServiceError as exc:
         return f"<p>Multi-Agent workflow failed.</p><pre>{escape(str(exc))}</pre>", 503
     return render_workflow(result), 200
@@ -114,3 +140,21 @@ def multi_agent_workflow_status():
     except multi_agent_api.MultiAgentServiceError as exc:
         return f"<p>Multi-Agent status failed.</p><pre>{escape(str(exc))}</pre>", 503
     return render_status(status), 200
+
+
+@multi_agent_bp.post("/multi-agent/decision")
+def multi_agent_decision():
+    if not multi_agent_mode_is_active(request):
+        return _disabled_fragment()
+    workflow_id = (request.form.get("workflow_id") or "").strip()
+    decision = (request.form.get("decision") or "").strip()
+    reason = (request.form.get("reason") or "").strip()
+    if not workflow_id or not decision:
+        return "<p>Missing workflow ID or decision.</p>", 400
+    try:
+        result = multi_agent_api.submit_decision(workflow_id, decision, reason=reason)
+    except multi_agent_api.MultiAgentServiceError as exc:
+        return f"<p>Recording the decision failed.</p><pre>{escape(str(exc))}</pre>", 503
+    if result.get("status") != "success":
+        return f"<p>{escape(str(result.get('error', 'Decision could not be recorded.')))}</p>", 404
+    return render_workflow(result["workflow"]), 200
