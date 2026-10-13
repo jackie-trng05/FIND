@@ -50,6 +50,10 @@
             <span id="mcp-state" class="mcp-state mcp-on">ON</span>
         </div>
     </div>
+    <p class="muted">
+        Grounded retrieval through the shared MCP server (<code>applicant_profile</code>).
+        Answers cite their source fields and a confidence level.
+    </p>
     <div class="mcp-actions">
         <button type="button" class="btn btn-secondary btn-sm" id="mcp-profile-btn" onclick="runMcpTool('/mcp/applicant-profile')">Applicant profile</button>
         <button type="button" class="btn btn-primary btn-sm" id="mcp-strengths-btn" onclick="runMcpTool('/mcp/strengths-summary')">Summarise strengths</button>
@@ -68,6 +72,10 @@
             <span id="rag-state" class="mcp-state mcp-on">ON</span>
         </div>
     </div>
+    <p class="muted">
+        Grounded question answering through the shared RAG server. Answers are drawn only
+        from retrieved FIND evidence and cite their sources with a confidence category.
+    </p>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
         <input type="text" id="rag-query" class="input" placeholder="Ask a question about the FIND platform…"
                value="What is on my applicant profile?"
@@ -79,6 +87,33 @@
         <button type="button" class="btn btn-ghost btn-sm" id="rag-refresh-btn" onclick="runRag('/rag/refresh')">Refresh corpus</button>
     </div>
     <div id="rag-result" class="mcp-panel">RAG responses will appear here.</div>
+</div>
+
+<div class="card applicant-only" style="margin-bottom:2rem;">
+    <div class="mcp-head">
+        <h2 style="font-size:1rem;margin:0;">Multi-Agent Orchestrator</h2>
+        <div class="mcp-toggle-row">
+            <label class="toggle-switch" for="multi-agent-toggle" title="Enable or disable Multi-Agent Mode">
+                <input id="multi-agent-toggle" type="checkbox" checked onchange="onMultiAgentToggle()">
+                <span class="toggle-label"></span>
+            </label>
+            <span id="multi-agent-state" class="mcp-state mcp-on">ON</span>
+        </div>
+    </div>
+    <p class="muted">
+        Run a governed Planner &rarr; Worker &rarr; Reviewer workflow. The Worker grounds its
+        output in real application records; the Reviewer flags risk; you make the final decision.
+    </p>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+        <input type="text" id="multi-agent-request" class="input" placeholder="Describe the task for the agents…"
+               value="Summarise my applicant profile and resume highlights."
+               style="flex:1;min-width:220px;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;">
+    </div>
+    <div class="mcp-actions">
+        <button type="button" class="btn btn-primary btn-sm" id="multi-agent-run-btn" onclick="runMultiAgentWorkflow()">Run Workflow</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="multi-agent-status-btn" onclick="getMultiAgentStatus()">Get Workflow Status</button>
+    </div>
+    <div id="multi-agent-result" class="mcp-panel">Multi-agent responses will appear here.</div>
 </div>
 
 <script>
@@ -226,6 +261,115 @@
     }
 
     document.body.addEventListener("authReady", loadRagMode);
+
+    // --- Multi-Agent Orchestrator (shared planner -> worker -> reviewer server) ---
+    const MULTI_AGENT_KEY = "multi_agent_mode_enabled";
+
+    function isMultiAgentEnabled() { return document.getElementById("multi-agent-toggle").checked; }
+
+    function renderMultiAgentState() {
+        const state = document.getElementById("multi-agent-state");
+        const on = isMultiAgentEnabled();
+        state.textContent = on ? "ON" : "OFF";
+        state.classList.toggle("mcp-on", on);
+        state.classList.toggle("mcp-off", !on);
+        document.getElementById("multi-agent-run-btn").disabled = !on;
+        document.getElementById("multi-agent-status-btn").disabled = !on;
+    }
+
+    function onMultiAgentToggle() {
+        localStorage.setItem(MULTI_AGENT_KEY, String(isMultiAgentEnabled()));
+        renderMultiAgentState();
+        document.getElementById("multi-agent-result").innerHTML = isMultiAgentEnabled()
+            ? "Multi-agent responses will appear here."
+            : '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+    }
+
+    function loadMultiAgentMode() {
+        const persisted = localStorage.getItem(MULTI_AGENT_KEY);
+        document.getElementById("multi-agent-toggle").checked = persisted === null ? true : persisted === "true";
+        renderMultiAgentState();
+        if (!isMultiAgentEnabled()) {
+            document.getElementById("multi-agent-result").innerHTML = '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+        }
+    }
+
+    async function callMultiAgentBackend(method, path, body) {
+        const opts = {
+            method,
+            credentials: "include",
+            headers: { "X-Multi-Agent-Mode": isMultiAgentEnabled() ? "on" : "off" },
+        };
+        if (method === "POST") {
+            opts.headers["Content-Type"] = "application/x-www-form-urlencoded";
+            opts.body = body;
+        }
+        const resp = await fetch("{{ backend_url }}" + path, opts);
+        if (resp.status === 503) {
+            return '<p class="mcp-off">Multi-agent server unavailable. Ensure the shared server is running on port 16080.</p>';
+        }
+        return resp.text();
+    }
+
+    async function runMultiAgentWorkflow() {
+        if (!isMultiAgentEnabled()) {
+            document.getElementById("multi-agent-result").innerHTML = '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+            return;
+        }
+        const request = document.getElementById("multi-agent-request").value.trim();
+        const panel = document.getElementById("multi-agent-result");
+        if (!request) {
+            panel.innerHTML = '<p class="mcp-off">Enter a request first.</p>';
+            return;
+        }
+        panel.innerHTML = '<span class="mcp-spinner"></span> Coordinating planner, worker and reviewer agents — three local models run in sequence, this can take a couple of minutes…';
+        document.getElementById("multi-agent-run-btn").disabled = true;
+        document.getElementById("multi-agent-status-btn").disabled = true;
+        try {
+            panel.innerHTML = await callMultiAgentBackend("POST", "/multi-agent/workflow", new URLSearchParams({ user_request: request }));
+        } catch (e) {
+            panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
+        } finally {
+            renderMultiAgentState();
+        }
+    }
+
+    async function getMultiAgentStatus() {
+        if (!isMultiAgentEnabled()) {
+            document.getElementById("multi-agent-result").innerHTML = '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+            return;
+        }
+        const panel = document.getElementById("multi-agent-result");
+        panel.innerHTML = '<span class="mcp-spinner"></span> Contacting multi-agent server…';
+        document.getElementById("multi-agent-run-btn").disabled = true;
+        document.getElementById("multi-agent-status-btn").disabled = true;
+        try {
+            panel.innerHTML = await callMultiAgentBackend("GET", "/multi-agent/workflow/status", null);
+        } catch (e) {
+            panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
+        } finally {
+            renderMultiAgentState();
+        }
+    }
+
+    async function submitMultiAgentDecision(workflowId, decision) {
+        if (!isMultiAgentEnabled()) {
+            document.getElementById("multi-agent-result").innerHTML = '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+            return;
+        }
+        const panel = document.getElementById("multi-agent-result");
+        panel.innerHTML = '<span class="mcp-spinner"></span> Recording decision…';
+        try {
+            panel.innerHTML = await callMultiAgentBackend("POST", "/multi-agent/decision",
+                new URLSearchParams({ workflow_id: workflowId, decision: decision }));
+        } catch (e) {
+            panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
+        } finally {
+            renderMultiAgentState();
+        }
+    }
+
+    document.body.addEventListener("authReady", loadMultiAgentMode);
 </script>
 {% endblock %}
 
