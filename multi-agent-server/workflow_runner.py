@@ -10,7 +10,7 @@ from coordinator import run_workflow
 
 
 def main() -> None:
-    result = run_workflow("Summarise the applications submitted for job posting 1.")
+    result = run_workflow("Summarise the available evidence and flag any risks.")
     print(json.dumps(result, indent=2))
 
 
