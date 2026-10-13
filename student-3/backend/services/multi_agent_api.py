@@ -69,3 +69,11 @@ def run_workflow(user_request: str) -> dict:
 def workflow_status() -> dict:
     """Return workflow history/audit counts and the latest workflow record."""
     return _get("/workflow/status")
+
+
+def submit_decision(workflow_id: str, decision: str, reason: str = "", evidence_used: str = "") -> dict:
+    """Record the human reviewer's Accept / Correction / Reject decision."""
+    return _post(
+        f"/workflow/{workflow_id}/decision",
+        {"decision": decision, "reason": reason, "evidence_used": evidence_used, "caller": CALLER},
+    )
