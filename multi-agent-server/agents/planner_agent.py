@@ -70,7 +70,7 @@ User Request:
         return (
             "Objective: Process the user request.\n"
             "Steps: Plan, work, review, human decision.\n"
-            "Evidence Required: Evidence from the FIND database service.\n"
+            "Evidence Required: FIND application evidence from the database service.\n"
             "Human Approval: Required.\n"
             f"Fallback Reason: {exc}"
         )
