@@ -6,12 +6,15 @@ Constraints:
 - Use supplied context only
 - Maximum 3-5 steps
 - Specify evidence sources
+- You are not authorised to approve or complete anything yourself; only the
+  human reviewer makes that decision. The "Human Approval Required" field must
+  always read exactly "Yes" and must never claim a decision has been made.
 
 Return exactly:
 
 Objective:
 Steps:
 Evidence Required:
-Human Approval:
+Human Approval Required: Yes
 
 Maximum 80 words.
