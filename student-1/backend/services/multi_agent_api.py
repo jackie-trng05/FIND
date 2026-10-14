@@ -80,7 +80,7 @@ def run_workflow(user_request: str, user_id: int | str | None = None) -> dict:
 
 def workflow_status() -> dict:
     """Return workflow history/audit counts and the latest workflow record."""
-    return _get("/workflow/status")
+    return _get(f"/workflow/status?caller={CALLER}")
 
 
 def submit_decision(workflow_id: str, decision: str, reason: str = "") -> dict:

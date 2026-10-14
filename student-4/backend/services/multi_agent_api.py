@@ -62,10 +62,26 @@ def _parse(response, path: str) -> dict:
 
 
 def run_workflow(user_request: str) -> dict:
-    """Run the coordinated planner -> worker -> reviewer workflow."""
-    return _post("/workflow", {"user_request": user_request, "caller": CALLER})
+    """Run the coordinated planner -> worker -> reviewer workflow.
+
+    Always requests the "interview" evidence domain — this feature is Interview
+    Scheduling, so the Worker grounds every call in interview records (the shared
+    Worker has no built-in knowledge of student features; that mapping lives
+    here). Interviews are a staff-facing schedule, so evidence is not scoped to a
+    single applicant (unlike student-1's profile domain).
+    """
+    payload = {"user_request": user_request, "caller": CALLER, "evidence_domain": "interview"}
+    return _post("/workflow", payload)
 
 
 def workflow_status() -> dict:
     """Return workflow history/audit counts and the latest workflow record."""
-    return _get("/workflow/status")
+    return _get(f"/workflow/status?caller={CALLER}")
+
+
+def submit_decision(workflow_id: str, decision: str, reason: str = "", evidence_used: str = "") -> dict:
+    """Record the human reviewer's Accept / Correction / Reject decision."""
+    return _post(
+        f"/workflow/{workflow_id}/decision",
+        {"decision": decision, "reason": reason, "evidence_used": evidence_used, "caller": CALLER},
+    )
