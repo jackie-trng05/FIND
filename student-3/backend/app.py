@@ -25,6 +25,7 @@ if str(BASE_DIR) not in sys.path:
 
 from routes.ai_mode import ai_mode_bp
 from routes.applications import applications_bp
+from routes.auth_mode import auth_bp
 from routes.mcp_mode import mcp_bp
 from routes.multi_agent_mode import multi_agent_bp
 from routes.rag_mode import rag_bp
@@ -45,6 +46,7 @@ def create_app() -> Flask:
 
     app.register_blueprint(applications_bp)
     app.register_blueprint(ai_mode_bp)
+    app.register_blueprint(auth_bp)
     app.register_blueprint(mcp_bp)
     app.register_blueprint(rag_bp)
     app.register_blueprint(multi_agent_bp)
