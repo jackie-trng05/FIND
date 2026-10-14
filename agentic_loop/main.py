@@ -25,6 +25,8 @@ def _print_mode_mapping(prompts_base: Path) -> None:
         "Student DevOps": prompts_base / "prompts" / "devops",
         "MCP": prompts_base / "prompts" / "mcp",
         "RAG": prompts_base / "prompts" / "rag",
+        "Multi-Agent": prompts_base / "prompts" / "multi_agent",
+        "Cloud (Pre-Commit / CI-CD / Deployment)": prompts_base / "prompts" / "cloud",
     }
     print_prompt_map({key: str(path) for key, path in prompt_map.items()})
 
