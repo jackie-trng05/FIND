@@ -4,3 +4,4 @@ requests
 openai
 pypdf
 mcp<2
+PyJWT>=2.11.0
