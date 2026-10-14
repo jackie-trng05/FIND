@@ -24,6 +24,7 @@ env:
   AI_MODE_ENABLED: "false"
   MCP_ENABLED: "false"
   RAG_ENABLED: "false"
+  MULTI_AGENT_ENABLED: "false"
 
 jobs:
   build-images:
@@ -120,7 +121,7 @@ jobs:
 
       - name: Run Student 4 pytest suite
         working-directory: student-4
-        run: python -m pytest tests -v --junitxml=pytest-results.xml | tee pytest-output.txt
+        run: python -m pytest tests --ignore=tests/post_commit -v --junitxml=pytest-results.xml | tee pytest-output.txt
 
       - name: Upload pytest results
         if: always()
@@ -130,6 +131,57 @@ jobs:
           path: |
             student-4/pytest-results.xml
             student-4/pytest-output.txt
+          if-no-files-found: warn
+
+  post-commit-tests:
+    runs-on: ubuntu-latest
+    needs: [smoke-check]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install post-commit test dependencies
+        run: pip install pytest requests "PyJWT>=2.11.0"
+
+      - name: Start Student 4 services
+        run: docker compose up -d --build student-4-frontend student-4-backend student-4-db
+
+      - name: Wait for the Interview API to be ready
+        run: |
+          for i in $(seq 1 15); do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:16015/ || true)
+            if [ "$code" = "200" ]; then echo "DB API ready"; exit 0; fi
+            echo "waiting for db API ($i): ${code:-none}"; sleep 2
+          done
+          echo "Interview API did not become ready" >&2; exit 1
+
+      - name: Run post-commit endpoint and token tests
+        working-directory: student-4
+        env:
+          DATABASE_SERVICE_URL: http://localhost:16015
+        run: |
+          mkdir -p reports/post_commit
+          python -m pytest tests/post_commit -v | tee reports/post_commit/test-results.md
+          status=${PIPESTATUS[0]}
+          echo "{\"status\": \"$([ $status -eq 0 ] && echo PASS || echo FAIL)\", \"commit_sha\": \"${{ github.sha }}\", \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" >> reports/post_commit/test-audit.jsonl
+          exit $status
+
+      - name: Stop Student 4 services
+        if: always()
+        run: docker compose down -v
+
+      - name: Upload post-commit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: student-4-post-commit-evidence
+          path: student-4/reports/post_commit
           if-no-files-found: warn
 
   evidence-pack:
