@@ -1,9 +1,9 @@
-from collectors import architecture_collector, db_collector, devops_collector, endpoints_collector, mcp_collector, rag_collector
+from collectors import architecture_collector, cicd_test_collector, db_collector, deployment_collector, devops_collector, endpoints_collector, mcp_collector, multi_agent_collector, pre_test_collector, rag_collector
 from collectors.feature_integration_collector import summarize_feature_matrix
 from config.review_config import ModeConfig
 from core.ai_runner import AIRunner
 from core.prompt_registry import PromptRegistry
-from pipelines import architecture_pipeline, devops_pipeline, service_pipeline
+from pipelines import architecture_pipeline, cicd_test_pipeline, deployment_pipeline, devops_pipeline, multi_agent_pipeline, pre_test_pipeline, service_pipeline
 
 
 COLLECTORS = {
@@ -13,6 +13,53 @@ COLLECTORS = {
     "devops": devops_collector.collect,
     "mcp": mcp_collector.collect,
     "rag": rag_collector.collect,
+    "multi_agent": multi_agent_collector.collect,
+    "pre_test": pre_test_collector.collect,
+    "cicd_test": cicd_test_collector.collect,
+    "deployment": deployment_collector.collect,
+}
+
+
+# Modes that follow the implementation -> independent review two-call pattern.
+# Each spec names the prompt family files, the pipeline builder, and the
+# implementation system prompt used for the first (non-review) model call.
+TWO_CALL_SPECS = {
+    "multi_agent": {
+        "pipeline": multi_agent_pipeline,
+        "impl_prompt": "implementation/multi_agent_implementation_prompt.txt",
+        "review_prompt": "review/multi_agent_review_prompt.txt",
+        "system_prompt": (
+            "You are a precise multi-agent workflow validator. "
+            "Use only supplied evidence and reply in at most 40 words."
+        ),
+    },
+    "pre_test": {
+        "pipeline": pre_test_pipeline,
+        "impl_prompt": "implementation/pre_test_implementation_prompt.txt",
+        "review_prompt": "review/pre_test_review_prompt.txt",
+        "system_prompt": (
+            "You are a precise pre-commit test reviewer. "
+            "Use only supplied evidence and reply in at most 60 words."
+        ),
+    },
+    "cicd_test": {
+        "pipeline": cicd_test_pipeline,
+        "impl_prompt": "implementation/cicd_test_implementation_prompt.txt",
+        "review_prompt": "review/cicd_test_review_prompt.txt",
+        "system_prompt": (
+            "You are a precise CI/CD test reviewer. "
+            "Use only supplied evidence and reply in at most 60 words."
+        ),
+    },
+    "deployment": {
+        "pipeline": deployment_pipeline,
+        "impl_prompt": "implementation/deployment_implementation_prompt.txt",
+        "review_prompt": "review/deployment_review_prompt.txt",
+        "system_prompt": (
+            "You are a precise Azure deployment reviewer. "
+            "Use only supplied evidence and reply in at most 80 words."
+        ),
+    },
 }
 
 ARCH_SYSTEM_PROMPT = "implementation/architecture_system_prompt.txt"
@@ -201,6 +248,41 @@ Draft suggestions:
     )
 
 
+def _run_two_call_mode(mode: ModeConfig, prompts: PromptRegistry, ai: AIRunner, evidence: str) -> str:
+    spec = TWO_CALL_SPECS[mode.key]
+    pipeline = spec["pipeline"]
+
+    _stage(mode.label, "PROMPTS", f"Loading prompt family: {mode.prompt_family}")
+    task_prompt = prompts.read(mode.prompt_family, spec["impl_prompt"])
+    implementation_user_prompt = pipeline.build_implementation_prompt(task_prompt, evidence)
+    _stage(mode.label, "PROMPTS", "Loaded implementation prompt")
+
+    _stage(mode.label, "LLM", "Running implementation model")
+    implementation_output, err = ai.call(spec["system_prompt"], implementation_user_prompt, review=False)
+    if err:
+        _stage(mode.label, "LLM", "Failed")
+        return f"MODEL FAILED: {err}"
+    _stage(mode.label, "LLM", "Implementation model complete")
+
+    review_system_prompt = prompts.read(mode.prompt_family, spec["review_prompt"])
+    review_user_prompt = pipeline.build_review_prompt(implementation_output, evidence)
+    _stage(mode.label, "PROMPTS", "Loaded review prompt")
+    _stage(mode.label, "LLM", "Running review model")
+    review_output, review_err = ai.call(review_system_prompt, review_user_prompt, review=True)
+    if review_err:
+        review_output = review_err
+        _stage(mode.label, "LLM", "Review model failed")
+    else:
+        _stage(mode.label, "LLM", "Review model complete")
+
+    _stage(mode.label, "DONE", "Review complete")
+    return (
+        f"OBSERVE: {evidence}\n\n"
+        f"IMPLEMENTATION: {implementation_output}\n"
+        f"REVIEW: {review_output}"
+    )
+
+
 def run_mode(mode: ModeConfig, app_dir, repo_root, prompts: PromptRegistry, ai: AIRunner) -> str:
     _stage(mode.label, "START", "Starting review flow")
     _stage(mode.label, "OBSERVE", "Collecting evidence")
@@ -224,4 +306,6 @@ def run_mode(mode: ModeConfig, app_dir, repo_root, prompts: PromptRegistry, ai: 
         return _run_devops_mode(mode, prompts, ai, evidence)
     if mode.kind in ("mcp", "rag"):
         return _run_validation_mode(mode, evidence, ai)
+    if mode.kind in ("multi_agent", "cloud"):
+        return _run_two_call_mode(mode, prompts, ai, evidence)
     return "Unknown mode."
