@@ -10,7 +10,7 @@ Feature flags (read from the environment, default ``true`` locally):
 In CI this flag is set to ``false`` so the pipeline never needs the shared
 server or Ollama; the endpoints then return a clear "disabled" response.
 
-Responses are rendered as HTML fragments (Lab 10 Multi-Agent panel): the planner
+Responses are rendered as HTML fragments (Multi-Agent panel): the planner
 plan, the worker output with its grounded evidence count, the reviewer
 assessment, and the pending human decision (Accept / Partially Accept / Reject).
 """

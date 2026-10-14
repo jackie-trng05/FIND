@@ -1,7 +1,7 @@
 # FIND Multi-Agent Server (shared, non-containerised)
 
-A shared three-agent coordination service for the FIND platform, modelled on
-Lab 10. It is the multi-agent analogue of the shared **MCP server** (port 16050)
+A shared three-agent coordination service for the FIND platform. It is the
+multi-agent analogue of the shared **MCP server** (port 16050)
 and **RAG server** (port 16070): a local host process reachable from every
 student backend container at `http://host.docker.internal:16080`.
 

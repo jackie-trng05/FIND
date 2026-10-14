@@ -1,0 +1,10 @@
+Validate the multi-agent coordination assessment against the evidence.
+
+Check that the assessment is grounded in the actual multi-agent-server/ files and
+coordinator wiring (plan_workflow, generate_output, review_output), plus the
+student Multi-Agent-Mode route, not assumptions.
+
+Identify any gaps or risks in agent sequencing, evidence grounding, or the
+human approval gate before workflow outputs are accepted.
+
+Reply in at most 40 words and stay evidence-based.

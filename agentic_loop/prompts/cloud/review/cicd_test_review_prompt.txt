@@ -1,0 +1,9 @@
+Validate the CI/CD test review assessment against the evidence.
+
+Check that the assessment is grounded in the actual docs/release-2/reports/test-results.md
+and docs/release-2/reports/test-audit.jsonl content, not assumptions.
+
+Identify any gaps or risks in post-commit test coverage (API, token auth) or
+in evidence completeness for a release decision.
+
+Reply in at most 40 words and stay evidence-based.

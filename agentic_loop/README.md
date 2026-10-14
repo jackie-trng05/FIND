@@ -24,13 +24,13 @@ not fully satisfy the requirement.
 | Release 1 | MCP server | Y | Shared local MCP server validated by the MCP review mode |
 | Release 1 | RAG server | Y | Shared local RAG server validated by the RAG review mode |
 | Release 1 | Grounded AI responses using retrieved context | Y | RAG review validates retrieval, citations, confidence, and unsupported-answer controls |
-| Release 2 (local) | Multi-Agent Server | N | No multi-agent service is present in this repository |
-| Release 2 (local) | Planner Agent | N | No planning step exists; mode selection in `main.py` is manual |
-| Release 2 (local) | Worker Agent | Partial | `agentic_loop`'s "implementation" LLM call performs an Act-like step, but only within this dev tool, not as a product-level Worker Agent |
-| Release 2 (local) | Reviewer Agent | Partial | The architecture pipeline's second LLM call self-critiques the first call's output using the same evidence — not an independent reviewer agent |
-| Release 2 (local) | Human review | Y | Currently the *only* review/adapt mechanism — a human reads the printed output and decides the next action |
-| Release 2 (cloud) | AI-Mode / Ollama / approved LLM(s) deployed to cloud | N | No cloud deployment configuration exists yet |
-| Release 2 (cloud) | MCP/RAG/Multi-Agent explicitly disabled in cloud | N/A | Not applicable until cloud deployment exists |
+| Release 2 (local) | Multi-Agent Server | Y | Shared [multi-agent-server/](../multi-agent-server/) validated by the new **Multi-Agent** review mode |
+| Release 2 (local) | Planner Agent | Y | [planner_agent.py](../multi-agent-server/agents/planner_agent.py) (`plan_workflow`); wiring checked by the Multi-Agent review mode |
+| Release 2 (local) | Worker Agent | Y | [worker_agent.py](../multi-agent-server/agents/worker_agent.py) (`generate_output`) grounds output in real FIND DB records |
+| Release 2 (local) | Reviewer Agent | Y | [reviewer_agent.py](../multi-agent-server/agents/reviewer_agent.py) (`review_output`) is an independent reviewer sequenced after planner + worker |
+| Release 2 (local) | Human review | Y | A human reads the printed output and decides the next action; the multi-agent workflow adds an explicit Accept / Correction / Reject gate |
+| Release 2 (cloud) | AI-Mode / Ollama / approved LLM(s) deployed to cloud | Partial | **Cloud Pre-Commit**, **Cloud CI/CD Tests**, and **Cloud Deployment** review modes exist. They self-register against the planned FIND locations (`.pre-commit-config.yaml`, `scripts/`, `tests/pre_commit/`, `tests/post_commit/`, `docs/release-2/reports/`), which currently hold placeholder scaffolds — replace the placeholders with the real cloud artifacts and the modes validate them automatically |
+| Release 2 (cloud) | MCP/RAG/Multi-Agent explicitly disabled in cloud | N/A | Not applicable until the real cloud deployment artifacts replace the placeholder scaffolds |
 
 ## Running the review tool
 

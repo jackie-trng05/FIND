@@ -1,0 +1,16 @@
+Review the FIND multi-agent workflow coordination implementation.
+
+Evaluate:
+- planner, worker, and reviewer agent entry functions (plan_workflow, generate_output, review_output)
+- coordinator sequencing (planner + worker concurrently, then reviewer, then human decision)
+- evidence grounding in the worker output (real FIND database records, never invented)
+- human approval gating before any output is accepted (Accept / Correction / Reject)
+
+Focus on coordination design quality, not model wording.
+
+Return:
+Strengths:
+Weaknesses:
+Recommendations:
+
+Maximum 40 words.

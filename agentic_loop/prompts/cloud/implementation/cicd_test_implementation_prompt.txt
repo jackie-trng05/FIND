@@ -1,0 +1,17 @@
+Review the FIND post-commit test results and evidence.
+
+Evaluate:
+- test execution status (API students, token auth tests)
+- evidence generation completeness
+- test-results.md format
+- test-audit.jsonl structure
+- failure reporting clarity
+
+Focus on result quality and evidence completeness.
+
+Return:
+Strengths:
+Weaknesses:
+Recommendations:
+
+Maximum 60 words.

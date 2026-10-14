@@ -47,6 +47,30 @@ def build_base_modes() -> list[ModeConfig]:
             kind="rag",
             prompt_family="rag",
         ),
+        ModeConfig(
+            key="multi_agent",
+            label="Multi-Agent",
+            kind="multi_agent",
+            prompt_family="multi_agent",
+        ),
+        ModeConfig(
+            key="pre_test",
+            label="Cloud Pre-Commit",
+            kind="cloud",
+            prompt_family="cloud",
+        ),
+        ModeConfig(
+            key="cicd_test",
+            label="Cloud CI/CD Tests",
+            kind="cloud",
+            prompt_family="cloud",
+        ),
+        ModeConfig(
+            key="deployment",
+            label="Cloud Deployment",
+            kind="cloud",
+            prompt_family="cloud",
+        ),
     ]
 
 

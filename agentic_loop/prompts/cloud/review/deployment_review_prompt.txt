@@ -1,0 +1,9 @@
+Validate the deployment review assessment against the evidence.
+
+Check that the assessment is grounded in the actual scripts/deploy-azure.sh
+content and docs/release-2/reports/deployment-results.md, not assumptions.
+
+Identify any gaps or risks in managed identity usage, ingress isolation
+(internal vs external), or deployment validation evidence.
+
+Reply in at most 40 words and stay evidence-based.

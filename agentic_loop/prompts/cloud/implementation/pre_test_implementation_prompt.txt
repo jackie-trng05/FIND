@@ -1,0 +1,17 @@
+Review the FIND pre-commit test code implementation.
+
+Evaluate:
+- scan coverage (Ruff, detect-secrets, pip-audit)
+- assertion quality
+- error handling
+- test independence
+- code clarity
+
+Focus on test design quality, not results.
+
+Return:
+Strengths:
+Weaknesses:
+Recommendations:
+
+Maximum 60 words.

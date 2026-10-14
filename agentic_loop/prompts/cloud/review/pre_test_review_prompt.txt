@@ -1,0 +1,9 @@
+Validate the pre-commit test review assessment against the evidence.
+
+Check that the assessment is grounded in the actual .pre-commit-config.yaml
+hooks and tests/pre_commit/ test files, not assumptions.
+
+Identify any gaps or risks in scan coverage (Ruff, detect-secrets, pip-audit)
+or in how commits are blocked on failure.
+
+Reply in at most 40 words and stay evidence-based.
