@@ -482,6 +482,201 @@ def _rag_section(backend_url: str) -> str:
 
 
 
+def _multi_agent_section(backend_url: str, pid=None) -> str:
+    """Multi-Agent Orchestrator panel for the new-posting form (staff view).
+
+    Runs the shared Planner -> Worker -> Reviewer workflow grounded in real
+    application records, then asks the staff reviewer for a final
+    Accept / Correction / Reject decision with a required reason and the evidence
+    used. Self-contained (markup + scoped CSS + IIFE) so it works when HTMX swaps
+    the form into the page.
+    """
+    default_request = (
+        f"Summarise the applications submitted for job posting {pid}."
+        if pid is not None
+        else "Summarise the applications submitted across current job postings."
+    )
+    markup = """
+        <div class="multi-agent-panel-wrap" id="multi-agent-orchestrator">
+            <div class="mcp-head">
+                <span class="ai-panel-title">Multi-Agent Orchestrator</span>
+                <div class="mcp-toggle-row">
+                    <label class="switch" for="multi-agent-toggle" title="Enable or disable Multi-Agent Mode">
+                        <input id="multi-agent-toggle" type="checkbox" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span id="multi-agent-state" class="mcp-state mcp-on">ON</span>
+                </div>
+            </div>
+            <p class="mcp-desc">Run a governed Planner → Worker → Reviewer workflow. The Worker grounds its output in real application records; the Reviewer flags risk; you make the final decision.</p>
+            <div class="mcp-form-row">
+                <input id="multi-agent-request" class="form-input" type="text"
+                       placeholder="Describe the task for the agents…"
+                       value="__DEFAULT_REQUEST__">
+            </div>
+            <div class="mcp-form-row">
+                <button type="button" class="btn btn-primary btn-sm" id="multi-agent-run-btn">Run Workflow</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="multi-agent-status-btn">Get Workflow Status</button>
+            </div>
+            <div id="multi-agent-result" class="mcp-panel">Multi-agent responses will appear here.</div>
+        </div>
+        <style>
+            .multi-agent-panel-wrap { margin-top: 1rem; padding: 0.9rem 1rem; border: 1px solid var(--color-border, #e5e7eb); border-radius: 8px; }
+            .multi-agent-panel-wrap .mcp-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+            .multi-agent-panel-wrap .mcp-toggle-row { display: flex; align-items: center; gap: 0.5rem; }
+            .multi-agent-panel-wrap .mcp-state { font-weight: 700; font-size: 0.8rem; }
+            .multi-agent-panel-wrap .mcp-on { color: #16a34a; }
+            .multi-agent-panel-wrap .mcp-off { color: #dc2626; }
+            .multi-agent-panel-wrap .mcp-desc { font-size: 0.82rem; color: var(--color-text-muted, #6b7280); margin-bottom: 0.6rem; }
+            .multi-agent-panel-wrap .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+            .multi-agent-panel-wrap .switch input { opacity: 0; width: 0; height: 0; }
+            .multi-agent-panel-wrap .switch .slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 999px; transition: 0.2s; }
+            .multi-agent-panel-wrap .switch .slider::before { content: ''; position: absolute; height: 16px; width: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+            .multi-agent-panel-wrap .switch input:checked + .slider { background: #16a34a; }
+            .multi-agent-panel-wrap .switch input:checked + .slider::before { transform: translateX(18px); }
+            .multi-agent-panel-wrap .mcp-form-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0.5rem 0; }
+            .multi-agent-panel-wrap .mcp-form-row .form-input { flex: 1 1 220px; }
+            .multi-agent-panel-wrap .mcp-panel { padding: 0.7rem 0.9rem; border: 1px solid var(--color-border, #e5e7eb); border-radius: 8px; font-size: 0.83rem; background: var(--color-surface, #f9fafb); }
+            .multi-agent-panel-wrap .mcp-panel h3 { font-size: 0.88rem; margin-bottom: 0.4rem; }
+            .multi-agent-panel-wrap .mcp-panel h4 { font-size: 0.76rem; margin: 0.6rem 0 0.2rem; color: var(--color-text-muted, #6b7280); }
+            .multi-agent-panel-wrap .mcp-answer { white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin: 0.4rem 0; max-height: 260px; overflow: auto; }
+            .multi-agent-panel-wrap .mcp-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+            .multi-agent-panel-wrap .mcp-spinner { display: inline-block; width: 12px; height: 12px; margin-right: 4px; vertical-align: -1px; border: 2px solid #cbd5e1; border-top-color: #16a34a; border-radius: 50%; animation: mcp-spin 0.7s linear infinite; }
+            @keyframes mcp-spin { to { transform: rotate(360deg); } }
+        </style>
+        <script>
+        (function () {
+            const BACKEND = '__BACKEND__';
+            const MA_KEY = 'multi_agent_mode_enabled';
+            const toggle = document.getElementById('multi-agent-toggle');
+            const stateEl = document.getElementById('multi-agent-state');
+            const runBtn = document.getElementById('multi-agent-run-btn');
+            const statusBtn = document.getElementById('multi-agent-status-btn');
+            const requestInput = document.getElementById('multi-agent-request');
+            const panel = document.getElementById('multi-agent-result');
+            if (!toggle || !panel) return;
+
+            const buttons = [runBtn, statusBtn];
+
+            function isEnabled() { return toggle.checked; }
+
+            function renderState() {
+                const on = isEnabled();
+                stateEl.textContent = on ? 'ON' : 'OFF';
+                stateEl.classList.toggle('mcp-on', on);
+                stateEl.classList.toggle('mcp-off', !on);
+                buttons.forEach(function (b) { if (b) b.disabled = !on; });
+            }
+
+            function disabledMsg() {
+                panel.innerHTML = '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+            }
+
+            function onToggle() {
+                localStorage.setItem(MA_KEY, String(isEnabled()));
+                renderState();
+                if (isEnabled()) { panel.innerHTML = 'Multi-agent responses will appear here.'; }
+                else { disabledMsg(); }
+            }
+
+            async function callBackend(method, path, body) {
+                const opts = {
+                    method: method,
+                    credentials: 'include',
+                    headers: { 'X-Multi-Agent-Mode': isEnabled() ? 'on' : 'off' }
+                };
+                if (method === 'POST') {
+                    opts.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                    opts.body = body;
+                }
+                const resp = await fetch(BACKEND + path, opts);
+                if (resp.status === 503) {
+                    panel.innerHTML = '<p class="mcp-off">Multi-agent server unavailable. Ensure the shared server is running on port 16080.</p>';
+                    return null;
+                }
+                return resp.text();
+            }
+
+            async function runWorkflow() {
+                if (!isEnabled()) { disabledMsg(); return; }
+                const request = (requestInput.value || '').trim();
+                if (!request) {
+                    panel.innerHTML = '<p class="mcp-off">Enter a request first.</p>';
+                    return;
+                }
+                panel.innerHTML = '<span class="mcp-spinner"></span> Coordinating planner, worker and reviewer agents — three local models run in sequence, this can take a couple of minutes…';
+                buttons.forEach(function (b) { if (b) b.disabled = true; });
+                try {
+                    const html = await callBackend('POST', '/multi-agent/workflow', new URLSearchParams({ user_request: request }));
+                    if (html !== null) { panel.innerHTML = html; }
+                } catch (e) {
+                    panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
+                } finally {
+                    renderState();
+                }
+            }
+
+            async function getStatus() {
+                if (!isEnabled()) { disabledMsg(); return; }
+                panel.innerHTML = '<span class="mcp-spinner"></span> Contacting multi-agent server…';
+                buttons.forEach(function (b) { if (b) b.disabled = true; });
+                try {
+                    const html = await callBackend('GET', '/multi-agent/workflow/status', null);
+                    if (html !== null) { panel.innerHTML = html; }
+                } catch (e) {
+                    panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
+                } finally {
+                    renderState();
+                }
+            }
+
+            async function submitDecision(workflowId, decision) {
+                if (!isEnabled()) { disabledMsg(); return; }
+                const reasonInput = document.getElementById('multi-agent-reason');
+                const reason = reasonInput ? reasonInput.value.trim() : '';
+                const evidenceInput = document.getElementById('multi-agent-evidence');
+                const evidenceUsed = evidenceInput ? evidenceInput.value.trim() : '';
+                const reasonWarn = document.getElementById('multi-agent-reason-warn');
+                const evidenceWarn = document.getElementById('multi-agent-evidence-warn');
+                const setWarn = function (el, msg) { if (el) { el.textContent = msg; el.style.display = msg ? 'block' : 'none'; } };
+                setWarn(reasonWarn, '');
+                setWarn(evidenceWarn, '');
+                if (!reason) {
+                    if (reasonInput) reasonInput.focus();
+                    setWarn(reasonWarn, 'Enter a reason before recording a decision.');
+                    return;
+                }
+                if (!evidenceUsed) {
+                    if (evidenceInput) evidenceInput.focus();
+                    setWarn(evidenceWarn, 'Enter the evidence used before recording a decision.');
+                    return;
+                }
+                panel.innerHTML = '<span class="mcp-spinner"></span> Recording decision…';
+                buttons.forEach(function (b) { if (b) b.disabled = true; });
+                try {
+                    const html = await callBackend('POST', '/multi-agent/decision', new URLSearchParams({ workflow_id: workflowId, decision: decision, reason: reason, evidence_used: evidenceUsed }));
+                    if (html !== null) { panel.innerHTML = html; }
+                } catch (e) {
+                    panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
+                } finally {
+                    renderState();
+                }
+            }
+            window.submitMultiAgentDecision = submitDecision;
+
+            toggle.addEventListener('change', onToggle);
+            runBtn.addEventListener('click', runWorkflow);
+            statusBtn.addEventListener('click', getStatus);
+
+            const persisted = localStorage.getItem(MA_KEY);
+            toggle.checked = persisted === null ? true : persisted === 'true';
+            renderState();
+            if (!isEnabled()) { disabledMsg(); }
+        })();
+        </script>"""
+    return markup.replace("__DEFAULT_REQUEST__", _e(default_request)).replace("__BACKEND__", backend_url)
+
+
 def render_posting_form(backend_url: str, posting: dict | None = None, *, error: str = "") -> str:
     """Create/Edit form. When ``posting`` is given the form edits it (PUT).
 
@@ -561,6 +756,7 @@ def render_posting_form(backend_url: str, posting: dict | None = None, *, error:
         </div>
         {_mcp_section(backend_url)}
         {_rag_section(backend_url)}
+        {_multi_agent_section(backend_url)}
         <div class="form-actions">
             <button class="btn btn-primary" type="submit">{_e(submit_label)}</button>
             {cancel_btn}
