@@ -23,14 +23,14 @@ def get_evaluation_response(evaluation_id, timeout=None):
 
 
 def create_evaluation(payload):
-    return http_requests.post(f"{DB_SERVICE_URL}/evaluations", json=payload)
+    return http_requests.post(f"{DB_SERVICE_URL}/evaluations", json=payload, timeout=5)
 
 
 def update_evaluation(evaluation_id, payload):
     return http_requests.put(
-        f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", json=payload
+        f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", json=payload, timeout=5
     )
 
 
 def delete_evaluation(evaluation_id):
-    return http_requests.delete(f"{DB_SERVICE_URL}/evaluations/{evaluation_id}")
+    return http_requests.delete(f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", timeout=5)

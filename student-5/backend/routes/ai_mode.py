@@ -15,6 +15,7 @@ The handler demonstrates the shared Agentic AI workflow:
 """
 
 import json
+import logging
 
 import requests as http_requests
 from flask import Blueprint, jsonify, request
@@ -30,6 +31,8 @@ from services.llm_client import OLLAMA_MODEL, create_chat_completion
 from services.prompt_loader import load_prompt
 
 ai_mode_bp = Blueprint("ai_mode", __name__)
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_SCORE = 3
 
@@ -91,8 +94,8 @@ def ai_recommendation():
             user_resp = http_requests.get(f"{SHARED_DB_URL}/users/{app_data.get('user_id')}", timeout=5)
             if user_resp.status_code == 200:
                 applicant_info = json.dumps(user_resp.json(), indent=2)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("AI-Mode context enrichment failed: %s", exc)
 
     try:
         interviews_resp = http_requests.get(f"{INTERVIEWS_DB_URL}/interviews", timeout=5)
@@ -104,8 +107,8 @@ def ai_recommendation():
                 and iv.get("interview_notes", "").strip()
             ]
             interview_notes = "\n\n".join(notes)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("AI-Mode interview-notes lookup failed: %s", exc)
 
     system_prompt = load_prompt("system_prompt.txt")
     user_prompt = load_prompt("task_prompt.txt").format(
