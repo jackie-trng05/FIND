@@ -1,0 +1,19 @@
+NAME                      SERVICE              PORTS                                           STATUS
+find-shared-api           shared-api           0.0.0.0:16002->5000/tcp, [::]:16002->5000/tcp   Up 27 hours
+find-shared-db            shared-db            0.0.0.0:16003->6000/tcp, [::]:16003->6000/tcp   Up 27 hours
+find-shared-frontend      shared-frontend      0.0.0.0:16001->3000/tcp, [::]:16001->3000/tcp   Up 16 minutes
+find-student-1-backend    student-1-backend    0.0.0.0:16005->5001/tcp, [::]:16005->5001/tcp   Up 16 minutes
+find-student-1-db         student-1-db         0.0.0.0:16006->6001/tcp, [::]:16006->6001/tcp   Up 16 minutes
+find-student-1-frontend   student-1-frontend   0.0.0.0:16004->3000/tcp, [::]:16004->3000/tcp   Up 16 minutes
+find-student-2-backend    student-2-backend    0.0.0.0:16008->5002/tcp, [::]:16008->5002/tcp   Up 16 minutes
+find-student-2-db         student-2-db         0.0.0.0:16009->6002/tcp, [::]:16009->6002/tcp   Up 16 minutes
+find-student-2-frontend   student-2-frontend   0.0.0.0:16007->3002/tcp, [::]:16007->3002/tcp   Up 16 minutes
+find-student-3-backend    student-3-backend    0.0.0.0:16011->5003/tcp, [::]:16011->5003/tcp   Up 16 minutes
+find-student-3-db         student-3-db         0.0.0.0:16012->6003/tcp, [::]:16012->6003/tcp   Up 16 minutes
+find-student-3-frontend   student-3-frontend   0.0.0.0:16010->3003/tcp, [::]:16010->3003/tcp   Up 16 minutes
+find-student-4-backend    student-4-backend    0.0.0.0:16014->5004/tcp, [::]:16014->5004/tcp   Up 16 minutes
+find-student-4-db         student-4-db         0.0.0.0:16015->6004/tcp, [::]:16015->6004/tcp   Up 16 minutes
+find-student-4-frontend   student-4-frontend   0.0.0.0:16013->3004/tcp, [::]:16013->3004/tcp   Up 16 minutes
+find-student-5-backend    student-5-backend    0.0.0.0:16017->5005/tcp, [::]:16017->5005/tcp   Up 16 minutes
+find-student-5-db         student-5-db         0.0.0.0:16018->6005/tcp, [::]:16018->6005/tcp   Up 16 minutes
+find-student-5-frontend   student-5-frontend   0.0.0.0:16016->3005/tcp, [::]:16016->3005/tcp   Up 16 minutes
