@@ -1,0 +1,13 @@
+{
+  "student": "student-1",
+  "kind": "multi-agent",
+  "url": "http://localhost:16005/multi-agent/workflow",
+  "timestamp": "2026-10-17T01:28:30.549562+00:00",
+  "scope": "Authenticated backend integration, not browser interaction or human approval",
+  "status": "PASS",
+  "detail": "Three agents and grounded evidence recorded; human decision remains pending",
+  "http_status": 200,
+  "response_sha256": "be8dbf55e7a77b4b1e8e331df664a669cd0b6a8a7ec3902b3d718f9dbb6185c1",
+  "response_length": 2655,
+  "workflow_id": "210f9c15-0455-472b-b505-fa223ac26b16"
+}

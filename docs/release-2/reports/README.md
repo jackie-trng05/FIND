@@ -24,7 +24,7 @@ Shared authentication and Student 5 database/session calls now use five-second d
 
 Forced debugging was removed from all 17 Flask launchers, including the five student backends subsequently approved by the user. Duplicate frontend/database defaults and student-module fallback logging now use main's PR #66 implementation. Its explicit frontend/database debug opt-in is `FLASK_DEBUG=true`; the remaining launchers follow Flask's environment handling. The change does not make Flask's development server a production WSGI server.
 
-Local regression transcripts are linked from the security and testing reports. They do not prove GitHub CI, individual commit-hook participation, cloud deployment or that existing containers were rebuilt. SQL construction, required container bindings, local Ollama placeholders and unrelated fallback behavior were not rewritten. Container images must be rebuilt before these source changes affect the running deployment.
+Local regression transcripts are linked from the security and testing reports. They do not prove GitHub CI, individual commit-hook participation or cloud deployment. SQL construction, required container bindings, local Ollama placeholders and unrelated fallback behavior were not rewritten. The local stack was rebuilt from commit `d261e66` on 2026-10-17 before the current synthetic integration retest. Rebuild again after changing application source; old execution evidence does not validate newer images.
 
 ## Setup
 
@@ -73,6 +73,23 @@ Repeat for students 2-5. Imported packs must contain nonempty `test-results.md` 
 
 ## Local and Cloud Evidence
 
+The reusable collector can populate machine-verifiable evidence from the repository root:
+
+```powershell
+python -m shared.release2_delivery regressions
+python -m shared.release2_delivery hooks-preflight
+python -m shared.release2_delivery local-ai
+python -m shared.release2_delivery contributions
+```
+
+`regressions` runs shared tests and all five student unit suites in isolated processes. `hooks-preflight` captures all 15 active hook results without invoking a commit or claiming student participation. `local-ai` requires the running Docker stack, Ollama, RAG and Multi-Agent servers. It creates synthetic applicant/staff accounts and a readable synthetic PDF, performs authenticated backend CRUD and all four AI integrations per feature, then removes fixture records and logs out. Two synthetic accounts remain per run because there is no supported user-delete API. Never run this against a production database.
+
+AI checks validate populated, feature-specific output, not factual accuracy. MCP requires source citations; RAG requires nonempty source-linked retrieval results, not a generated-answer quality test. Multi-Agent requires three successful agents, nonempty evidence and no detected model fallback. Its request must name the actual interview ID for Student 4. It never submits a human decision. The first run's incorrect interview scope and missing profile resume remain in the audit; the corrected retest is separate evidence. The first preflight collector's hook-ID mismatch is also retained, with its underlying successful hook transcript.
+
+Current local reports therefore distinguish passing backend checks from pending full frontend interaction and human review. Browser-shell evidence only proves the pages rendered. Existing human workflow records for Students 2-5 have audited decisions and evidence; Student 1's decision still lacks `evidence_used`. Do not fill that field without the actual person's assessment.
+
+`contributions` captures the latest twelve actual commits touching each feature and creates missing input templates without overwriting them. These are unconfirmed drafts, not student-to-author identity mappings. Complete each student's contribution input from confirmed responsibilities and genuine commit links, then import it as described below.
+
 ```powershell
 python shared/release2_reports.py snapshot
 python shared/release2_reports.py workflow
@@ -120,6 +137,8 @@ python shared/release2_reports.py template --kind release --student group
 ```
 
 Complete contribution inputs for all five students with responsibilities, actual work and real commit/PR URLs. Complete the release input with a named human reviewer, UTC timestamp, justification and READY/NOT READY. A READY entry is rejected while required evidence is missing or reviews are stale. A model response cannot approve the release.
+
+Remaining human inputs: the students' actual commit-hook transcripts, confirmed contributions, full frontend/human-review records, Student 1's real workflow evidence reference, and a final release decision once the gates are satisfied. Cloud reports intentionally retain explicit TODOs until the user supplies a real deployment; do not mark cloud PASS to complete the checklist. No technical-PDF work is included in this report task.
 
 ```powershell
 python shared/release2_reports.py record --kind contribution --student student-1 --source docs/release-2/reports/inputs/student-1-contribution.json

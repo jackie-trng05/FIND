@@ -1,0 +1,23 @@
+{
+  "student": "student-1",
+  "kind": "rag",
+  "url": "http://localhost:16005/rag/retrieve",
+  "timestamp": "2026-10-17T01:28:30.285646+00:00",
+  "scope": "Authenticated backend integration, not browser interaction or human approval",
+  "status": "PASS",
+  "detail": "Nonempty retrieved chunks returned through backend",
+  "http_status": 200,
+  "response_sha256": "9ecdddff01b30d2af0ee86c6935f1c7fee02ec5a5be4aebd98f179b9c4b5ff99",
+  "response_length": 3982,
+  "retrieval": {
+    "status": "success",
+    "retrieval_mode": "chromadb",
+    "query_coverage": 1.0,
+    "error": null
+  },
+  "sources": [
+    "student-2-db:/job_postings/6",
+    "student-1-db:/profiles/7",
+    "student-1-db:/profiles/6"
+  ]
+}

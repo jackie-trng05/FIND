@@ -1,0 +1,13 @@
+{
+  "student": "student-1",
+  "kind": "ai-mode",
+  "url": "http://localhost:16005/profile/ai-suggestions",
+  "timestamp": "2026-10-17T01:25:22.921930+00:00",
+  "scope": "Authenticated backend integration, not browser interaction or human approval",
+  "status": "PENDING",
+  "detail": "Response captured; feature-specific AI output requires inspection",
+  "http_status": 200,
+  "response_sha256": "c273f8b07f6e144ed6d47efef6e5224501680e3856852494eaca7d366c1ed7f3",
+  "response_length": 84,
+  "response": "<p class=\"text-sm\">Upload a resume below to get AI suggestions for your profile.</p>"
+}

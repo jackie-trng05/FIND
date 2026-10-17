@@ -1,0 +1,264 @@
+{
+  "collector": "GitHub Copilot automated integration check, not human sign-off",
+  "timestamp": "2026-10-17T01:29:02.911993+00:00",
+  "fixture": "release2-9f5798a139a7",
+  "test_user_ids": {
+    "staff": 13,
+    "applicant": 14
+  },
+  "checks": {
+    "frontend": {
+      "status": "PENDING",
+      "evidence": "Not executed; human review is not automated"
+    },
+    "create": {
+      "status": "PASS",
+      "evidence": "Backend assigned the logged-in evaluator"
+    },
+    "read": {
+      "status": "PASS",
+      "evidence": "Backend read its synthetic evaluation"
+    },
+    "update": {
+      "status": "PASS",
+      "evidence": "Backend score update persisted"
+    },
+    "delete": {
+      "status": "PASS",
+      "evidence": "Authenticated backend deletion verified absent in persistence service"
+    },
+    "ai-mode": {
+      "status": "PASS",
+      "evidence": "evidence/99661a294cc641359d327623a1e04e09-student-5-ai-mode-integration.json",
+      "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval"
+    },
+    "mcp": {
+      "status": "PASS",
+      "evidence": "evidence/9a84aeb57479403da9b24124e5f5d863-student-5-mcp-integration.json",
+      "detail": "Backend MCP context returned explicit source citations"
+    },
+    "rag": {
+      "status": "PASS",
+      "evidence": "evidence/aa78c06e83d84c8eb459fc4f7c072165-student-5-rag-integration.json",
+      "detail": "Nonempty retrieved chunks returned through backend"
+    },
+    "multi-agent": {
+      "status": "PASS",
+      "evidence": "evidence/f6dabc96147348fa9360585aff125e72-student-5-multi-agent-integration.json",
+      "detail": "Three agents and grounded evidence recorded; human decision remains pending"
+    },
+    "human-review": {
+      "status": "PENDING",
+      "evidence": "Not executed; human review is not automated"
+    }
+  },
+  "scope": "Authenticated backend API CRUD with raw persistence reads. Not full UI interaction or business-lifecycle validation. Verify container provenance against the linked service/build evidence. A fixture application's status was reset directly only for cleanup.",
+  "residuals": "Two uniquely named example.invalid test accounts remain; no supported user-delete API. Passwords and session tokens are not retained.",
+  "operations": [
+    {
+      "method": "POST",
+      "url": "http://localhost:16002/api/auth/register",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16002/api/auth/login",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16002/api/auth/register",
+      "status": 201
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16002/api/auth/login",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16005/profile",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16006/profiles/by-user/14",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16005/profile",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "url": "http://localhost:16005/profile/12",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16006/profiles/12",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16008/job-postings",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16009/job-postings",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16008/job-postings/14",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "url": "http://localhost:16008/job-postings/14",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16009/job-postings/14",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16011/api/applications/save",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16012/applications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16011/api/context/applications/22/detail",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "url": "http://localhost:16011/api/applications/22/save",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16012/applications/22",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16014/interviews",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16014/interviews/12",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "url": "http://localhost:16014/interviews/12",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16015/interviews/12",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16017/api/evaluations",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16017/api/evaluations/8",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "url": "http://localhost:16017/api/evaluations/8",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16018/evaluations/8",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16005/resume",
+      "status": 200
+    },
+    {
+      "method": "DELETE",
+      "url": "http://localhost:16014/interviews/12",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16015/interviews/12",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "url": "http://localhost:16017/api/evaluations/8",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16018/evaluations/8",
+      "status": 404
+    },
+    {
+      "method": "PUT",
+      "url": "http://localhost:16012/applications/22",
+      "status": 200
+    },
+    {
+      "method": "DELETE",
+      "url": "http://localhost:16011/api/applications/22",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16012/applications/22",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "url": "http://localhost:16008/job-postings/14",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16009/job-postings/14",
+      "status": 404
+    },
+    {
+      "method": "DELETE",
+      "url": "http://localhost:16005/profile/12",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "url": "http://localhost:16006/profiles/12",
+      "status": 404
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16002/api/auth/logout",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "url": "http://localhost:16002/api/auth/logout",
+      "status": 200
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "captured_at": "2026-10-17T01:32:02.728Z",
+  "collector": "GitHub Copilot using the shared Playwright browser page",
+  "source_commit": "d261e66",
+  "staff_user_id": 15,
+  "scope": "Authenticated browser-shell rendering only, not full frontend CRUD or human approval. Synthetic example.invalid account remains; no password or session token retained.",
+  "pages": [
+    {"student": "student-1", "url": "http://localhost:16004/", "status": 200, "title": "My Profile \u2014 FIND", "visible_body": true, "headings": ["My Profile", "User Details", "User Profile", "MCP Insights", "RAG Assistant", "Multi-Agent Orchestrator"]},
+    {"student": "student-2", "url": "http://localhost:16007/", "status": 200, "title": "Job Postings \u2014 FIND", "visible_body": true, "headings": ["Job Postings"]},
+    {"student": "student-3", "url": "http://localhost:16010/", "status": 200, "title": "Applications \u2014 FIND", "visible_body": true, "headings": ["My Applications", "All Applications"]},
+    {"student": "student-4", "url": "http://localhost:16013/", "status": 200, "title": "Interviews \u00b7 Calendar \u2014 FIND", "visible_body": true, "headings": ["Interview Calendar", "October 2026"]},
+    {"student": "student-5", "url": "http://localhost:16016/", "status": 200, "title": "Evaluations \u2014 FIND", "visible_body": true, "headings": ["Evaluations", "Applications Ready for Evaluation"]}
+  ]
+}

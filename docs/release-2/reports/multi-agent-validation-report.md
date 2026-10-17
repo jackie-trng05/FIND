@@ -14,6 +14,6 @@ See IMPLEMENTATION in the transcript.
 
 See REVIEW in the transcript.
 
-Latest execution: COMPLETE | [evidence](evidence/0410c271effb4f84af552f1a82b76c80-multi_agent-validation.txt); captured 2026-10-17T00:04:13.964118+00:00; tested commit b8397c671c18 (capture dirty=True).
+Latest execution: FAIL | [evidence](evidence/5d10a07062554f7a897318aacddc4099-multi_agent-validation.txt); captured 2026-10-17T01:38:23.712486+00:00; tested commit d261e6649ac3 (capture dirty=True).
 
 COMPLETE means both models returned text, not that the application passed. Human review remains required.

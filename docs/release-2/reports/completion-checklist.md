@@ -35,11 +35,10 @@ Status: NOT READY
 - [ ] student-5: cloud evidence (PASS)
 - [ ] student-5: contribution evidence (RECORDED)
 - [ ] student-1: completed Multi-Agent workflow, human decision and linked audit
-- [ ] student-5: completed Multi-Agent workflow, human decision and linked audit
-- [ ] multi_agent: review is stale; rerun after latest evidence
+- [ ] multi_agent: captured implementation/review transcript
 - [ ] pre_test: captured implementation/review transcript
 - [ ] cicd_test: captured implementation/review transcript
 - [ ] deployment: captured implementation/review transcript
 - [ ] Final named human release approval with justification
 
-This checks evidence records, not software correctness. Confirm evidence applies to the final release commit. Required software, workflows, deployment scripts, PDF and showcase are separate gates.
+This checks evidence records, not software correctness. Confirm evidence applies to the final release commit. This checklist covers in-repository evidence only; it does not certify the application or deployment infrastructure.

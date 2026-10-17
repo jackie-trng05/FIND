@@ -1,0 +1,233 @@
+Command: C:\git\FIND\.venv\Scripts\python.exe -m pre_commit run --all-files --verbose
+Exit: 0
+
+Ruff Scan (student-1)....................................................Passed
+- hook id: ruff-scan-student-1
+- duration: 1.25s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repo4wptio7b\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_ruff_scan_student1.py::test_ruff_scan_passes PASSED [100%]
+
+============================== 1 passed in 0.24s ==============================
+
+detect-secrets Scan (student-1)..........................................Passed
+- hook id: detect-secrets-scan-student-1
+- duration: 3.58s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repobi7jym8k\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_secrets_scan_student1.py::test_detect_secrets_scan_passes PASSED [100%]
+
+============================== 1 passed in 2.54s ==============================
+
+pip-audit Scan (student-1)...............................................Passed
+- hook id: pip-audit-scan-student-1
+- duration: 8.95s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repocib5rou_\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+plugins: platformdirs-4.13.3
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_dependency_audit_student1.py::test_pip_audit_passes PASSED [100%]
+
+============================== 1 passed in 7.90s ==============================
+
+Ruff Scan (student-2)....................................................Passed
+- hook id: ruff-scan-student-2
+- duration: 1.03s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repo4wptio7b\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_ruff_scan_student2.py::test_ruff_scan_passes PASSED [100%]
+
+============================== 1 passed in 0.31s ==============================
+
+detect-secrets Scan (student-2)..........................................Passed
+- hook id: detect-secrets-scan-student-2
+- duration: 3.12s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repobi7jym8k\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_secrets_scan_student2.py::test_detect_secrets_scan_passes PASSED [100%]
+
+============================== 1 passed in 2.29s ==============================
+
+pip-audit Scan (student-2)...............................................Passed
+- hook id: pip-audit-scan-student-2
+- duration: 5.08s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repocib5rou_\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+plugins: platformdirs-4.13.3
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_dependency_audit_student2.py::test_pip_audit_passes PASSED [100%]
+
+============================== 1 passed in 4.04s ==============================
+
+Ruff Scan (student-3)....................................................Passed
+- hook id: ruff-scan-student-3
+- duration: 1.08s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repo4wptio7b\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_ruff_scan_student3.py::test_ruff_scan_passes PASSED [100%]
+
+============================== 1 passed in 0.24s ==============================
+
+detect-secrets Scan (student-3)..........................................Passed
+- hook id: detect-secrets-scan-student-3
+- duration: 3.58s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repobi7jym8k\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_secrets_scan_student3.py::test_detect_secrets_scan_passes PASSED [100%]
+
+============================== 1 passed in 2.63s ==============================
+
+pip-audit Scan (student-3)...............................................Passed
+- hook id: pip-audit-scan-student-3
+- duration: 4.19s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repocib5rou_\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+plugins: platformdirs-4.13.3
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_dependency_audit_student3.py::test_pip_audit_passes PASSED [100%]
+
+============================== 1 passed in 3.29s ==============================
+
+Ruff Scan (student-4)....................................................Passed
+- hook id: ruff-scan-student-4
+- duration: 1.03s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repo4wptio7b\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_ruff_scan_student4.py::test_ruff_scan_passes PASSED [100%]
+
+============================== 1 passed in 0.23s ==============================
+
+detect-secrets Scan (student-4)..........................................Passed
+- hook id: detect-secrets-scan-student-4
+- duration: 3.7s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repobi7jym8k\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_secrets_scan_student4.py::test_detect_secrets_scan_passes PASSED [100%]
+
+============================== 1 passed in 2.77s ==============================
+
+pip-audit Scan (student-4)...............................................Passed
+- hook id: pip-audit-scan-student-4
+- duration: 4.58s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repocib5rou_\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+plugins: platformdirs-4.13.3
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_dependency_audit_student4.py::test_pip_audit_passes PASSED [100%]
+
+============================== 1 passed in 3.55s ==============================
+
+Ruff Scan (student-5)....................................................Passed
+- hook id: ruff-scan-student-5
+- duration: 0.98s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repo4wptio7b\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_ruff_scan_student5.py::test_ruff_scan_passes PASSED [100%]
+
+============================== 1 passed in 0.23s ==============================
+
+detect-secrets Scan (student-5)..........................................Passed
+- hook id: detect-secrets-scan-student-5
+- duration: 3.56s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repobi7jym8k\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_secrets_scan_student5.py::test_detect_secrets_scan_passes PASSED [100%]
+
+============================== 1 passed in 2.75s ==============================
+
+pip-audit Scan (student-5)...............................................Passed
+- hook id: pip-audit-scan-student-5
+- duration: 3.83s
+
+============================= test session starts =============================
+platform win32 -- Python 3.12.2, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\Jackie.Truong\.cache\pre-commit\repocib5rou_\py_env-python3.12\Scripts\python.EXE
+cachedir: .pytest_cache
+rootdir: C:\git\FIND
+configfile: pyproject.toml
+plugins: platformdirs-4.13.3
+collecting ... collected 1 item
+
+tests/lab11/pre_commit/test_dependency_audit_student5.py::test_pip_audit_passes PASSED [100%]
+
+============================== 1 passed in 3.01s ==============================
+

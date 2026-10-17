@@ -4,15 +4,15 @@ Generated from captured evidence. PENDING means not demonstrated. Do not edit ge
 
 ## Pre-Test Review
 
-FAIL | [evidence](evidence/061e838ee170438cb3c33ae949230624-pre_test-validation.txt); captured 2026-10-17T00:13:26.923998+00:00; tested commit b8397c671c18 (capture dirty=True)
+FAIL | [evidence](evidence/f11f1d618d4544b3a6a335b3ec47ec37-pre_test-validation.txt); captured 2026-10-17T01:38:26.140387+00:00; tested commit d261e6649ac3 (capture dirty=True)
 
 ## CI/CD Test Review
 
-FAIL | [evidence](evidence/3cb61d9e050948b39665a44113eaa1df-cicd_test-validation.txt); captured 2026-10-17T00:13:33.143405+00:00; tested commit b8397c671c18 (capture dirty=True)
+FAIL | [evidence](evidence/cde21eb127ac44eb8fab9e15acebf3f1-cicd_test-validation.txt); captured 2026-10-17T01:38:27.359368+00:00; tested commit d261e6649ac3 (capture dirty=True)
 
 ## Deployment Review
 
-FAIL | [evidence](evidence/d519d5066fcb447aa8b99cbab87e0665-deployment-validation.txt); captured 2026-10-17T00:13:40.497242+00:00; tested commit b8397c671c18 (capture dirty=True)
+FAIL | [evidence](evidence/e62bd6d223df4b56aff9d08bdabd4ca8-deployment-validation.txt); captured 2026-10-17T01:38:28.221669+00:00; tested commit d261e6649ac3 (capture dirty=True)
 
 ## Release Decision
 

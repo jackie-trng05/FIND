@@ -1,0 +1,13 @@
+{
+  "student": "student-5",
+  "kind": "ai-mode",
+  "url": "http://localhost:16017/api/ai/evaluation-recommendation",
+  "timestamp": "2026-10-17T01:28:52.195218+00:00",
+  "scope": "Authenticated backend integration, not browser interaction or human approval",
+  "status": "PASS",
+  "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval",
+  "http_status": 200,
+  "response_sha256": "719eca70e7cf472e992042baad1308f56f3dcef575b2b6b44d3c7fe2f6eb1219",
+  "response_length": 693,
+  "response": "{\"communication\":5,\"education\":3,\"problem_solving\":5,\"professionalism\":5,\"rationale\":\"The candidate demonstrated excellent technical knowledge in pytest fixtures, REST API tests, and Docker, scoring a 5. Their education level is considered average, scoring a 3, as there is no information about their educational background in the provided context. The candidate's communication and problem-solving skills were highly rated, scoring 5s, based on the interviewer's notes describing their clear explanations and systematic debugging approach. Their professionalism was also rated highly, scoring a 5, as there is no indication of unprofessional behavior in the provided context.\",\"technical\":5}\n"
+}

@@ -1,0 +1,13 @@
+{
+  "student": "student-3",
+  "kind": "ai-mode",
+  "url": "http://localhost:16011/api/applications/21/screen",
+  "timestamp": "2026-10-17T01:25:53.620106+00:00",
+  "scope": "Authenticated backend integration, not browser interaction or human approval",
+  "status": "PENDING",
+  "detail": "Response captured; feature-specific AI output requires inspection",
+  "http_status": 200,
+  "response_sha256": "b93d4791aac6b69cd7c27ccd8b7acfa0e256112ae5643aa619df703bbb589553",
+  "response_length": 1123,
+  "response": "\n    <div class=\"ai-result-card rec-yes\">\n        <div class=\"ai-recommendation\">\n            <span class=\"ai-recommendation-label\">Recommendation</span>\n            <span class=\"ai-recommendation-value\">Yes</span>\n            <span class=\"ai-recommendation-caption\">Recommend shortlist</span>\n        </div>\n        <div class=\"ai-reasoning\">\n            <h4>Reasoning</h4>\n            <p>The candidate&#x27;s resume explicitly demonstrates experience with Python, testing (via pytest), and SQL and REST API testing, which aligns with the core requirements of the job posting. The candidate&#x27;s skills in Flask, Docker, and test automation also support their suitability for the role.</p>\n        </div>\n        <div class=\"ai-result-actions\">\n            <button class=\"btn btn-accent\" hx-post=\"http://localhost:16011/api/applications/21/screen\" hx-target=\"#ai-screening-panel\" hx-swap=\"innerHTML\" hx-indicator=\"#ai-spinner\" hx-disabled-elt=\"this\">Generate AI recommendation</button><span id=\"ai-spinner\" class=\"htmx-indicator ai-spinner\"><span class=\"spinner\"></span> Thinking\u2026</span>\n        </div>\n    </div>\n    "
+}

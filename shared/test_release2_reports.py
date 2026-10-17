@@ -5,6 +5,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from shared import release2_delivery as delivery
+
 
 SPEC = importlib.util.spec_from_file_location("release2_reports", Path(__file__).with_name("release2_reports.py"))
 reports = importlib.util.module_from_spec(SPEC)
@@ -92,6 +94,31 @@ class Release2ReportsTest(unittest.TestCase):
         reports.save_event("security", "student-1", "PASS", scanner="ruff", invocation="manual")
         self.assertIn("student-1: passing ruff commit-hook evidence", reports.completion_gaps(reports.read_events()))
 
+    def test_local_report_links_checks_without_inventing_human_approval(self):
+        reports.save_event("local", "student-1", "PENDING", artifact="evidence/local.json",
+                           summary={"checks": {"create": {"status": "PASS"}, "ai-mode": {"status": "PASS", "evidence": "evidence/ai.json"}}})
+        text = (reports.REPORTS / "local-deployment-report.md").read_text()
+        self.assertIn("[PASS](evidence/ai.json)", text)
+        self.assertIn("student-1 | PENDING", text)
+        self.assertIn("not full browser CRUD", text)
+
+    def test_hook_preflight_and_contribution_drafts_do_not_count_as_participation(self):
+        reports.save_event("hook-preflight", "group", "PASS", artifact="evidence/preflight.txt", summary={"expected_count": 15})
+        reports.save_event("contribution-draft", "student-1", "CAPTURED", artifact="evidence/draft.json")
+        gaps = reports.completion_gaps(reports.read_events())
+        self.assertIn("student-1: passing ruff commit-hook evidence", gaps)
+        self.assertIn("student-1: contribution evidence (RECORDED)", gaps)
+
+    def test_preflight_matches_the_actual_active_hook_ids(self):
+        output = "\n".join(f"- hook id: {tool}-scan-student-{number}" for number in range(1, 6)
+                           for tool in ("ruff", "detect-secrets", "pip-audit"))
+        result = type("Result", (), {"returncode": 0, "stdout": output, "stderr": ""})()
+        with patch.object(delivery, "reports", reports), patch.object(delivery.subprocess, "run", return_value=result):
+            delivery.collect_hook_preflight()
+        event = reports.read_events()[-1]
+        self.assertEqual(event["status"], "PASS")
+        self.assertEqual(len(event["summary"]["hooks_seen"]), 15)
+
     def test_release_cannot_be_ready_with_missing_evidence(self):
         source = self.root / "release.json"
         source.write_text(json.dumps({"reviewer": "Human", "timestamp": "2026-10-17", "decision": "READY", "justification": "Looks good"}))
@@ -130,6 +157,29 @@ class Release2ReportsTest(unittest.TestCase):
         self.assertEqual(len(reports.read_events()), 1)
         self.assertEqual(reports.read_events()[0]["tested_head"], "b" * 40)
 
+    def test_commit_transcript_import_requires_actual_matching_commit(self):
+        path = self.root / "commit.txt"
+        path.write_text("pre-commit run --all-files\nRuff Scan (student-1)....Passed")
+        with self.assertRaisesRegex(ValueError, "actual git commit"):
+            reports.import_commit_transcript("student-1", path, "a" * 40, "Human", "2026-10-17T01:00:00+00:00")
+        self.assertEqual(reports.read_events(), [])
+
+    def test_commit_transcript_import_is_private_and_idempotent(self):
+        path = self.root / "commit.txt"
+        path.write_text("git commit -m test\nRuff Scan (student-1)....Passed\ndetect-secrets Scan (student-1)....Passed\npip-audit Scan (student-1)....Passed\n[feat/reports aaaaaaa] test\nPRIVATE TERMINAL TEXT")
+        for _ in range(2):
+            self.assertEqual(reports.import_commit_transcript("student-1", path, "a" * 40, "Human", "2026-10-17T01:00:00+00:00"), 0)
+        events = reports.read_events()
+        self.assertEqual(len(events), 3)
+        self.assertTrue(all(event["invocation"] == "commit-hook" for event in events))
+        self.assertNotIn("PRIVATE TERMINAL TEXT", (reports.REPORTS / events[0]["artifact"]).read_text())
+
+    def test_skipped_student_hook_does_not_pass_participation(self):
+        path = self.root / "commit.txt"
+        path.write_text("git commit -m test\nRuff Scan (student-1)....Skipped\ndetect-secrets Scan (student-1)....Passed\npip-audit Scan (student-1)....Passed\n[feat/reports aaaaaaa] test")
+        self.assertEqual(reports.import_commit_transcript("student-1", path, "a" * 40, "Human", "2026-10-17T01:00:00+00:00"), 1)
+        self.assertIn("student-1: passing ruff commit-hook evidence", reports.completion_gaps(reports.read_events()))
+
     def test_human_approval_becomes_stale_after_new_evidence(self):
         reports.save_event("release", "group", "READY", approved_ids=[])
         reports.save_event("snapshot", "group", "CAPTURED")
@@ -149,6 +199,14 @@ class Release2ReportsTest(unittest.TestCase):
         evidence = reports.review_evidence("deployment")
         self.assertIn("gap review only", evidence)
         self.assertIn("student-5 | PENDING", evidence)
+        self.assertIn("Cloud execution is intentionally deferred", evidence)
+
+    def test_ci_review_shows_tested_sha_instead_of_only_import_checkout(self):
+        path = reports.artifact("ci.txt", "Actual CI evidence")
+        reports.save_event("ci", "student-1", "PASS", artifact=path, tested_commit="b" * 40)
+        evidence = reports.review_evidence("cicd_test")
+        self.assertIn("tested_commit: " + "b" * 40, evidence)
+        self.assertIn("not authenticated backend routes", evidence)
 
     def test_scan_timeout_is_saved_as_failure(self):
         with patch.object(reports.subprocess, "run", side_effect=reports.subprocess.TimeoutExpired("ruff", 180)):
@@ -159,6 +217,43 @@ class Release2ReportsTest(unittest.TestCase):
         result = type("Result", (), {"returncode": 0, "stdout": "{}", "stderr": ""})()
         with patch.object(reports.subprocess, "run", return_value=result):
             self.assertEqual(reports.security("student-1", "ruff"), 1)
+
+    def test_ai_http_success_without_inspected_content_is_pending(self):
+        response = type("Response", (), {"status_code": 200, "text": "<p>Some output</p>"})()
+        self.assertEqual(delivery.integration_result("ai-mode", response)[0], "PENDING")
+
+    def test_local_ai_command_dispatches_to_live_collector(self):
+        with patch("sys.argv", ["release2_delivery", "local-ai"]), patch.object(delivery, "collect_local") as collect:
+            delivery.main()
+        collect.assert_called_once_with(include_ai=True)
+
+    def test_ai_profile_missing_resume_is_not_a_pass(self):
+        response = type("Response", (), {"status_code": 200, "text": "<p>Upload a resume first.</p>"})()
+        self.assertEqual(delivery.integration_result("ai-mode", response, student="student-1")[0], "FAIL")
+
+    def test_ai_default_scores_without_rationale_are_not_a_pass(self):
+        scores = {name: 3 for name in ("technical", "education", "communication", "problem_solving", "professionalism")}
+        response = type("Response", (), {"status_code": 200, "text": json.dumps(scores)})()
+        self.assertEqual(delivery.integration_result("ai-mode", response, student="student-5")[0], "FAIL")
+        scores["rationale"] = "Synthetic candidate explained Python testing clearly."
+        response.text = json.dumps(scores)
+        self.assertEqual(delivery.integration_result("ai-mode", response, student="student-5")[0], "PASS")
+
+    def test_rag_requires_nonempty_grounded_chunks(self):
+        response = type("Response", (), {"status_code": 200, "text": '<pre>{&quot;status&quot;: &quot;success&quot;, &quot;results&quot;: []}</pre>'})()
+        self.assertEqual(delivery.integration_result("rag", response)[0], "FAIL")
+        response.text = '<pre>{&quot;status&quot;: &quot;success&quot;, &quot;results&quot;: [{&quot;text&quot;: &quot;QA testing evidence&quot;, &quot;source_id&quot;: &quot;qa-1&quot;}]}</pre>'
+        self.assertEqual(delivery.integration_result("rag", response)[0], "PASS")
+
+    def test_multi_agent_success_does_not_invent_human_decision(self):
+        response = type("Response", (), {"status_code": 200, "text": "<h3>Multi-Agent Workflow</h3>"})()
+        workflow = {f"{role}_result": {"status": "success"} for role in ("planner", "worker", "reviewer")}
+        workflow["worker_result"]["evidence_count"] = 2
+        result = delivery.integration_result("multi-agent", response, workflow)
+        self.assertEqual(result[0], "PASS")
+        self.assertIn("pending", result[1])
+        workflow["reviewer_result"]["review"] = "Review model unavailable"
+        self.assertEqual(delivery.integration_result("multi-agent", response, workflow)[0], "FAIL")
 
 
 if __name__ == "__main__":

@@ -28,6 +28,6 @@ Generated from captured evidence. PENDING means not demonstrated. Do not edit ge
 - student-4: CAPTURED | [evidence](evidence/3de574823318476c8419e7add3d6d02e-student-4-ci-workflow-and-coverage.txt); captured 2026-10-17T00:45:46.906953+00:00; tested commit cae018c09a9c (capture dirty=True)
 - student-5: CAPTURED | [evidence](evidence/a8330677b5cb4eff8333f8da66ab439b-student-5-ci-workflow-and-coverage.txt); captured 2026-10-17T00:45:52.235195+00:00; tested commit cae018c09a9c (capture dirty=True)
 
-Latest local production-fix regressions (not GitHub CI): PASS | [evidence](evidence/70885b261e2f42ca8a104dd97ea38c95-all-students-local-regressions.txt); captured 2026-10-17T00:52:16.485389+00:00; tested commit b573b15a5074 (capture dirty=True).
+Latest local production-fix regressions (not GitHub CI): PASS | [evidence](evidence/069a2fd1b5b14a9982e6974066c01a2c-all-students-local-regressions.txt); captured 2026-10-17T01:35:39.707324+00:00; tested commit d261e6649ac3 (capture dirty=True).
 
 Each evidence pack must identify two assigned endpoint functions, expected/actual results, the workflow URL and tested commit SHA. Token-library tests and health checks alone do not meet the two-endpoint requirement. Existing suites target database/API services: confirm the assigned backend/API boundary or supplement backend-facing coverage. Successful imports do not certify coverage.
