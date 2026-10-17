@@ -28,7 +28,6 @@ environments without the vector store installed.
 import hashlib
 import json
 import math
-import logging
 import os
 import re
 import time
@@ -137,7 +136,7 @@ def reset_collection() -> None:
     try:
         client.delete_collection(name=COLLECTION_NAME)
     except Exception:  # noqa: BLE001 - collection may not exist yet
-        logging.getLogger(__name__).warning("RAG collection deletion did not succeed; attempting collection creation")
+        pass
     _collection = client.get_or_create_collection(
             name=COLLECTION_NAME, metadata={"hnsw:space": "cosine"}
         )

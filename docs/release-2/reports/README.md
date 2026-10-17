@@ -23,6 +23,8 @@ Reports are static documents. Update them only from actual execution or supplied
 
 CI evidence applies to commit `cae018c09a9cb7702730dbbbb3977523168f4fc0`, not automatically to later commits. Hook reports retain their original temporary commit IDs and timestamps; they do not independently establish student identity. Local images were rebuilt from `d261e66` before the retained synthetic integration checks.
 
+Production fixes and their regression tests have been removed from this reports-only branch for separate delivery. Retained local results describe the earlier tested revisions with those fixes, not validation of the current checkout.
+
 All five features have passing backend CRUD and AI integration checks. These do not establish full browser CRUD, factual AI quality or human approval. RAG checks demonstrate source-linked retrieval. The latest workflow snapshot records grounded, non-fallback execution and audited human decisions with reason and evidence for all five callers, including Student 1's rerun.
 
 Cloud deployment, full frontend testing, confirmed contributions and final release approval remain deferred. Cloud reports retain explicit TODOs. No missing human decisions or participation are invented.

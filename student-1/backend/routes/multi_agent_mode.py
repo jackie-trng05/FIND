@@ -12,7 +12,7 @@ server or Ollama; the endpoints then return a clear "disabled" response.
 
 Responses are rendered as HTML fragments (Multi-Agent panel): the planner
 plan, the worker output with its grounded evidence count, the reviewer
-assessment, and the pending human decision (Accept / Correction / Reject).
+assessment, and the pending human decision (Accept / Partially Accept / Reject).
 """
 
 import json
@@ -73,20 +73,13 @@ def render_workflow(result: dict) -> str:
 
     if status == "pending":
         reason_input = (
-            "<input type=\"text\" id=\"multi-agent-reason\" class=\"input\" placeholder=\"Reason (required)\" "
-            "style=\"width:100%;margin-bottom:0.25rem;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;\">"
-            "<p id=\"multi-agent-reason-warn\" class=\"mcp-off\" style=\"display:none;margin:0 0 0.5rem;font-size:0.8rem;\"></p>"
-        )
-        evidence_input = (
-            "<input type=\"text\" id=\"multi-agent-evidence\" class=\"input\" placeholder=\"Evidence Used (required)\" "
-            "style=\"width:100%;margin-bottom:0.25rem;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;\">"
-            "<p id=\"multi-agent-evidence-warn\" class=\"mcp-off\" style=\"display:none;margin:0 0 0.5rem;font-size:0.8rem;\"></p>"
+            "<input type=\"text\" id=\"multi-agent-reason\" class=\"input\" placeholder=\"Reason (required for Correction)\" "
+            "style=\"width:100%;margin-bottom:0.5rem;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;\">"
         )
         decision_block = (
             "<h4>Human Decision (required)</h4>"
             "<p class=\"mcp-desc\">Status: <strong>pending</strong> — choose one:</p>"
             f"{reason_input}"
-            f"{evidence_input}"
             "<div class=\"mcp-actions\">"
             f"<button type=\"button\" class=\"btn btn-primary btn-sm\" onclick=\"submitMultiAgentDecision('{escape(workflow_id)}','Accept')\">Accept</button>"
             f"<button type=\"button\" class=\"btn btn-secondary btn-sm\" onclick=\"submitMultiAgentDecision('{escape(workflow_id)}','Correction')\">Correction</button>"
@@ -95,15 +88,12 @@ def render_workflow(result: dict) -> str:
         )
     else:
         reason = escape(str(decision.get("reason", "")))
-        evidence_used = escape(str(decision.get("evidence_used", "")))
         decided_at = escape(str(decision.get("decided_at", "")))
         reason_html = f" — {reason}" if reason else ""
-        evidence_html = f"<p class=\"mcp-desc\">Evidence used: {evidence_used}</p>" if evidence_used else ""
         decision_block = (
             "<h4>Human Decision</h4>"
             f"<p class=\"mcp-desc\">Status: <strong>{escape(status)}</strong>{reason_html} "
             f"<span class=\"mcp-state mcp-off\">(recorded {decided_at})</span></p>"
-            f"{evidence_html}"
         )
     return header + planner_block + worker_block + reviewer_block + decision_block
 
@@ -159,15 +149,10 @@ def multi_agent_decision():
     workflow_id = (request.form.get("workflow_id") or "").strip()
     decision = (request.form.get("decision") or "").strip()
     reason = (request.form.get("reason") or "").strip()
-    evidence_used = (request.form.get("evidence_used") or "").strip()
     if not workflow_id or not decision:
         return "<p>Missing workflow ID or decision.</p>", 400
-    if not reason:
-        return "<p class=\"mcp-off\">A reason is required to record a decision.</p>", 400
-    if not evidence_used:
-        return "<p class=\"mcp-off\">Evidence Used is required to record a decision.</p>", 400
     try:
-        result = multi_agent_api.submit_decision(workflow_id, decision, reason=reason, evidence_used=evidence_used)
+        result = multi_agent_api.submit_decision(workflow_id, decision, reason=reason)
     except multi_agent_api.MultiAgentServiceError as exc:
         return f"<p>Recording the decision failed.</p><pre>{escape(str(exc))}</pre>", 503
     if result.get("status") != "success":

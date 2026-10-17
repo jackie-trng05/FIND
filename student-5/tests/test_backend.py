@@ -1,9 +1,4 @@
 """Tests for the Student 5 backend service — evaluation CRUD endpoints."""
-from unittest.mock import Mock
-
-import pytest
-import requests
-
 from conftest import (
     APPLICATIONS_DB_URL,
     DB_SERVICE_URL,
@@ -59,49 +54,6 @@ def _mock_app_enrichment(requests_mock, application_id=200):
 def test_list_evaluations_requires_auth(backend_client):
     resp = backend_client.get("/api/evaluations")
     assert resp.status_code == 401
-
-
-@pytest.mark.parametrize("exception,status", [(requests.Timeout, 504), (requests.ConnectionError, 503)])
-def test_session_transport_failure_is_controlled(backend_client, requests_mock, auth_headers, exception, status):
-    from conftest import SHARED_API_URL
-    requests_mock.get(f"{SHARED_API_URL}/api/auth/session", exc=exception("private upstream details"))
-    response = backend_client.get("/api/evaluations", headers=auth_headers)
-    assert response.status_code == status
-    assert "private" not in response.get_data(as_text=True)
-
-
-@pytest.mark.parametrize("exception,status", [(requests.Timeout, 504), (requests.ConnectionError, 503)])
-def test_evaluation_transport_failure_is_controlled(backend_client, requests_mock, auth_headers, exception, status):
-    mock_session(requests_mock, STAFF_USER)
-    requests_mock.post(f"{DB_SERVICE_URL}/evaluations", exc=exception("private upstream details"))
-    response = backend_client.post("/api/evaluations", json=FULL_EVALUATION, headers=auth_headers)
-    assert response.status_code == status
-    assert "private" not in response.get_data(as_text=True)
-
-
-@pytest.mark.parametrize("operation,method,args", [
-    ("list_evaluations_response", "get", ()),
-    ("get_evaluation_response", "get", (1,)),
-    ("create_evaluation", "post", ({},)),
-    ("update_evaluation", "put", (1, {})),
-    ("delete_evaluation", "delete", (1,)),
-])
-def test_database_requests_have_finite_timeouts(monkeypatch, operation, method, args):
-    from services import database_api
-    mocked = Mock()
-    monkeypatch.setattr(database_api.http_requests, method, mocked)
-    getattr(database_api, operation)(*args)
-    assert mocked.call_args.kwargs["timeout"] == 5
-
-
-@pytest.mark.parametrize("operation,args", [("list_evaluations_response", ()), ("get_evaluation_response", (1,))])
-@pytest.mark.parametrize("timeout,expected", [(None, 5), (3, 3)])
-def test_read_timeout_overrides_remain_bounded(monkeypatch, operation, args, timeout, expected):
-    from services import database_api
-    mocked = Mock()
-    monkeypatch.setattr(database_api.http_requests, "get", mocked)
-    getattr(database_api, operation)(*args, timeout=timeout)
-    assert mocked.call_args.kwargs["timeout"] == expected
 
 
 def test_list_evaluations_requires_staff(backend_client, requests_mock, auth_headers):

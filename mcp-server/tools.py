@@ -21,7 +21,6 @@ import json
 from io import BytesIO
 from pathlib import Path
 
-import logging
 import requests
 
 import config
@@ -169,7 +168,6 @@ def _extract_resume_text(data: bytes, mimetype: str) -> str:
                 try:
                     pages.append(page.extract_text() or "")
                 except Exception:
-                    logging.getLogger(__name__).warning("Skipping an unreadable resume PDF page")
                     continue
             text = "\n".join(p.strip() for p in pages if p.strip())
         except Exception:

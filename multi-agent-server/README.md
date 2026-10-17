@@ -31,12 +31,6 @@ GET  /workflow/status   -> history/audit counts + latest workflow (scope with ?c
 Every run is appended to `workflow_history.jsonl` (full record) and
 `coordination_audit.jsonl` (compact audit line).
 
-The student-1 profile workflow requires both **Reason** and **Evidence Used** for
-every human decision (Accept / Correction / Reject), matching the interview
-workflow. Its backend forwards both fields to `POST /workflow/<id>/decision`;
-they are stored in workflow history and the decision audit event, and displayed
-with the recorded decision.
-
 ## Configuration (environment variables)
 
 | Variable | Default | Purpose |

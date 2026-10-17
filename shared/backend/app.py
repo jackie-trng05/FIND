@@ -15,17 +15,6 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
 
 DB_SERVICE_URL = "http://find-shared-db:6000"
-HTTP_TIMEOUT = 5
-
-
-@app.errorhandler(requests.Timeout)
-def handle_upstream_timeout(error):
-    return jsonify({"error": "Upstream service timed out"}), 504
-
-
-@app.errorhandler(requests.RequestException)
-def handle_upstream_unavailable(error):
-    return jsonify({"error": "Upstream service unavailable"}), 503
 
 
 def hash_password(password):
@@ -71,7 +60,7 @@ def register():
         "user_role": role,
         "user_first_name": data.get("first_name", ""),
         "user_last_name": data.get("last_name", ""),
-    }, timeout=HTTP_TIMEOUT)
+    })
 
     if resp.status_code == 409:
         return jsonify({"error": "Email already registered"}), 409
@@ -93,7 +82,7 @@ def login():
     if not email or not password:
         return jsonify({"error": "Email and password are required"}), 400
 
-    resp = requests.get(f"{DB_SERVICE_URL}/users/by-email", params={"email": email}, timeout=HTTP_TIMEOUT)
+    resp = requests.get(f"{DB_SERVICE_URL}/users/by-email", params={"email": email})
     if resp.status_code == 404:
         return jsonify({"error": "Invalid email or password"}), 401
 
@@ -110,7 +99,7 @@ def login():
         "user_id": user["user_id"],
         "session_token": token,
         "expires_at": expires_at,
-    }, timeout=HTTP_TIMEOUT)
+    })
 
     resp = make_response(jsonify({
         "message": "Login successful",
@@ -136,13 +125,13 @@ def get_session():
     if not token:
         return jsonify({"error": "No token provided"}), 401
 
-    resp = requests.get(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token}, timeout=HTTP_TIMEOUT)
+    resp = requests.get(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token})
     if resp.status_code == 404:
         return jsonify({"error": "Invalid or expired session"}), 401
 
     session = resp.json()
     if datetime.fromisoformat(session["expires_at"]) < datetime.utcnow():
-        requests.delete(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token}, timeout=HTTP_TIMEOUT)
+        requests.delete(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token})
         return jsonify({"error": "Session expired"}), 401
 
     return jsonify({
@@ -164,7 +153,7 @@ def update_user():
     if not token:
         return jsonify({"error": "Not authenticated"}), 401
 
-    session_resp = requests.get(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token}, timeout=HTTP_TIMEOUT)
+    session_resp = requests.get(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token})
     if session_resp.status_code != 200:
         return jsonify({"error": "Invalid session"}), 401
 
@@ -179,7 +168,7 @@ def update_user():
     requests.put(f"{DB_SERVICE_URL}/users/{user_id}", json={
         "user_first_name": data.get("first_name", ""),
         "user_last_name": data.get("last_name", ""),
-    }, timeout=HTTP_TIMEOUT)
+    })
     return jsonify({"message": "User updated"}), 200
 
 
@@ -189,11 +178,11 @@ def logout():
     if not token:
         token = request.cookies.get("session_token", "")
     if token:
-        requests.delete(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token}, timeout=HTTP_TIMEOUT)
+        requests.delete(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token})
     resp = make_response(jsonify({"message": "Logged out"}), 200)
     resp.delete_cookie("session_token", domain=COOKIE_DOMAIN)
     return resp
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")))
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)
