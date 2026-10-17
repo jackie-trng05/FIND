@@ -20,16 +20,23 @@ if [[ -z "$REGISTRY_NAME" ]]; then
   exit 1
 fi
 
-# Step 2: Create Azure Container Registry
+# Step 2: Create Azure Container Registry.
+# Admin user is enabled so images can be pushed with `docker login` from CI:
+# ACR Tasks (`az acr build`) are not available on this subscription tier, so images
+# are built locally with Docker and pushed instead.
 echo "Creating Azure Container Registry..."
 az acr create \
   --resource-group "$RESOURCE_GROUP" \
   --name "$REGISTRY_NAME" \
-  --sku Basic
+  --sku Basic \
+  --admin-enabled true
 
-# Step 2b: Wait for the registry's DNS name to propagate before building.
+# Ensure admin is enabled even if the registry already existed (e.g. from a prior run).
+az acr update --name "$REGISTRY_NAME" --admin-enabled true
+
+# Step 2b: Wait for the registry's DNS name to propagate before pushing.
 # A fresh ACR can report "created" before *.azurecr.io resolves, causing
-# the first `az acr build` push to fail with "no such host".
+# the first `docker push` to fail with "no such host".
 LOGIN_SERVER="${REGISTRY_NAME}.azurecr.io"
 echo "Waiting for $LOGIN_SERVER to resolve..."
 for i in $(seq 1 24); do
@@ -43,6 +50,12 @@ for i in $(seq 1 24); do
   fi
   sleep 5
 done
+
+# Step 2c: Authenticate Docker to the registry using its admin credentials.
+echo "Logging Docker in to $LOGIN_SERVER..."
+ACR_USERNAME=$(az acr credential show --name "$REGISTRY_NAME" --query username -o tsv)
+ACR_PASSWORD=$(az acr credential show --name "$REGISTRY_NAME" --query "passwords[0].value" -o tsv)
+echo "$ACR_PASSWORD" | docker login "$LOGIN_SERVER" --username "$ACR_USERNAME" --password-stdin
 
 # Step 3: Build and push all 18 container images.
 # Each entry is "image-name|build-context".
@@ -71,10 +84,8 @@ for entry in "${SERVICES[@]}"; do
   IMAGE_NAME="${entry%%|*}"
   CONTEXT="${entry##*|}"
   echo "Building and pushing ${IMAGE_NAME} image (context: ${CONTEXT})..."
-  az acr build \
-    --registry "$REGISTRY_NAME" \
-    --image "${IMAGE_NAME}:${IMAGE_TAG}" \
-    "./${CONTEXT}"
+  docker build --tag "${LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}" "./${CONTEXT}"
+  docker push "${LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
 done
 
 echo "=== Image Build Complete ==="
