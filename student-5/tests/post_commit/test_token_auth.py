@@ -1,6 +1,6 @@
 """Post-commit CI/CD token tests for the Student 5 service.
 
-Mirrors Lab 11's ``test_token_auth.py``: validates the real JWT logic used by
+Mirrors the reference ``test_token_auth.py``: validates the real JWT logic used by
 the backend auth blueprint (``routes/auth_mode.py``) by signing and verifying
 tokens with the shared secret.
 """
