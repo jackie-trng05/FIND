@@ -21,7 +21,8 @@ if [[ -z "$REGISTRY_NAME" ]]; then
 fi
 
 # Step 2: Create Azure Container Registry.
-# Admin user is enabled so images can be pushed with `docker login` from CI:
+# Admin user stays DISABLED: images are pushed with the Azure identity (OIDC in CI,
+# `az login` locally) via `az acr login`, not a stored username/password.
 # ACR Tasks (`az acr build`) are not available on this subscription tier, so images
 # are built locally with Docker and pushed instead.
 echo "Creating Azure Container Registry..."
@@ -29,10 +30,10 @@ az acr create \
   --resource-group "$RESOURCE_GROUP" \
   --name "$REGISTRY_NAME" \
   --sku Basic \
-  --admin-enabled true
+  --admin-enabled false
 
-# Ensure admin is enabled even if the registry already existed (e.g. from a prior run).
-az acr update --name "$REGISTRY_NAME" --admin-enabled true
+# Ensure admin stays disabled even if the registry already existed (e.g. from a prior run).
+az acr update --name "$REGISTRY_NAME" --admin-enabled false
 
 # Step 2b: Wait for the registry's DNS name to propagate before pushing.
 # A fresh ACR can report "created" before *.azurecr.io resolves, causing
@@ -51,11 +52,34 @@ for i in $(seq 1 24); do
   sleep 5
 done
 
-# Step 2c: Authenticate Docker to the registry using its admin credentials.
-echo "Logging Docker in to $LOGIN_SERVER..."
-ACR_USERNAME=$(az acr credential show --name "$REGISTRY_NAME" --query username -o tsv)
-ACR_PASSWORD=$(az acr credential show --name "$REGISTRY_NAME" --query "passwords[0].value" -o tsv)
-echo "$ACR_PASSWORD" | docker login "$LOGIN_SERVER" --username "$ACR_USERNAME" --password-stdin
+# Step 2c: Authenticate Docker to the registry with the Azure identity (passwordless).
+# The workflow signs in with OIDC via azure/login; locally this uses your `az login`.
+# The identity already holds subscription-wide Contributor (which permits push), but
+# grant AcrPush at the registry scope too so it also works on ABAC-enabled registries,
+# then allow for role-assignment propagation before logging in.
+echo "Ensuring the current identity can push to $REGISTRY_NAME..."
+REGISTRY_ID=$(az acr show --name "$REGISTRY_NAME" --query id -o tsv)
+PRINCIPAL=$(az account show --query user.name -o tsv)
+if [[ -n "$PRINCIPAL" && -n "$REGISTRY_ID" ]]; then
+  EXISTING_ACRPUSH=$(az role assignment list --assignee "$PRINCIPAL" --role AcrPush --scope "$REGISTRY_ID" --query "[0].id" -o tsv 2>/dev/null || true)
+  if [[ -z "$EXISTING_ACRPUSH" ]]; then
+    echo "Granting AcrPush on the registry to $PRINCIPAL..."
+    az role assignment create --assignee "$PRINCIPAL" --role AcrPush --scope "$REGISTRY_ID" >/dev/null || true
+  fi
+fi
+
+echo "Logging Docker in to $LOGIN_SERVER via az acr login..."
+for i in $(seq 1 10); do
+  if az acr login --name "$REGISTRY_NAME"; then
+    break
+  fi
+  if [[ "$i" -eq 10 ]]; then
+    echo "az acr login failed after waiting for role propagation." >&2
+    exit 1
+  fi
+  echo "az acr login not ready (attempt $i); waiting for role propagation..."
+  sleep 15
+done
 
 # Step 3: Build and push all 18 container images.
 # Each entry is "image-name|build-context".
