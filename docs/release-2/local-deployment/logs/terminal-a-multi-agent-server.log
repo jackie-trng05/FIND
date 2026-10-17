@@ -1,0 +1,10 @@
+# Terminal A - non-containerised Multi-Agent Server (python app.py, port 16080)
+$ 2026-10-17T15:01:36.7483824+11:00
+
+# health check:
+{"status": "ok", "service": "multi-agent-server"}
+
+# process listening on 16080:
+LocalAddress LocalPort  State OwningProcess
+------------ ---------  ----- -------------
+0.0.0.0          16080 Listen          8224
