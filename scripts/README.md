@@ -23,6 +23,14 @@ env vars, so every frontend, every student backend, and `shared-api` need public
 needed (unlike the original lab) because FIND already parameterises all cross-service
 URLs through environment variables.
 
+**Shared static assets:** locally, `docker-compose` mounts the shared CSS
+(`shared/css`) and shared JS (`shared/frontend/static/js`) into the frontends as
+volumes. Azure Container Apps have no bind mounts, so the frontend images **bake these
+assets in** at build time — the 6 frontends build from the repo-root context (`docker
+build -f <service>/frontend/Dockerfile .`) and `COPY` the shared folders to
+`/app/shared-css` and `/app/shared-js`. Compose still mounts the same paths at runtime
+(the mounts shadow the baked copies, preserving live editing).
+
 **Circular URLs:** `shared-frontend` needs each student frontend URL while student
 frontends need `shared-frontend`'s `LOGIN_URL`/`FIND_HOME_URL`. Azure Container Apps
 FQDNs are deterministic once the environment exists

@@ -82,33 +82,33 @@ for i in $(seq 1 10); do
 done
 
 # Step 3: Build and push all 18 container images.
-# Each entry is "image-name|build-context".
+# Each entry is "image-name|build-context|dockerfile". Frontends build from the repo
+# root so their images can bake in the shared CSS/JS that compose provides via volumes.
 SERVICES=(
-  "shared-frontend|shared/frontend"
-  "shared-api|shared/backend"
-  "shared-db|shared/database"
-  "student-1-frontend|student-1/frontend"
-  "student-1-backend|student-1/backend"
-  "student-1-db|student-1/database"
-  "student-2-frontend|student-2/frontend"
-  "student-2-backend|student-2/backend"
-  "student-2-db|student-2/database"
-  "student-3-frontend|student-3/frontend"
-  "student-3-backend|student-3/backend"
-  "student-3-db|student-3/database"
-  "student-4-frontend|student-4/frontend"
-  "student-4-backend|student-4/backend"
-  "student-4-db|student-4/database"
-  "student-5-frontend|student-5/frontend"
-  "student-5-backend|student-5/backend"
-  "student-5-db|student-5/database"
+  "shared-frontend|.|shared/frontend/Dockerfile"
+  "shared-api|shared/backend|shared/backend/Dockerfile"
+  "shared-db|shared/database|shared/database/Dockerfile"
+  "student-1-frontend|.|student-1/frontend/Dockerfile"
+  "student-1-backend|student-1/backend|student-1/backend/Dockerfile"
+  "student-1-db|student-1/database|student-1/database/Dockerfile"
+  "student-2-frontend|.|student-2/frontend/Dockerfile"
+  "student-2-backend|student-2/backend|student-2/backend/Dockerfile"
+  "student-2-db|student-2/database|student-2/database/Dockerfile"
+  "student-3-frontend|.|student-3/frontend/Dockerfile"
+  "student-3-backend|student-3/backend|student-3/backend/Dockerfile"
+  "student-3-db|student-3/database|student-3/database/Dockerfile"
+  "student-4-frontend|.|student-4/frontend/Dockerfile"
+  "student-4-backend|student-4/backend|student-4/backend/Dockerfile"
+  "student-4-db|student-4/database|student-4/database/Dockerfile"
+  "student-5-frontend|.|student-5/frontend/Dockerfile"
+  "student-5-backend|student-5/backend|student-5/backend/Dockerfile"
+  "student-5-db|student-5/database|student-5/database/Dockerfile"
 )
 
 for entry in "${SERVICES[@]}"; do
-  IMAGE_NAME="${entry%%|*}"
-  CONTEXT="${entry##*|}"
-  echo "Building and pushing ${IMAGE_NAME} image (context: ${CONTEXT})..."
-  docker build --tag "${LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}" "./${CONTEXT}"
+  IFS='|' read -r IMAGE_NAME CONTEXT DOCKERFILE <<< "$entry"
+  echo "Building and pushing ${IMAGE_NAME} image (context: ${CONTEXT}, dockerfile: ${DOCKERFILE})..."
+  docker build --file "$DOCKERFILE" --tag "${LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}" "$CONTEXT"
   docker push "${LOGIN_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
 done
 
