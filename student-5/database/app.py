@@ -46,7 +46,7 @@ def list_evaluations():
         params.append(int(request.args["application_id"]))
 
     where = " WHERE " + " AND ".join(filters) if filters else ""
-    rows = conn.execute(f"SELECT * FROM evaluations{where} ORDER BY updated_at DESC", params).fetchall()
+    rows = conn.execute(f"SELECT * FROM evaluations{where} ORDER BY updated_at DESC", params).fetchall()  # noqa: S608 - WHERE built from constant fragments; values are parameterized
     conn.close()
     return jsonify([dict(r) for r in rows])
 
@@ -211,4 +211,5 @@ def delete_evaluation(evaluation_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6005")))
+    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6005")), debug=debug_mode)  # noqa: S104 - container needs to bind all interfaces

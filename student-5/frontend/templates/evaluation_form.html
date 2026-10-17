@@ -172,6 +172,29 @@
           </div>
 
           <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
+            <div class="mcp-head">
+              <h2 style="font-size:1rem;margin:0;">Multi-Agent Orchestrator</h2>
+              <div class="mcp-toggle-row">
+                <label class="switch" for="multi-agent-toggle" title="Enable or disable Multi-Agent Mode">
+                  <input id="multi-agent-toggle" type="checkbox" checked onchange="onMultiAgentToggle()">
+                  <span class="slider"></span>
+                </label>
+                <span id="multi-agent-state" class="mcp-state mcp-on">ON</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+              <input type="text" id="multi-agent-request" class="input" placeholder="Describe the task for the agents…"
+                     value="Summarise the evidence for evaluating this candidate's application."
+                     style="flex:1;min-width:220px;padding:0.4rem 0.6rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;">
+            </div>
+            <div class="mcp-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="multi-agent-run-btn" onclick="runMultiAgentWorkflow()">Run Workflow</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="multi-agent-status-btn" onclick="getMultiAgentStatus()">Get Workflow Status</button>
+            </div>
+            <div id="multi-agent-result" class="mcp-panel">Multi-agent responses will appear here.</div>
+          </div>
+
+          <div class="card" style="padding:1.5rem;margin-bottom:1.5rem;">
             <h2 style="font-size:1rem;margin-bottom:1rem;">Candidate Scoring (1-5)</h2>
             <div class="score-row">
               <div class="score-item">
@@ -490,6 +513,138 @@
       }
     }
 
+    // --- Multi-Agent Orchestrator (governed Planner → Worker → Reviewer) ---
+    const MULTI_AGENT_KEY = 'multi_agent_mode_enabled';
+
+    function isMultiAgentEnabled() { return document.getElementById('multi-agent-toggle').checked; }
+
+    function multiAgentButtons() {
+      return ['multi-agent-run-btn', 'multi-agent-status-btn'].map(id => document.getElementById(id));
+    }
+
+    function renderMultiAgentState() {
+      const state = document.getElementById('multi-agent-state');
+      const on = isMultiAgentEnabled();
+      state.textContent = on ? 'ON' : 'OFF';
+      state.classList.toggle('mcp-on', on);
+      state.classList.toggle('mcp-off', !on);
+      multiAgentButtons().forEach(b => { if (b) b.disabled = !on; });
+    }
+
+    function onMultiAgentToggle() {
+      localStorage.setItem(MULTI_AGENT_KEY, String(isMultiAgentEnabled()));
+      renderMultiAgentState();
+      document.getElementById('multi-agent-result').innerHTML = isMultiAgentEnabled()
+        ? 'Multi-agent responses will appear here.'
+        : '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+    }
+
+    function loadMultiAgentMode() {
+      const persisted = localStorage.getItem(MULTI_AGENT_KEY);
+      document.getElementById('multi-agent-toggle').checked = persisted === null ? true : persisted === 'true';
+      renderMultiAgentState();
+      if (!isMultiAgentEnabled()) {
+        document.getElementById('multi-agent-result').innerHTML = '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+      }
+    }
+
+    async function callMultiAgent(method, path, body) {
+      const opts = {
+        method: method,
+        credentials: 'include',
+        headers: { 'X-Multi-Agent-Mode': isMultiAgentEnabled() ? 'on' : 'off' }
+      };
+      if (method === 'POST') {
+        opts.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        opts.body = body;
+      }
+      const panel = document.getElementById('multi-agent-result');
+      const resp = await fetch(BACKEND + path, opts);
+      if (resp.status === 503) {
+        panel.innerHTML = '<p class="mcp-off">Multi-agent server unavailable. Ensure the shared server is running on port 16080.</p>';
+        return null;
+      }
+      return resp.text();
+    }
+
+    async function runMultiAgentWorkflow() {
+      if (!isMultiAgentEnabled()) {
+        document.getElementById('multi-agent-result').innerHTML = '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+        return;
+      }
+      const request = document.getElementById('multi-agent-request').value.trim();
+      if (!request) {
+        document.getElementById('multi-agent-result').innerHTML = '<p class="mcp-off">Enter a request first.</p>';
+        return;
+      }
+      const panel = document.getElementById('multi-agent-result');
+      panel.innerHTML = 'Coordinating planner, worker and reviewer agents — three local models run in sequence, this can take a couple of minutes…';
+      multiAgentButtons().forEach(b => { if (b) b.disabled = true; });
+      try {
+        const html = await callMultiAgent('POST', '/multi-agent/workflow', new URLSearchParams({ user_request: request }));
+        if (html !== null) { panel.innerHTML = html; }
+      } catch (e) {
+        panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
+      } finally {
+        renderMultiAgentState();
+      }
+    }
+
+    async function getMultiAgentStatus() {
+      if (!isMultiAgentEnabled()) {
+        document.getElementById('multi-agent-result').innerHTML = '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+        return;
+      }
+      const panel = document.getElementById('multi-agent-result');
+      panel.innerHTML = 'Contacting multi-agent server…';
+      multiAgentButtons().forEach(b => { if (b) b.disabled = true; });
+      try {
+        const html = await callMultiAgent('GET', '/multi-agent/workflow/status', null);
+        if (html !== null) { panel.innerHTML = html; }
+      } catch (e) {
+        panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
+      } finally {
+        renderMultiAgentState();
+      }
+    }
+
+    async function submitMultiAgentDecision(workflowId, decision) {
+      if (!isMultiAgentEnabled()) {
+        document.getElementById('multi-agent-result').innerHTML = '<p class="mcp-off">Multi-Agent Mode is OFF. Enable it to run workflows.</p>';
+        return;
+      }
+      const reasonInput = document.getElementById('multi-agent-reason');
+      const reason = reasonInput ? reasonInput.value.trim() : '';
+      const evidenceInput = document.getElementById('multi-agent-evidence');
+      const evidenceUsed = evidenceInput ? evidenceInput.value.trim() : '';
+      const reasonWarn = document.getElementById('multi-agent-reason-warn');
+      const evidenceWarn = document.getElementById('multi-agent-evidence-warn');
+      const setWarn = (el, msg) => { if (el) { el.textContent = msg; el.style.display = msg ? 'block' : 'none'; } };
+      setWarn(reasonWarn, '');
+      setWarn(evidenceWarn, '');
+      if (!reason) {
+        if (reasonInput) reasonInput.focus();
+        setWarn(reasonWarn, 'Enter a reason before recording a decision.');
+        return;
+      }
+      if (!evidenceUsed) {
+        if (evidenceInput) evidenceInput.focus();
+        setWarn(evidenceWarn, 'Enter the evidence used before recording a decision.');
+        return;
+      }
+      const panel = document.getElementById('multi-agent-result');
+      panel.innerHTML = 'Recording decision…';
+      multiAgentButtons().forEach(b => { if (b) b.disabled = true; });
+      try {
+        const html = await callMultiAgent('POST', '/multi-agent/decision', new URLSearchParams({ workflow_id: workflowId, decision: decision, reason: reason, evidence_used: evidenceUsed }));
+        if (html !== null) { panel.innerHTML = html; }
+      } catch (e) {
+        panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
+      } finally {
+        renderMultiAgentState();
+      }
+    }
+
     function renderInterviewNotes(data) {
       const card = document.getElementById('interview-notes-card');
       const grid = document.getElementById('interview-notes-grid');
@@ -624,6 +779,7 @@
       updateOverall();
       loadMcpMode();
       loadRagMode();
+      loadMultiAgentMode();
     });
   </script>
 </body>

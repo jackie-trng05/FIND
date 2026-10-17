@@ -38,6 +38,7 @@ class SharedBackendTimeoutTest(unittest.TestCase):
     def test_approved_launchers_do_not_force_debug(self):
         root = Path(__file__).resolve().parents[1]
         launchers = ["shared/backend", "shared/database", "shared/frontend",
+                     "student-1/backend", "student-2/backend", "student-3/backend", "student-4/backend", "student-5/backend",
                      "student-1/database", "student-1/frontend", "student-2/database", "student-2/frontend",
                      "student-3/database", "student-3/frontend", "student-4/database", "student-5/database", "student-5/frontend"]
         for folder in launchers:
@@ -47,7 +48,18 @@ class SharedBackendTimeoutTest(unittest.TestCase):
                          and isinstance(node.func, ast.Attribute) and node.func.attr == "run"
                          and isinstance(node.func.value, ast.Name) and node.func.value.id == "app"]
                 self.assertEqual(len(calls), 1)
-                self.assertNotIn("debug", {argument.arg for argument in calls[0].keywords})
+                startup = next(node for node in tree.body if isinstance(node, ast.If) and calls[0] in ast.walk(node))
+                code = compile(ast.Module(body=startup.body, type_ignores=[]), str(root / folder / "app.py"), "exec")
+                for value, expected in [(None, False), ("true", True)]:
+                    with self.subTest(environment=value), patch.dict(os.environ), \
+                            patch("flask.cli.load_dotenv", return_value=False), \
+                            patch("werkzeug.serving.run_simple") as run_server, patch("flask.cli.show_server_banner"):
+                        os.environ.pop("FLASK_DEBUG", None)
+                        if value is not None:
+                            os.environ["FLASK_DEBUG"] = value
+                        exec(code, {"app": Flask("launcher_regression"), "os": os, "PORT": 5000})
+                        self.assertEqual(run_server.call_args.kwargs["use_debugger"], expected)
+                        self.assertEqual(run_server.call_args.kwargs["use_reloader"], expected)
 
     def test_flask_debug_is_off_by_default_and_allows_explicit_opt_in(self):
         for value, expected in [(None, False), ("1", True)]:

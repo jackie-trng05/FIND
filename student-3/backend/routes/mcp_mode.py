@@ -15,6 +15,7 @@ Step 1 exposes the two shared tools (project_files, ci_report). Each student's
 own retrieval tool + grounded AI-Mode endpoint is added in Step 2.
 """
 
+import logging
 import os
 from html import escape
 
@@ -23,6 +24,8 @@ from flask import Blueprint, request
 from services import mcp_client
 
 mcp_bp = Blueprint("mcp_mode", __name__)
+
+logger = logging.getLogger(__name__)
 
 
 # --- Feature flags -------------------------------------------------------
@@ -219,8 +222,8 @@ def _grounded_shortlist(job_posting_id: int, context: dict) -> str:
         narrative = (response.choices[0].message.content or "").strip()
         if narrative:
             return narrative
-    except Exception:  # noqa: BLE001 - fall back to the deterministic grounded verdict
-        pass
+    except Exception as exc:  # noqa: BLE001 - fall back to the deterministic grounded verdict
+        logger.debug("LLM narrative generation failed, using deterministic verdict: %s", exc)
     return verdict
 
 

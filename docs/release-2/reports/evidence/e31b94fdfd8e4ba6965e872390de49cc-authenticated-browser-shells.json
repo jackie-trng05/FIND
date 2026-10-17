@@ -1,0 +1,43 @@
+{
+  "captured": "2026-10-17T00:57:42.544966+00:00",
+  "synthetic_user_id": 15,
+  "tool": "VS Code Playwright browser",
+  "checks": [
+    {
+      "student": "student-1",
+      "url": "http://localhost:16004/",
+      "http_status": 200,
+      "title": "My Profile \u2014 FIND",
+      "login_redirect": false
+    },
+    {
+      "student": "student-2",
+      "url": "http://localhost:16007/",
+      "http_status": 200,
+      "title": "Job Postings \u2014 FIND",
+      "login_redirect": false
+    },
+    {
+      "student": "student-3",
+      "url": "http://localhost:16010/",
+      "http_status": 200,
+      "title": "Applications \u2014 FIND",
+      "login_redirect": false
+    },
+    {
+      "student": "student-4",
+      "url": "http://localhost:16013/",
+      "http_status": 200,
+      "title": "Interviews \u00b7 Calendar \u2014 FIND",
+      "login_redirect": false
+    },
+    {
+      "student": "student-5",
+      "url": "http://localhost:16016/",
+      "http_status": 200,
+      "title": "Evaluations \u2014 FIND",
+      "login_redirect": false
+    }
+  ],
+  "scope": "Browser shell rendering only, not complete UI CRUD or AI controls; synthetic staff account remains."
+}

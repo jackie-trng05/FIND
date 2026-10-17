@@ -29,6 +29,27 @@ class Release2ReportsTest(unittest.TestCase):
         self.assertIn("student-5 | PENDING", output)
         self.assertNotIn("| PASS |", output)
         self.assertEqual(len(list(reports.REPORTS.glob("*.md"))), 9)
+        self.assertIn("<!-- TODO: Cloud deployment has not been performed", (reports.REPORTS / "deployment-results.md").read_text())
+
+    def test_ci_evidence_displays_tested_commit_not_import_checkout(self):
+        event = {"status": "PASS", "timestamp": "2026-10-17", "commit": "a" * 40,
+                 "tested_commit": "b" * 40, "dirty": True}
+        self.assertIn("tested commit " + "b" * 12, reports.event_line(event))
+
+    def test_ci_import_includes_matching_downloaded_unit_report(self):
+        source = self.root / "student-1-post-commit-evidence"
+        source.mkdir()
+        (source / "test-results.md").write_text("tests/post_commit/test_api_profiles.py::test_profile_by_id PASSED")
+        (source / "test-audit.jsonl").write_text(json.dumps({"status": "PASS", "commit_sha": "a" * 40}))
+        unit_source = self.root / "student-1-ci-evidence"
+        unit_source.mkdir()
+        unit_report = {"workflow_name": "student-1-ci", "commit_sha": "a" * 40,
+                       "tests": {"status": "passed", "total": 108, "passed": 108}}
+        (unit_source / "report.json").write_text(json.dumps(unit_report))
+        self.assertEqual(reports.import_ci("student-1", source, "https://github.com/team/find/actions/runs/123", "a" * 40), 0)
+        event = reports.read_events()[-1]
+        self.assertEqual(event["summary"]["unit_tests"]["passed"], 108)
+        self.assertEqual(len(event["summary"]["post_commit_tests"]), 1)
 
     def test_ci_import_requires_matching_tested_commit(self):
         (self.root / "test-results.md").write_text("test_profile_by_id PASSED")

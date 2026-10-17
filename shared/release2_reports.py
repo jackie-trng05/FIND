@@ -78,7 +78,9 @@ def event_line(event):
     if not event:
         return "PENDING | No captured evidence"
     link = f"[evidence]({event['artifact']})" if event.get("artifact") else "See audit record"
-    return f"{event['status']} | {link}; {event['timestamp']}; commit {event['commit'][:12]} (dirty={event['dirty']})"
+    commit = event.get("tested_commit", event.get("tested_head", event["commit"]))
+    dirty = event.get("tested_dirty", event["dirty"])
+    return f"{event['status']} | {link}; captured {event['timestamp']}; tested commit {commit[:12]} (capture dirty={dirty})"
 
 
 def write_report(filename, title, body):
@@ -104,6 +106,16 @@ def render():
     testing = "| Student | CI status | Evidence |\n| --- | --- | --- |\n"
     for student in STUDENTS:
         testing += f"| {student} | {event_line(latest(events, 'ci', student))} |\n"
+    testing += "\n## Downloaded CI Unit and Post-Commit Tests\n\n| Student | Unit tests | Post-commit cases |\n| --- | --- | --- |\n"
+    for student in STUDENTS:
+        captured = latest(events, "ci", student) or {}
+        summary = captured.get("summary", {})
+        unit = summary.get("unit_tests", {})
+        unit_result = f"{unit['passed']}/{unit['total']} passed; {unit['status']}" if unit else "PENDING: no downloaded unit summary"
+        testing += f"| {student} | {unit_result} | {len(summary.get('post_commit_tests', []))} captured |\n"
+    testing += "\n## Workflow Logs and Endpoint Assertions\n\n"
+    for student in STUDENTS:
+        testing += f"- {student}: {event_line(latest(events, 'ci-supporting', student))}\n"
     write_report("test-results.md", "Release 2 Post-Commit CI/CD Testing Report", testing +
                  "\nLatest local production-fix regressions (not GitHub CI): " + event_line(latest(events, "verification", "group")) + ".\n" +
                  "\nEach evidence pack must identify two assigned endpoint functions, expected/actual results, "
@@ -119,6 +131,8 @@ def render():
             deployment += "\nRetain multi-terminal logs, frontend workflow evidence and shared AI service integration evidence.\n"
             deployment += "\nLatest automatic Docker service snapshot: " + event_line(latest(events, "snapshot", "group")) + ".\n"
         else:
+            deployment += "\n<!-- TODO: Cloud deployment has not been performed. Supply approved Azure/AWS resources, deployment scripts/workflow, real URLs, workflow logs, per-feature CRUD/persistence results and disabled-AI evidence. Never replace placeholders with invented results. -->\n"
+            deployment += "\nTODO: Cloud validation is intentionally pending at the user's request; no deployment or success is claimed.\n"
             deployment += "\nRetain deployment scripts, cloud-deployment.yml execution logs, platform/resources, "
             deployment += "deployed URLs, all four disabled AI flags, and database persistence evidence.\n"
             deployment += "\nFinal human release decision: " + event_line(latest(events, "release", "group")) + ".\n"
@@ -299,8 +313,26 @@ def import_ci(student, source, run_url, commit):
     status = records[-1].get("status")
     if status not in ("PASS", "FAIL") or not results.strip():
         raise ValueError("CI pack must contain test output and a PASS/FAIL audit status")
-    path = artifact(f"{student}-ci.md", f"# {student} CI Evidence\n\nRun: {run_url}\n\nTested commit: {commit}\n\n{results}\n\n## Audit\n\n```json\n{audit}\n```\n")
-    event = save_event("ci", student, status, artifact=path, run_url=run_url, tested_commit=commit)
+    summary = {"tested_commit": commit, "run_url": run_url, "post_commit_status": status,
+               "post_commit_tests": [{"test": name, "status": state} for name, state in re.findall(
+                   r"(?m)^(tests/post_commit/\S+::\w+)\s+(PASSED|FAILED|SKIPPED|ERROR)", results)]}
+    supplements = ""
+    if source.is_dir():
+        unit_path = source.parent / f"{student}-ci-evidence" / "report.json"
+        if unit_path.exists():
+            unit_report = json.loads(unit_path.read_text(encoding="utf-8"))
+            if unit_report.get("commit_sha") != commit or unit_report.get("workflow_name") != f"{student}-ci":
+                raise ValueError("CI unit report must match the student and tested commit")
+            summary["unit_tests"] = unit_report["tests"]
+            if unit_report["tests"]["status"] != "passed":
+                status = "FAIL"
+            supplements += "\n## Downloaded CI Unit Report\n\n```json\n" + json.dumps(unit_report, indent=2) + "\n```\n"
+            for filename in ("pytest-output.txt", "pytest-results.xml"):
+                candidate = source.parent / f"{student}-pytest-results" / filename
+                if candidate.exists():
+                    supplements += f"\n## {filename}\n\n```text\n{candidate.read_text(encoding='utf-8')}\n```\n"
+    path = artifact(f"{student}-ci.md", f"# {student} CI Evidence\n\nRun: {run_url}\n\nTested commit: {commit}\n\n{results}\n\n## Audit\n\n```json\n{audit}\n```\n" + supplements)
+    event = save_event("ci", student, status, artifact=path, run_url=run_url, tested_commit=commit, summary=summary)
     with (REPORTS / "test-audit.jsonl").open("a", encoding="utf-8") as stream:
         stream.write(json.dumps(event) + "\n")
     return 0 if status == "PASS" else 1

@@ -98,4 +98,4 @@ def health():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3004")))
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3004")))  # noqa: S104 - container needs to bind all interfaces

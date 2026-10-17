@@ -19,10 +19,10 @@ Generated from captured evidence. PENDING means not demonstrated. Do not edit ge
 | student-5 | ruff | PENDING | No captured evidence |
 | student-5 | detect-secrets | PENDING | No captured evidence |
 | student-5 | pip-audit | PENDING | No captured evidence |
-| group | ruff | FAIL | [evidence](evidence/dec3623e3e154c5ba4fcacf994b9af60-group-ruff.txt); 2026-10-17T00:28:08.780289+00:00; commit 72181dcca3a7 (dirty=True) |
-| group | detect-secrets | FAIL | [evidence](evidence/bbad4e0a161c419b91edb05b338a1043-group-detect-secrets.txt); 2026-10-17T00:28:13.632205+00:00; commit 72181dcca3a7 (dirty=True) |
-| group | pip-audit | FAIL | [evidence](evidence/b6bf4b989daf460687f4611068cb50cd-group-pip-audit.txt); 2026-10-17T00:26:48.381653+00:00; commit 72181dcca3a7 (dirty=True) |
+| group | ruff | FAIL | [evidence](evidence/8106113c828b4ef69fc176678ddbeb3e-group-ruff.txt); captured 2026-10-17T00:52:47.760356+00:00; tested commit b573b15a5074 (capture dirty=True) |
+| group | detect-secrets | FAIL | [evidence](evidence/03a7a99171d648358e6f9c1fb4e34462-group-detect-secrets.txt); captured 2026-10-17T00:52:53.907564+00:00; tested commit b573b15a5074 (capture dirty=True) |
+| group | pip-audit | PASS | [evidence](evidence/5f850d96a4ed477aa4dc1d36cff14258-group-pip-audit.txt); captured 2026-10-17T00:53:13.342368+00:00; tested commit b573b15a5074 (capture dirty=True) |
 
-Latest local production-fix verification (not a commit-hook run): PASS | [evidence](evidence/c2f5bfc7e7fc4424803a36d5bc56ad74-approved-production-fix-regressions.txt); 2026-10-17T00:27:53.605960+00:00; commit 72181dcca3a7 (dirty=True).
+Latest local production-fix verification (not a commit-hook run): PASS | [evidence](evidence/70885b261e2f42ca8a104dd97ea38c95-all-students-local-regressions.txt); captured 2026-10-17T00:52:16.485389+00:00; tested commit b573b15a5074 (capture dirty=True).
 
 Each student must capture all three scans and the actual commit-hook transcript. A manual run is not evidence that git commit invoked the hooks. Group scans do not establish individual participation. Findings and retests remain in the linked evidence.

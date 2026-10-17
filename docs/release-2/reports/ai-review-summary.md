@@ -4,15 +4,15 @@ Generated from captured evidence. PENDING means not demonstrated. Do not edit ge
 
 ## Pre-Test Review
 
-FAIL | [evidence](evidence/061e838ee170438cb3c33ae949230624-pre_test-validation.txt); 2026-10-17T00:13:26.923998+00:00; commit b8397c671c18 (dirty=True)
+FAIL | [evidence](evidence/061e838ee170438cb3c33ae949230624-pre_test-validation.txt); captured 2026-10-17T00:13:26.923998+00:00; tested commit b8397c671c18 (capture dirty=True)
 
 ## CI/CD Test Review
 
-FAIL | [evidence](evidence/3cb61d9e050948b39665a44113eaa1df-cicd_test-validation.txt); 2026-10-17T00:13:33.143405+00:00; commit b8397c671c18 (dirty=True)
+FAIL | [evidence](evidence/3cb61d9e050948b39665a44113eaa1df-cicd_test-validation.txt); captured 2026-10-17T00:13:33.143405+00:00; tested commit b8397c671c18 (capture dirty=True)
 
 ## Deployment Review
 
-FAIL | [evidence](evidence/d519d5066fcb447aa8b99cbab87e0665-deployment-validation.txt); 2026-10-17T00:13:40.497242+00:00; commit b8397c671c18 (dirty=True)
+FAIL | [evidence](evidence/d519d5066fcb447aa8b99cbab87e0665-deployment-validation.txt); captured 2026-10-17T00:13:40.497242+00:00; tested commit b8397c671c18 (capture dirty=True)
 
 ## Release Decision
 

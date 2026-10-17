@@ -22,7 +22,7 @@ Four individual report categories are consolidated with five identifiable studen
 
 Shared authentication and Student 5 database/session calls now use five-second default timeouts. Both backends return generic JSON 504 responses for upstream timeouts and 503 for transport failures, without exposing upstream exception details. Existing explicit finite read-timeout overrides are preserved; `None` uses the finite default.
 
-Forced debugging was removed from the 12 approved shared/frontend/database launchers. These use Flask's default debug-off behavior and retain explicit `FLASK_DEBUG=1` local opt-in. Five additional student backend launchers still force debugging; they were outside the approved list of 12 and have not been changed. The change does not make Flask's development server a production WSGI server.
+Forced debugging was removed from all 17 Flask launchers, including the five student backends subsequently approved by the user. Duplicate frontend/database defaults and student-module fallback logging now use main's PR #66 implementation. Its explicit frontend/database debug opt-in is `FLASK_DEBUG=true`; the remaining launchers follow Flask's environment handling. The change does not make Flask's development server a production WSGI server.
 
 Local regression transcripts are linked from the security and testing reports. They do not prove GitHub CI, individual commit-hook participation, cloud deployment or that existing containers were rebuilt. SQL construction, required container bindings, local Ollama placeholders and unrelated fallback behavior were not rewritten. Container images must be rebuilt before these source changes affect the running deployment.
 
@@ -39,7 +39,9 @@ python -m pre_commit install
 $env:FIND_STUDENT_ID = 'student-1'
 ```
 
-Use your own student ID. `language: system` deliberately uses the active environment. The hooks scan the selected student plus shared code and all local AI servers. With no student ID, scans are labelled `group`, not attributed to every teammate. Ruff uses security (`S`) rules, with pytest assertions excluded. Like Lab 11, pip-audit scans packages installed in the active project environment, including reporting tools. Install the dependencies relevant to your contribution there first. It does not audit every container or unresolved service manifest; audit deployed images separately where required. Each scan has a 180-second limit and records timeouts as failures.
+The active hooks are main's 15 per-student Lab 11 pytest hooks, not a second reporting-specific hook set. They use pre-commit-managed Python environments, so VS Code's global Python does not need the scanner modules installed. Their `files` patterns select the affected student directories; `FIND_STUDENT_ID` applies only to the manual report commands below. Dependency hooks audit their isolated environment, not application manifests or container images.
+
+Manual report scans use the active project environment and include the selected student plus shared code and local AI servers. Use your own student ID; with no ID, results are labelled `group`, not attributed to every teammate. Ruff uses security (`S`) rules, with pytest assertions excluded. Like Lab 11, the manual pip-audit scans installed packages in that environment. Install relevant application dependencies first. Each manual scan has a 180-second limit and records timeouts as failures.
 
 ## Security Evidence
 
@@ -49,15 +51,15 @@ python shared/release2_reports.py security --student student-1 --scanner detect-
 python shared/release2_reports.py security --student student-1 --scanner pip-audit
 ```
 
-These manual runs are useful preflight checks but do not prove the commit workflow. On your next authorised commit, installed hooks run the same commands, fail the commit when scans fail and capture evidence. Retain the commit terminal transcript as well. No commit is made by this reporting task. Fix or explicitly document real findings; do not suppress them to manufacture passing evidence.
+These manual report scans do not prove the commit workflow. On your next authorised commit, main's installed hooks run the per-student tests in `tests/lab11/pre_commit/` and block on failures. They do not invoke this report collector or automatically populate its audit. Retain the actual commit terminal transcript for report import after integration. No commit is made by this reporting task. Raw historical report failures remain unchanged; main's existing reviewed Ruff annotations are inherited, not new report-task suppressions.
 
-Hooks use `--hook` to capture into ignored `.release2-hook-evidence/`, avoiding a permanently changing staged report on every commit attempt. After a real commit-hook execution, import its evidence for review and inclusion in a subsequent evidence commit:
+The legacy reporting hooks used ignored `.release2-hook-evidence/`. The following command imports only those older captured records; it is not an importer for the active pytest-hook transcripts:
 
 ```powershell
 python shared/release2_reports.py import-hooks
 ```
 
-Import preserves the original capture timestamp and tested HEAD/dirty state and skips already-imported records. `pre-commit run --all-files` is a preflight, not proof that a real commit invoked hooks: retain the actual commit transcript. Do not run `--hook` manually and present it as a commit. Secret scan evidence stores finding counts by file, never secret values; inspect findings privately. Review all other logs and screenshots for secrets/personal data before committing.
+Legacy import preserves the original capture timestamp and tested HEAD/dirty state and skips already-imported records. `pre-commit run --all-files` is a preflight, not proof that a real commit invoked hooks: retain the actual commit transcript. Do not run `--hook` manually and present it as a commit. Secret scan evidence stores finding counts by file, never secret values; inspect findings privately. Review all other logs and screenshots for secrets/personal data before committing.
 
 ## CI Evidence
 

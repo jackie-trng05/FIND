@@ -210,7 +210,7 @@ def update_application(application_id):
     updates["updated_at"] = utc_now_iso()
     set_clause = ", ".join(f"{col} = ?" for col in updates)
     params = list(updates.values()) + [application_id]
-    conn.execute(f"UPDATE applications SET {set_clause} WHERE application_id = ?", params)
+    conn.execute(f"UPDATE applications SET {set_clause} WHERE application_id = ?", params)  # noqa: S608
     conn.commit()
     row = conn.execute("SELECT * FROM applications WHERE application_id = ?", (application_id,)).fetchone()
     conn.close()
@@ -289,4 +289,5 @@ def delete_application(application_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6003")))
+    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6003")), debug=debug_mode)  # noqa: S104 - container needs to bind all interfaces

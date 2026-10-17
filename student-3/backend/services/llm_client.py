@@ -4,6 +4,7 @@ Hosts the local LLM client used by AI-Mode candidate screening, plus the
 resume-text extraction and response-parsing helpers that surround the call.
 """
 
+import logging
 from io import BytesIO
 
 from openai import OpenAI
@@ -14,6 +15,8 @@ try:
     from pypdf import PdfReader  # type: ignore
 except Exception:  # pragma: no cover
     PdfReader = None  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama", timeout=120.0)
 
@@ -28,7 +31,8 @@ def extract_resume_text(data, mimetype):
             for page in reader.pages[:10]:
                 try:
                     pages.append(page.extract_text() or "")
-                except Exception:
+                except Exception as exc:
+                    logger.debug("PDF page text extraction failed: %s", exc)
                     continue
             text = "\n".join(p.strip() for p in pages if p.strip())
         except Exception:

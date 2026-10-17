@@ -15,6 +15,7 @@ Step 1 exposes the two shared tools (project_files, ci_report). Each student's
 own retrieval tool + grounded AI-Mode endpoint is added in Step 2.
 """
 
+import logging
 import os
 from html import escape
 
@@ -24,6 +25,8 @@ from services import integration_api, mcp_client
 from views.html_formatters import render_message
 
 mcp_bp = Blueprint("mcp_mode", __name__)
+
+logger = logging.getLogger(__name__)
 
 
 # --- Feature flags -------------------------------------------------------
@@ -204,8 +207,8 @@ def _grounded_strengths_summary(context: dict) -> str:
         narrative = (response.choices[0].message.content or "").strip()
         if narrative:
             return narrative
-    except Exception:  # noqa: BLE001 - fall back to the deterministic grounded summary
-        pass
+    except Exception as exc:  # noqa: BLE001 - fall back to the deterministic grounded summary
+        logger.debug("LLM narrative generation failed, using deterministic summary: %s", exc)
     return summary
 
 

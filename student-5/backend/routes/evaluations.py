@@ -5,6 +5,7 @@ plus the "applications ready for evaluation" listings.
 """
 
 import json
+import logging
 from urllib.parse import quote
 
 from flask import Blueprint, Response, jsonify, request
@@ -12,6 +13,8 @@ from flask import Blueprint, Response, jsonify, request
 from services import database_api, integration_api
 from services.config import FRONTEND_PUBLIC_URL
 from views.html_formatters import render_eligible_rows, render_evaluations_rows
+
+logger = logging.getLogger(__name__)
 
 evaluations_bp = Blueprint("evaluations", __name__)
 
@@ -83,15 +86,15 @@ def _finish_save(resp, data):
         detail = ""
         try:
             detail = (resp.json() or {}).get("error", "")
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Could not parse error detail from response: %s", exc)
         return _hx_trigger({"showErrorToast": detail or "Failed to save evaluation"})
 
     saved = {}
     try:
         saved = resp.json() or {}
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Could not parse saved evaluation response: %s", exc)
 
     rec = data.get("Evaluation_FinalRecommendation")
     application_id = data.get("Application_Id") or saved.get("Application_Id")
@@ -99,8 +102,8 @@ def _finish_save(resp, data):
         action = "Hired" if rec == "Hire" else "Rejected"
         try:
             integration_api.apply_decision(application_id, action)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("apply_decision failed for application %s: %s", application_id, exc)
         msg = f"Evaluation completed. Applicant has been marked {action}."
     else:
         integration_api.update_application_status(application_id, "Evaluation In Progress")
@@ -225,8 +228,8 @@ def delete_evaluation(evaluation_id):
         get_resp = database_api.get_evaluation_response(evaluation_id, timeout=3)
         if get_resp.status_code == 200:
             application_id = get_resp.json().get("Application_Id")
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Could not capture linked application before delete: %s", exc)
 
     resp = database_api.delete_evaluation(evaluation_id)
 
