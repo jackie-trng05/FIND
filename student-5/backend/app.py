@@ -10,8 +10,9 @@ Container port 5005 (host port 16017 per the canonical port table).
 from pathlib import Path
 import sys
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
+from requests.exceptions import RequestException, Timeout
 
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
@@ -28,6 +29,15 @@ from services.config import FRONTEND_PUBLIC_URL, PORT
 
 def create_app() -> Flask:
     app = Flask(__name__)
+
+    @app.errorhandler(Timeout)
+    def handle_upstream_timeout(error):
+        return jsonify({"error": "Upstream service timed out"}), 504
+
+    @app.errorhandler(RequestException)
+    def handle_upstream_unavailable(error):
+        return jsonify({"error": "Upstream service unavailable"}), 503
+
     CORS(
         app,
         resources={
@@ -54,4 +64,4 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=PORT, debug=True)  # noqa: S104 - container needs to bind all interfaces
+    app.run(host="0.0.0.0", port=PORT)  # noqa: S104 - container needs to bind all interfaces

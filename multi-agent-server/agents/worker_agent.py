@@ -11,6 +11,7 @@ queried (``profile`` -> student-1, ``applications`` -> student-3,
 invented. The per-domain database URLs are configurable via ``STUDENT_*_DB_URL``.
 """
 
+import logging
 import os
 from typing import Any, Dict, List
 from pathlib import Path
@@ -127,6 +128,7 @@ def _extract_resume_text(data: bytes, mimetype: str) -> str:
                 try:
                     pages.append(page.extract_text() or "")
                 except Exception:
+                    logging.getLogger(__name__).warning("Skipping an unreadable resume PDF page")
                     continue
             text = "\n".join(p.strip() for p in pages if p.strip())
         except Exception:

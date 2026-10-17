@@ -43,4 +43,4 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=PORT, debug=True)  # noqa: S104 - container needs to bind all interfaces
+    app.run(host="0.0.0.0", port=PORT)  # noqa: S104 - container needs to bind all interfaces
