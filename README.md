@@ -28,6 +28,10 @@ development tooling rather than a product service. Cloud deployment must target 
 integrated application, with one shared deployment on Microsoft Azure or Amazon Web Services,
 not individual student microservices.
 
+Release 2 captured evidence and its limitations are documented in the
+[report index](docs/release-2/reports/README.md). Reports remain static records;
+pending deployment and human-review work is not treated as completed evidence.
+
 
 <a id="project-structure"></a>
 

@@ -5,6 +5,7 @@ __pycache__/
 
 # Test artefacts
 cookies.txt
+/.release2-hook-evidence/
 
 # RAG server generated artefacts (shared, non-containerised RAG server)
 rag-server/chroma/

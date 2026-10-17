@@ -1,0 +1,667 @@
+{
+  "student": "student-1",
+  "scope": "One retained capture per evidence type. Original execution timestamps, commits and statuses are preserved. Consolidation is not a new test run.",
+  "records": [
+    {
+      "event": {
+        "id": "0a0f4b8892d14423b61aa4fef39f3248",
+        "timestamp": "2026-10-17T00:45:23.800343+00:00",
+        "commit": "b573b15a5074f5df64e90900cb9d3b7eb740b5de",
+        "dirty": true,
+        "kind": "ci-context",
+        "student": "student-1",
+        "status": "PASS",
+        "run_url": "https://github.com/jackie-trng05/FIND/actions/runs/38985346084",
+        "tested_commit": "cae018c09a9cb7702730dbbbb3977523168f4fc0",
+        "summary": {
+          "tested_commit": "cae018c09a9cb7702730dbbbb3977523168f4fc0",
+          "run_url": "https://github.com/jackie-trng05/FIND/actions/runs/38985346084",
+          "unit_tests": {
+            "status": "passed",
+            "total": 108,
+            "passed": 108,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "endpoint_evidence": {
+            "id": "a8ba2aa9167f4d3c9e0ae95518378c19",
+            "timestamp": "2026-10-17T00:45:29.451724+00:00",
+            "tested_commit": "cae018c09a9cb7702730dbbbb3977523168f4fc0",
+            "summary": {
+              "workflow_conclusion": "success",
+              "endpoint_test_source": "student-1/tests/post_commit/test_api_profiles.py",
+              "functions": [
+                {
+                  "name": "test_service_health",
+                  "assertions": [
+                    "assert response.status_code == 200"
+                  ]
+                },
+                {
+                  "name": "test_profile_by_id",
+                  "assertions": [
+                    "assert response.status_code == 200",
+                    "assert response.json()[\"profile_id\"] == 1"
+                  ]
+                },
+                {
+                  "name": "test_profile_by_user",
+                  "assertions": [
+                    "assert response.status_code == 200",
+                    "assert response.json()[\"user_id\"] == 1"
+                  ]
+                }
+              ],
+              "boundary": "database/API service; not authenticated-backend coverage"
+            }
+          },
+          "scope": "Distinct downloaded CI context only; post-commit output is held in the canonical main report. Original capture provenance is preserved, not a new execution."
+        }
+      }
+    },
+    {
+      "event": {
+        "id": "8aced270fd734ca39a9861567c1d810c",
+        "timestamp": "2026-10-17T01:28:29.716559+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "integration",
+        "student": "student-1",
+        "status": "PASS",
+        "feature": "ai-mode",
+        "artifact": "../local/student-1/evidence.json",
+        "summary": {
+          "student": "student-1",
+          "kind": "ai-mode",
+          "url": "http://localhost:16005/profile/ai-suggestions",
+          "timestamp": "2026-10-17T01:28:27.207888+00:00",
+          "scope": "Authenticated backend integration, not browser interaction or human approval",
+          "status": "PASS",
+          "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval",
+          "http_status": 200,
+          "response_sha256": "56d7aa11f47d9e813a3acbba504e616d39f4db9e36b527c90fddabf2bb1b5d4a",
+          "response_length": 2191
+        }
+      },
+      "capture_filename": "190d838c2b8347109d2f734514f8f538-student-1-ai-mode-integration.json",
+      "capture_sha256": "f9d45f49e1bbf525dedb8e0c1d17c852e85911330d6330fb4e1c66459cb5236b",
+      "capture": {
+        "student": "student-1",
+        "kind": "ai-mode",
+        "url": "http://localhost:16005/profile/ai-suggestions",
+        "timestamp": "2026-10-17T01:28:27.207888+00:00",
+        "scope": "Authenticated backend integration, not browser interaction or human approval",
+        "status": "PASS",
+        "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval",
+        "http_status": 200,
+        "response_sha256": "56d7aa11f47d9e813a3acbba504e616d39f4db9e36b527c90fddabf2bb1b5d4a",
+        "response_length": 2191,
+        "response": "\n    <div>\n        \n        \n        <div style=\"display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.9rem;\">\n            <div><strong>Professional Title:</strong> <span>QA Automation Engineer</span></div>\n            <button type=\"button\" class=\"btn btn-secondary btn-sm\"\n                    data-target=\"professional_title\" data-value=\"QA Automation Engineer\"\n                    onclick=\"applyProfileSuggestion(this)\">Apply</button>\n        </div>\n        <div style=\"display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.9rem;\">\n            <div><strong>Summary:</strong> <span>Experienced QA Automation Engineer with five years of experience in testing and automation, skilled in Python, Flask, and Docker, with a strong focus on software quality and continuous integration.</span></div>\n            <button type=\"button\" class=\"btn btn-secondary btn-sm\"\n                    data-target=\"summary\" data-value=\"Experienced QA Automation Engineer with five years of experience in testing and automation, skilled in Python, Flask, and Docker, with a strong focus on software quality and continuous integration.\"\n                    onclick=\"applyProfileSuggestion(this)\">Apply</button>\n        </div>\n        <div style=\"display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.9rem;\">\n            <div><strong>Interests:</strong> <span>software quality, accessible software, continuous integration</span></div>\n            <button type=\"button\" class=\"btn btn-secondary btn-sm\"\n                    data-target=\"interests\" data-value=\"software quality, accessible software, continuous integration\"\n                    onclick=\"applyProfileSuggestion(this)\">Apply</button>\n        </div>\n        <div style=\"margin-top:0.75rem;\">\n            <button type=\"button\" class=\"btn btn-secondary btn-sm\"\n                    onclick=\"document.getElementById('ai-profile-suggestions').innerHTML=''\">Dismiss</button>\n        </div>\n    </div>"
+      }
+    },
+    {
+      "event": {
+        "id": "64e4e58a8f7e471bb48a202dd9bad987",
+        "timestamp": "2026-10-17T01:28:30.072866+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "integration",
+        "student": "student-1",
+        "status": "PASS",
+        "feature": "mcp",
+        "artifact": "../local/student-1/evidence.json",
+        "summary": {
+          "student": "student-1",
+          "kind": "mcp",
+          "url": "http://localhost:16005/mcp/applicant-profile",
+          "timestamp": "2026-10-17T01:28:29.943303+00:00",
+          "scope": "Authenticated backend integration, not browser interaction or human approval",
+          "status": "PASS",
+          "detail": "Backend MCP context returned explicit source citations",
+          "http_status": 200,
+          "response_sha256": "4953540cb1d38c56a589b6a84b253b41b3819572c33b8742158c28e9dff91289",
+          "response_length": 1421
+        }
+      },
+      "capture_filename": "dbd070a08ddb497181bebbd224b57e06-student-1-mcp-integration.json",
+      "capture_sha256": "c75f7a886e5219b8de6c03d6805bc78239b93da39c1713dcd45991876dea21bf",
+      "capture": {
+        "student": "student-1",
+        "kind": "mcp",
+        "url": "http://localhost:16005/mcp/applicant-profile",
+        "timestamp": "2026-10-17T01:28:29.943303+00:00",
+        "scope": "Authenticated backend integration, not browser interaction or human approval",
+        "status": "PASS",
+        "detail": "Backend MCP context returned explicit source citations",
+        "http_status": 200,
+        "response_sha256": "4953540cb1d38c56a589b6a84b253b41b3819572c33b8742158c28e9dff91289",
+        "response_length": 1421
+      }
+    },
+    {
+      "event": {
+        "id": "4e358cf4bc5144fabc8de3e9cfb2cc5f",
+        "timestamp": "2026-10-17T01:28:30.338526+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "integration",
+        "student": "student-1",
+        "status": "PASS",
+        "feature": "rag",
+        "artifact": "../local/student-1/evidence.json",
+        "summary": {
+          "student": "student-1",
+          "kind": "rag",
+          "url": "http://localhost:16005/rag/retrieve",
+          "timestamp": "2026-10-17T01:28:30.285646+00:00",
+          "scope": "Authenticated backend integration, not browser interaction or human approval",
+          "status": "PASS",
+          "detail": "Nonempty retrieved chunks returned through backend",
+          "http_status": 200,
+          "response_sha256": "9ecdddff01b30d2af0ee86c6935f1c7fee02ec5a5be4aebd98f179b9c4b5ff99",
+          "response_length": 3982,
+          "retrieval": {
+            "status": "success",
+            "retrieval_mode": "chromadb",
+            "query_coverage": 1.0,
+            "error": null
+          },
+          "sources": [
+            "student-2-db:/job_postings/6",
+            "student-1-db:/profiles/7",
+            "student-1-db:/profiles/6"
+          ]
+        }
+      },
+      "capture_filename": "e0fa0b71596a4c1e868fb3e9714c5634-student-1-rag-integration.json",
+      "capture_sha256": "2b7131616156562f03ef02bed79ab643394b76594a5ff2897f25407ea6a831be",
+      "capture": {
+        "student": "student-1",
+        "kind": "rag",
+        "url": "http://localhost:16005/rag/retrieve",
+        "timestamp": "2026-10-17T01:28:30.285646+00:00",
+        "scope": "Authenticated backend integration, not browser interaction or human approval",
+        "status": "PASS",
+        "detail": "Nonempty retrieved chunks returned through backend",
+        "http_status": 200,
+        "response_sha256": "9ecdddff01b30d2af0ee86c6935f1c7fee02ec5a5be4aebd98f179b9c4b5ff99",
+        "response_length": 3982,
+        "retrieval": {
+          "status": "success",
+          "retrieval_mode": "chromadb",
+          "query_coverage": 1.0,
+          "error": null
+        },
+        "sources": [
+          "student-2-db:/job_postings/6",
+          "student-1-db:/profiles/7",
+          "student-1-db:/profiles/6"
+        ]
+      }
+    },
+    {
+      "event": {
+        "id": "11811a51ff1846ab9a2bdda0d0d12ec8",
+        "timestamp": "2026-10-17T01:28:34.006510+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "integration",
+        "student": "student-1",
+        "status": "PASS",
+        "feature": "multi-agent",
+        "artifact": "../local/student-1/evidence.json",
+        "summary": {
+          "student": "student-1",
+          "kind": "multi-agent",
+          "url": "http://localhost:16005/multi-agent/workflow",
+          "timestamp": "2026-10-17T01:28:30.549562+00:00",
+          "scope": "Authenticated backend integration, not browser interaction or human approval",
+          "status": "PASS",
+          "detail": "Three agents and grounded evidence recorded; human decision remains pending",
+          "http_status": 200,
+          "response_sha256": "be8dbf55e7a77b4b1e8e331df664a669cd0b6a8a7ec3902b3d718f9dbb6185c1",
+          "response_length": 2655,
+          "workflow_id": "210f9c15-0455-472b-b505-fa223ac26b16"
+        }
+      },
+      "capture_filename": "b6a77db2f10f4893b3b8f1a542e9a3f1-student-1-multi-agent-integration.json",
+      "capture_sha256": "bff88ef8007ace54fd67b3c3054e3463d4be7d09f2876485eb5ba2fd9721e6b0",
+      "capture": {
+        "student": "student-1",
+        "kind": "multi-agent",
+        "url": "http://localhost:16005/multi-agent/workflow",
+        "timestamp": "2026-10-17T01:28:30.549562+00:00",
+        "scope": "Authenticated backend integration, not browser interaction or human approval",
+        "status": "PASS",
+        "detail": "Three agents and grounded evidence recorded; human decision remains pending",
+        "http_status": 200,
+        "response_sha256": "be8dbf55e7a77b4b1e8e331df664a669cd0b6a8a7ec3902b3d718f9dbb6185c1",
+        "response_length": 2655,
+        "workflow_id": "210f9c15-0455-472b-b505-fa223ac26b16"
+      }
+    },
+    {
+      "event": {
+        "id": "13cd2f594d964a62a009e109c3d3ffc1",
+        "timestamp": "2026-10-17T01:29:01.948872+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "local",
+        "student": "student-1",
+        "status": "PENDING",
+        "artifact": "../local/student-1/evidence.json",
+        "summary": {
+          "checks": {
+            "frontend": {
+              "status": "PENDING",
+              "evidence": "Not executed; human review is not automated"
+            },
+            "create": {
+              "status": "PASS",
+              "evidence": "Authenticated backend create persisted its synthetic profile"
+            },
+            "read": {
+              "status": "PASS",
+              "evidence": "Authenticated backend returned the fixture profile"
+            },
+            "update": {
+              "status": "PASS",
+              "evidence": "Backend update persisted the new location"
+            },
+            "delete": {
+              "status": "PASS",
+              "evidence": "Authenticated backend deletion verified absent in persistence service"
+            },
+            "ai-mode": {
+              "status": "PASS",
+              "evidence": "../local/student-1/evidence.json",
+              "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval"
+            },
+            "mcp": {
+              "status": "PASS",
+              "evidence": "../local/student-1/evidence.json",
+              "detail": "Backend MCP context returned explicit source citations"
+            },
+            "rag": {
+              "status": "PASS",
+              "evidence": "../local/student-1/evidence.json",
+              "detail": "Nonempty retrieved chunks returned through backend"
+            },
+            "multi-agent": {
+              "status": "PASS",
+              "evidence": "../local/student-1/evidence.json",
+              "detail": "Three agents and grounded evidence recorded; human decision remains pending"
+            },
+            "human-review": {
+              "status": "PENDING",
+              "evidence": "Not executed; human review is not automated"
+            }
+          },
+          "fixture": "release2-9f5798a139a7"
+        }
+      },
+      "capture_filename": "dbd87ca5901e4c4e83cf992d0561cab3-student-1-local-integration.json",
+      "capture_sha256": "9f4ffdee43581010a3828272bd165004c74298a8277253c9dd202bd32a08c0e7",
+      "capture": {
+        "collector": "GitHub Copilot automated integration check, not human sign-off",
+        "timestamp": "2026-10-17T01:29:01.947677+00:00",
+        "fixture": "release2-9f5798a139a7",
+        "test_user_ids": {
+          "staff": 13,
+          "applicant": 14
+        },
+        "checks": {
+          "frontend": {
+            "status": "PENDING",
+            "evidence": "Not executed; human review is not automated"
+          },
+          "create": {
+            "status": "PASS",
+            "evidence": "Authenticated backend create persisted its synthetic profile"
+          },
+          "read": {
+            "status": "PASS",
+            "evidence": "Authenticated backend returned the fixture profile"
+          },
+          "update": {
+            "status": "PASS",
+            "evidence": "Backend update persisted the new location"
+          },
+          "delete": {
+            "status": "PASS",
+            "evidence": "Authenticated backend deletion verified absent in persistence service"
+          },
+          "ai-mode": {
+            "status": "PASS",
+            "evidence": "../local/student-1/evidence.json",
+            "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval"
+          },
+          "mcp": {
+            "status": "PASS",
+            "evidence": "../local/student-1/evidence.json",
+            "detail": "Backend MCP context returned explicit source citations"
+          },
+          "rag": {
+            "status": "PASS",
+            "evidence": "../local/student-1/evidence.json",
+            "detail": "Nonempty retrieved chunks returned through backend"
+          },
+          "multi-agent": {
+            "status": "PASS",
+            "evidence": "../local/student-1/evidence.json",
+            "detail": "Three agents and grounded evidence recorded; human decision remains pending"
+          },
+          "human-review": {
+            "status": "PENDING",
+            "evidence": "Not executed; human review is not automated"
+          }
+        },
+        "scope": "Authenticated backend API CRUD with raw persistence reads. Not full UI interaction or business-lifecycle validation. Verify container provenance against the linked service/build evidence. A fixture application's status was reset directly only for cleanup.",
+        "residuals": "Two uniquely named example.invalid test accounts remain; no supported user-delete API. Passwords and session tokens are not retained.",
+        "operations": [
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/register",
+            "status": 201
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/login",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/register",
+            "status": 201
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/login",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16005/profile",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16006/profiles/by-user/14",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16005/profile",
+            "status": 200
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16005/profile/12",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16006/profiles/12",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16008/job-postings",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16009/job-postings",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16008/job-postings/14",
+            "status": 200
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16008/job-postings/14",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16009/job-postings/14",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16011/api/applications/save",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16012/applications",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16011/api/context/applications/22/detail",
+            "status": 200
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16011/api/applications/22/save",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16012/applications/22",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16014/interviews",
+            "status": 201
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16014/interviews/12",
+            "status": 200
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16014/interviews/12",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16015/interviews/12",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16017/api/evaluations",
+            "status": 201
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16017/api/evaluations/8",
+            "status": 200
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16017/api/evaluations/8",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16018/evaluations/8",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16005/resume",
+            "status": 200
+          },
+          {
+            "method": "DELETE",
+            "url": "http://localhost:16014/interviews/12",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16015/interviews/12",
+            "status": 404
+          },
+          {
+            "method": "DELETE",
+            "url": "http://localhost:16017/api/evaluations/8",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16018/evaluations/8",
+            "status": 404
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16012/applications/22",
+            "status": 200
+          },
+          {
+            "method": "DELETE",
+            "url": "http://localhost:16011/api/applications/22",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16012/applications/22",
+            "status": 404
+          },
+          {
+            "method": "DELETE",
+            "url": "http://localhost:16008/job-postings/14",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16009/job-postings/14",
+            "status": 404
+          },
+          {
+            "method": "DELETE",
+            "url": "http://localhost:16005/profile/12",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16006/profiles/12",
+            "status": 404
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/logout",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/logout",
+            "status": 200
+          }
+        ]
+      }
+    },
+    {
+      "event": {
+        "id": "54d1327a3c214996afd5d9fe93b2ba4d",
+        "timestamp": "2026-10-17T01:33:53.779760+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "contribution-draft",
+        "student": "student-1",
+        "status": "CAPTURED",
+        "artifact": "../local/student-1/evidence.json"
+      },
+      "capture_filename": "5aa36d3fa4e3430baf315e641524b0b4-student-1-contribution-draft.json",
+      "capture_sha256": "0ad1504ef457869f440fd2a477e45e03f66e0771905760e68d87ca2c671c81e3",
+      "capture": {
+        "student": "student-1",
+        "feature": "Applicant profiles",
+        "timestamp": "2026-10-17T01:33:53.778349+00:00",
+        "status": "UNCONFIRMED DRAFT",
+        "scope": "Latest twelve commits touching this feature path. Merge commits may touch multiple features. Authors are not mapped to student identities; human confirmation is required.",
+        "commits": [
+          {
+            "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+            "author": "Jackie Truong",
+            "subject": "chore: Resolved conflicts. Removed duplicate hooks and student logging changes. Preserved distinct safety fixes, in-repo reports and evidence. Verified 368 unit tests and all 15 security hooks pass.",
+            "url": "https://github.com/jackie-trng05/FIND/commit/d261e6649ac39c6308d0442c0c5df9f909e310d1"
+          },
+          {
+            "commit": "b573b15a5074f5df64e90900cb9d3b7eb740b5de",
+            "author": "Jackie Truong",
+            "subject": "feat: add evidence text to student-1",
+            "url": "https://github.com/jackie-trng05/FIND/commit/b573b15a5074f5df64e90900cb9d3b7eb740b5de"
+          },
+          {
+            "commit": "5b58653e5214b9cd691a73f593f166a55bf84907",
+            "author": "Jackie Truong",
+            "subject": "feat: add timeout and error handling, remove forced debug mode",
+            "url": "https://github.com/jackie-trng05/FIND/commit/5b58653e5214b9cd691a73f593f166a55bf84907"
+          },
+          {
+            "commit": "de5ad7d34478b5ef527695d3404de9efb8a2d961",
+            "author": "gurnoor-saini",
+            "subject": "fix(student-1): resolve Ruff security findings for pre-commit scan",
+            "url": "https://github.com/jackie-trng05/FIND/commit/de5ad7d34478b5ef527695d3404de9efb8a2d961"
+          },
+          {
+            "commit": "4f75a6a598eb473b4beb423bec5de0d1007187eb",
+            "author": "Kushi Immadi",
+            "subject": "test(student-1): add Lab 11 post-commit CI/CD endpoint and token tests",
+            "url": "https://github.com/jackie-trng05/FIND/commit/4f75a6a598eb473b4beb423bec5de0d1007187eb"
+          },
+          {
+            "commit": "9402a5d2dbdc1373301dbb5609bcdf9c3e77e3d3",
+            "author": "Nikita1081",
+            "subject": "docs: normalize Multi-Agent panel docstrings across student routes",
+            "url": "https://github.com/jackie-trng05/FIND/commit/9402a5d2dbdc1373301dbb5609bcdf9c3e77e3d3"
+          },
+          {
+            "commit": "276db50103b7a8042cb67c45b9af3ee235d03c6e",
+            "author": "Nikita1081",
+            "subject": "fix(multi-agent): scope Get Workflow Status to each student's own runs (student-1/2/5)",
+            "url": "https://github.com/jackie-trng05/FIND/commit/276db50103b7a8042cb67c45b9af3ee235d03c6e"
+          },
+          {
+            "commit": "3faaed59d4658228b4ffeef8be646a96bc90f75d",
+            "author": "Jackie Truong",
+            "subject": "Add human review choices, add profile/resume info to worker agent, rename partial accept to 'correction' to match the criteria",
+            "url": "https://github.com/jackie-trng05/FIND/commit/3faaed59d4658228b4ffeef8be646a96bc90f75d"
+          },
+          {
+            "commit": "41565bc883d578153163142e56cb941e8bcb8287",
+            "author": "Jackie Truong",
+            "subject": "Initial multi agent integrations",
+            "url": "https://github.com/jackie-trng05/FIND/commit/41565bc883d578153163142e56cb941e8bcb8287"
+          },
+          {
+            "commit": "ae0ae0a0c6dcb149c436e01b1bac75d0e08708b8",
+            "author": "Kushi Immadi",
+            "subject": "feat: add multi-agent proxy routes and register blueprint for all students",
+            "url": "https://github.com/jackie-trng05/FIND/commit/ae0ae0a0c6dcb149c436e01b1bac75d0e08708b8"
+          },
+          {
+            "commit": "86cfa37cef76164e9dbf5002b6024c3f7e2a6a49",
+            "author": "Kushi Immadi",
+            "subject": "feat: add multi-agent service client to all student backends",
+            "url": "https://github.com/jackie-trng05/FIND/commit/86cfa37cef76164e9dbf5002b6024c3f7e2a6a49"
+          },
+          {
+            "commit": "0a8fee8a88a939f9eb08f532ef80f503ea566761",
+            "author": "Nikita1081",
+            "subject": "Remove MCP/RAG panel description text from feature frontends",
+            "url": "https://github.com/jackie-trng05/FIND/commit/0a8fee8a88a939f9eb08f532ef80f503ea566761"
+          }
+        ]
+      }
+    }
+  ]
+}

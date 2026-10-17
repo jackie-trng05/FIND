@@ -1,0 +1,672 @@
+{
+  "student": "student-3",
+  "scope": "One retained capture per evidence type. Original execution timestamps, commits and statuses are preserved. Consolidation is not a new test run.",
+  "records": [
+    {
+      "event": {
+        "id": "ba90aae5724d417bb3911eaa5c9d1ff9",
+        "timestamp": "2026-10-17T00:45:36.554752+00:00",
+        "commit": "b573b15a5074f5df64e90900cb9d3b7eb740b5de",
+        "dirty": true,
+        "kind": "ci-context",
+        "student": "student-3",
+        "status": "PASS",
+        "run_url": "https://github.com/jackie-trng05/FIND/actions/runs/38985346318",
+        "tested_commit": "cae018c09a9cb7702730dbbbb3977523168f4fc0",
+        "summary": {
+          "tested_commit": "cae018c09a9cb7702730dbbbb3977523168f4fc0",
+          "run_url": "https://github.com/jackie-trng05/FIND/actions/runs/38985346318",
+          "unit_tests": {
+            "status": "passed",
+            "total": 43,
+            "passed": 43,
+            "failed": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          "endpoint_evidence": {
+            "id": "e5c1fc37f8aa41d2bdfc7f71bf38307a",
+            "timestamp": "2026-10-17T00:45:41.655483+00:00",
+            "tested_commit": "cae018c09a9cb7702730dbbbb3977523168f4fc0",
+            "summary": {
+              "workflow_conclusion": "success",
+              "endpoint_test_source": "student-3/tests/post_commit/test_api_applications.py",
+              "functions": [
+                {
+                  "name": "test_service_health",
+                  "assertions": [
+                    "assert response.status_code == 200"
+                  ]
+                },
+                {
+                  "name": "test_applications_exist",
+                  "assertions": [
+                    "assert response.status_code == 200",
+                    "assert len(applications) > 0"
+                  ]
+                },
+                {
+                  "name": "test_application_by_id",
+                  "assertions": [
+                    "assert response.status_code == 200"
+                  ]
+                },
+                {
+                  "name": "test_applications_by_status",
+                  "assertions": [
+                    "assert response.status_code == 200"
+                  ]
+                }
+              ],
+              "boundary": "database/API service; not authenticated-backend coverage"
+            }
+          },
+          "scope": "Distinct downloaded CI context only; post-commit output is held in the canonical main report. Original capture provenance is preserved, not a new execution."
+        }
+      }
+    },
+    {
+      "event": {
+        "id": "03a3c89ec3b64b999c45c64825c6916c",
+        "timestamp": "2026-10-17T01:28:43.557314+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "integration",
+        "student": "student-3",
+        "status": "PASS",
+        "feature": "ai-mode",
+        "artifact": "../local/student-3/evidence.json",
+        "summary": {
+          "student": "student-3",
+          "kind": "ai-mode",
+          "url": "http://localhost:16011/api/applications/22/screen",
+          "timestamp": "2026-10-17T01:28:41.180944+00:00",
+          "scope": "Authenticated backend integration, not browser interaction or human approval",
+          "status": "PASS",
+          "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval",
+          "http_status": 200,
+          "response_sha256": "75b19f2589d86027554cf6ed6f38dbfc59dcb77874fe5896a61039d855072acf",
+          "response_length": 1113
+        }
+      },
+      "capture_filename": "0e7dc2b176394553b01bf4b479ce13d0-student-3-ai-mode-integration.json",
+      "capture_sha256": "c1b7058140092eadc2a3157dbc38a5c44f056328bd935568733ff4a993865d4e",
+      "capture": {
+        "student": "student-3",
+        "kind": "ai-mode",
+        "url": "http://localhost:16011/api/applications/22/screen",
+        "timestamp": "2026-10-17T01:28:41.180944+00:00",
+        "scope": "Authenticated backend integration, not browser interaction or human approval",
+        "status": "PASS",
+        "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval",
+        "http_status": 200,
+        "response_sha256": "75b19f2589d86027554cf6ed6f38dbfc59dcb77874fe5896a61039d855072acf",
+        "response_length": 1113,
+        "response": "\n    <div class=\"ai-result-card rec-yes\">\n        <div class=\"ai-recommendation\">\n            <span class=\"ai-recommendation-label\">Recommendation</span>\n            <span class=\"ai-recommendation-value\">Yes</span>\n            <span class=\"ai-recommendation-caption\">Recommend shortlist</span>\n        </div>\n        <div class=\"ai-reasoning\">\n            <h4>Reasoning</h4>\n            <p>The candidate&#x27;s resume explicitly demonstrates experience with Python, which matches the job posting&#x27;s core requirement of Python. Additionally, the candidate has experience with testing, specifically with pytest, which aligns with the job posting&#x27;s requirement of testing.</p>\n        </div>\n        <div class=\"ai-result-actions\">\n            <button class=\"btn btn-accent\" hx-post=\"http://localhost:16011/api/applications/22/screen\" hx-target=\"#ai-screening-panel\" hx-swap=\"innerHTML\" hx-indicator=\"#ai-spinner\" hx-disabled-elt=\"this\">Generate AI recommendation</button><span id=\"ai-spinner\" class=\"htmx-indicator ai-spinner\"><span class=\"spinner\"></span> Thinking\u2026</span>\n        </div>\n    </div>\n    "
+      }
+    },
+    {
+      "event": {
+        "id": "80aeb6e886514791a37aebfc9ac73515",
+        "timestamp": "2026-10-17T01:28:43.895100+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "integration",
+        "student": "student-3",
+        "status": "PASS",
+        "feature": "mcp",
+        "artifact": "../local/student-3/evidence.json",
+        "summary": {
+          "student": "student-3",
+          "kind": "mcp",
+          "url": "http://localhost:16011/mcp/applications-for-job",
+          "timestamp": "2026-10-17T01:28:43.787459+00:00",
+          "scope": "Authenticated backend integration, not browser interaction or human approval",
+          "status": "PASS",
+          "detail": "Backend MCP context returned explicit source citations",
+          "http_status": 200,
+          "response_sha256": "4b30e39523f9f38daa4b55f8ab5d1ba7caa2b085dec4afa2836f783e6fec265f",
+          "response_length": 659
+        }
+      },
+      "capture_filename": "65faf7e658b34d238262878ac1b65087-student-3-mcp-integration.json",
+      "capture_sha256": "1f2134e1f4fb21f283a736b26e0b997060ae77dbab04d52191b3a862ee0db094",
+      "capture": {
+        "student": "student-3",
+        "kind": "mcp",
+        "url": "http://localhost:16011/mcp/applications-for-job",
+        "timestamp": "2026-10-17T01:28:43.787459+00:00",
+        "scope": "Authenticated backend integration, not browser interaction or human approval",
+        "status": "PASS",
+        "detail": "Backend MCP context returned explicit source citations",
+        "http_status": 200,
+        "response_sha256": "4b30e39523f9f38daa4b55f8ab5d1ba7caa2b085dec4afa2836f783e6fec265f",
+        "response_length": 659
+      }
+    },
+    {
+      "event": {
+        "id": "260b672845024aa1a7c17880622c240d",
+        "timestamp": "2026-10-17T01:28:44.190270+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "integration",
+        "student": "student-3",
+        "status": "PASS",
+        "feature": "rag",
+        "artifact": "../local/student-3/evidence.json",
+        "summary": {
+          "student": "student-3",
+          "kind": "rag",
+          "url": "http://localhost:16011/rag/retrieve",
+          "timestamp": "2026-10-17T01:28:44.137167+00:00",
+          "scope": "Authenticated backend integration, not browser interaction or human approval",
+          "status": "PASS",
+          "detail": "Nonempty retrieved chunks returned through backend",
+          "http_status": 200,
+          "response_sha256": "5d430ac5527c44923e56b062ae4451435a59ac89da118368528fa4ae4c7766c9",
+          "response_length": 3982,
+          "retrieval": {
+            "status": "success",
+            "retrieval_mode": "chromadb",
+            "query_coverage": 1.0,
+            "error": null
+          },
+          "sources": [
+            "student-2-db:/job_postings/6",
+            "student-1-db:/profiles/7",
+            "student-1-db:/profiles/6"
+          ]
+        }
+      },
+      "capture_filename": "4d25ec33d6b74d9ca4e04192245e1c76-student-3-rag-integration.json",
+      "capture_sha256": "bf73293a67becb292414d092f2278e6e9a3bfb383ce1fe8886f5c59b5e34e60a",
+      "capture": {
+        "student": "student-3",
+        "kind": "rag",
+        "url": "http://localhost:16011/rag/retrieve",
+        "timestamp": "2026-10-17T01:28:44.137167+00:00",
+        "scope": "Authenticated backend integration, not browser interaction or human approval",
+        "status": "PASS",
+        "detail": "Nonempty retrieved chunks returned through backend",
+        "http_status": 200,
+        "response_sha256": "5d430ac5527c44923e56b062ae4451435a59ac89da118368528fa4ae4c7766c9",
+        "response_length": 3982,
+        "retrieval": {
+          "status": "success",
+          "retrieval_mode": "chromadb",
+          "query_coverage": 1.0,
+          "error": null
+        },
+        "sources": [
+          "student-2-db:/job_postings/6",
+          "student-1-db:/profiles/7",
+          "student-1-db:/profiles/6"
+        ]
+      }
+    },
+    {
+      "event": {
+        "id": "8577711e88ff453b8d05d7ea82dc14f4",
+        "timestamp": "2026-10-17T01:28:46.911514+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "integration",
+        "student": "student-3",
+        "status": "PASS",
+        "feature": "multi-agent",
+        "artifact": "../local/student-3/evidence.json",
+        "summary": {
+          "student": "student-3",
+          "kind": "multi-agent",
+          "url": "http://localhost:16011/multi-agent/workflow",
+          "timestamp": "2026-10-17T01:28:44.422505+00:00",
+          "scope": "Authenticated backend integration, not browser interaction or human approval",
+          "status": "PASS",
+          "detail": "Three agents and grounded evidence recorded; human decision remains pending",
+          "http_status": 200,
+          "response_sha256": "4e00a5c6dec0b5566efd41012ebf42aaef8d94ebe332694b3d278fca6f182975",
+          "response_length": 2609,
+          "workflow_id": "53662595-e711-45bd-b3dc-59e54c39b8fb"
+        }
+      },
+      "capture_filename": "e92c26222bed4f9b8ba18f57ff0d9d09-student-3-multi-agent-integration.json",
+      "capture_sha256": "f819f37dc0d888f7f980307eb41922c661c5b329dc9773782ea7b00cd6cc14ab",
+      "capture": {
+        "student": "student-3",
+        "kind": "multi-agent",
+        "url": "http://localhost:16011/multi-agent/workflow",
+        "timestamp": "2026-10-17T01:28:44.422505+00:00",
+        "scope": "Authenticated backend integration, not browser interaction or human approval",
+        "status": "PASS",
+        "detail": "Three agents and grounded evidence recorded; human decision remains pending",
+        "http_status": 200,
+        "response_sha256": "4e00a5c6dec0b5566efd41012ebf42aaef8d94ebe332694b3d278fca6f182975",
+        "response_length": 2609,
+        "workflow_id": "53662595-e711-45bd-b3dc-59e54c39b8fb"
+      }
+    },
+    {
+      "event": {
+        "id": "d64a86daa49f4a10aecce6a2a36843e9",
+        "timestamp": "2026-10-17T01:29:02.460904+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "local",
+        "student": "student-3",
+        "status": "PENDING",
+        "artifact": "../local/student-3/evidence.json",
+        "summary": {
+          "checks": {
+            "frontend": {
+              "status": "PENDING",
+              "evidence": "Not executed; human review is not automated"
+            },
+            "create": {
+              "status": "PASS",
+              "evidence": "Applicant backend persisted a new Draft"
+            },
+            "read": {
+              "status": "PASS",
+              "evidence": "Applicant detail context succeeded for its own fixture"
+            },
+            "update": {
+              "status": "PASS",
+              "evidence": "Backend draft update persisted declaration consent"
+            },
+            "delete": {
+              "status": "PASS",
+              "evidence": "Authenticated backend deletion verified absent in persistence service"
+            },
+            "ai-mode": {
+              "status": "PASS",
+              "evidence": "../local/student-3/evidence.json",
+              "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval"
+            },
+            "mcp": {
+              "status": "PASS",
+              "evidence": "../local/student-3/evidence.json",
+              "detail": "Backend MCP context returned explicit source citations"
+            },
+            "rag": {
+              "status": "PASS",
+              "evidence": "../local/student-3/evidence.json",
+              "detail": "Nonempty retrieved chunks returned through backend"
+            },
+            "multi-agent": {
+              "status": "PASS",
+              "evidence": "../local/student-3/evidence.json",
+              "detail": "Three agents and grounded evidence recorded; human decision remains pending"
+            },
+            "human-review": {
+              "status": "PENDING",
+              "evidence": "Not executed; human review is not automated"
+            }
+          },
+          "fixture": "release2-9f5798a139a7"
+        }
+      },
+      "capture_filename": "8e3377f3c44d4f7ba8167e7fa5f62d9e-student-3-local-integration.json",
+      "capture_sha256": "9293e10756ed025d1d6ab02c1fe88b69d7fa77d3b5afed907b1fdb116aa27bd5",
+      "capture": {
+        "collector": "GitHub Copilot automated integration check, not human sign-off",
+        "timestamp": "2026-10-17T01:29:02.459898+00:00",
+        "fixture": "release2-9f5798a139a7",
+        "test_user_ids": {
+          "staff": 13,
+          "applicant": 14
+        },
+        "checks": {
+          "frontend": {
+            "status": "PENDING",
+            "evidence": "Not executed; human review is not automated"
+          },
+          "create": {
+            "status": "PASS",
+            "evidence": "Applicant backend persisted a new Draft"
+          },
+          "read": {
+            "status": "PASS",
+            "evidence": "Applicant detail context succeeded for its own fixture"
+          },
+          "update": {
+            "status": "PASS",
+            "evidence": "Backend draft update persisted declaration consent"
+          },
+          "delete": {
+            "status": "PASS",
+            "evidence": "Authenticated backend deletion verified absent in persistence service"
+          },
+          "ai-mode": {
+            "status": "PASS",
+            "evidence": "../local/student-3/evidence.json",
+            "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval"
+          },
+          "mcp": {
+            "status": "PASS",
+            "evidence": "../local/student-3/evidence.json",
+            "detail": "Backend MCP context returned explicit source citations"
+          },
+          "rag": {
+            "status": "PASS",
+            "evidence": "../local/student-3/evidence.json",
+            "detail": "Nonempty retrieved chunks returned through backend"
+          },
+          "multi-agent": {
+            "status": "PASS",
+            "evidence": "../local/student-3/evidence.json",
+            "detail": "Three agents and grounded evidence recorded; human decision remains pending"
+          },
+          "human-review": {
+            "status": "PENDING",
+            "evidence": "Not executed; human review is not automated"
+          }
+        },
+        "scope": "Authenticated backend API CRUD with raw persistence reads. Not full UI interaction or business-lifecycle validation. Verify container provenance against the linked service/build evidence. A fixture application's status was reset directly only for cleanup.",
+        "residuals": "Two uniquely named example.invalid test accounts remain; no supported user-delete API. Passwords and session tokens are not retained.",
+        "operations": [
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/register",
+            "status": 201
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/login",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/register",
+            "status": 201
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/login",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16005/profile",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16006/profiles/by-user/14",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16005/profile",
+            "status": 200
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16005/profile/12",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16006/profiles/12",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16008/job-postings",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16009/job-postings",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16008/job-postings/14",
+            "status": 200
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16008/job-postings/14",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16009/job-postings/14",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16011/api/applications/save",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16012/applications",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16011/api/context/applications/22/detail",
+            "status": 200
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16011/api/applications/22/save",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16012/applications/22",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16014/interviews",
+            "status": 201
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16014/interviews/12",
+            "status": 200
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16014/interviews/12",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16015/interviews/12",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16017/api/evaluations",
+            "status": 201
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16017/api/evaluations/8",
+            "status": 200
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16017/api/evaluations/8",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16018/evaluations/8",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16005/resume",
+            "status": 200
+          },
+          {
+            "method": "DELETE",
+            "url": "http://localhost:16014/interviews/12",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16015/interviews/12",
+            "status": 404
+          },
+          {
+            "method": "DELETE",
+            "url": "http://localhost:16017/api/evaluations/8",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16018/evaluations/8",
+            "status": 404
+          },
+          {
+            "method": "PUT",
+            "url": "http://localhost:16012/applications/22",
+            "status": 200
+          },
+          {
+            "method": "DELETE",
+            "url": "http://localhost:16011/api/applications/22",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16012/applications/22",
+            "status": 404
+          },
+          {
+            "method": "DELETE",
+            "url": "http://localhost:16008/job-postings/14",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16009/job-postings/14",
+            "status": 404
+          },
+          {
+            "method": "DELETE",
+            "url": "http://localhost:16005/profile/12",
+            "status": 200
+          },
+          {
+            "method": "GET",
+            "url": "http://localhost:16006/profiles/12",
+            "status": 404
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/logout",
+            "status": 200
+          },
+          {
+            "method": "POST",
+            "url": "http://localhost:16002/api/auth/logout",
+            "status": 200
+          }
+        ]
+      }
+    },
+    {
+      "event": {
+        "id": "2dcd1d4c2a7e443ba27e1d69ee8d2a03",
+        "timestamp": "2026-10-17T01:33:54.506125+00:00",
+        "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+        "dirty": true,
+        "kind": "contribution-draft",
+        "student": "student-3",
+        "status": "CAPTURED",
+        "artifact": "../local/student-3/evidence.json"
+      },
+      "capture_filename": "3b2c0d82a8b7485d8dbb3d87c6e15cc5-student-3-contribution-draft.json",
+      "capture_sha256": "ac7060f64ffaab5905376de30d8ecd9c4fcab3d2f5737dcfbc4697ec5387feda",
+      "capture": {
+        "student": "student-3",
+        "feature": "Applications",
+        "timestamp": "2026-10-17T01:33:54.504940+00:00",
+        "status": "UNCONFIRMED DRAFT",
+        "scope": "Latest twelve commits touching this feature path. Merge commits may touch multiple features. Authors are not mapped to student identities; human confirmation is required.",
+        "commits": [
+          {
+            "commit": "d261e6649ac39c6308d0442c0c5df9f909e310d1",
+            "author": "Jackie Truong",
+            "subject": "chore: Resolved conflicts. Removed duplicate hooks and student logging changes. Preserved distinct safety fixes, in-repo reports and evidence. Verified 368 unit tests and all 15 security hooks pass.",
+            "url": "https://github.com/jackie-trng05/FIND/commit/d261e6649ac39c6308d0442c0c5df9f909e310d1"
+          },
+          {
+            "commit": "5b58653e5214b9cd691a73f593f166a55bf84907",
+            "author": "Jackie Truong",
+            "subject": "feat: add timeout and error handling, remove forced debug mode",
+            "url": "https://github.com/jackie-trng05/FIND/commit/5b58653e5214b9cd691a73f593f166a55bf84907"
+          },
+          {
+            "commit": "a1787fe7dc55ba64f1b3569d4c58ba6e189f69f9",
+            "author": "gurnoor-saini",
+            "subject": "fix(student-3): resolve Ruff security findings for pre-commit scan",
+            "url": "https://github.com/jackie-trng05/FIND/commit/a1787fe7dc55ba64f1b3569d4c58ba6e189f69f9"
+          },
+          {
+            "commit": "a52c3565ec6a48b93eff66e49bf7feb8bfb1a226",
+            "author": "Kushi Immadi",
+            "subject": "test(student-3): add Lab 11 post-commit CI/CD endpoint and token tests",
+            "url": "https://github.com/jackie-trng05/FIND/commit/a52c3565ec6a48b93eff66e49bf7feb8bfb1a226"
+          },
+          {
+            "commit": "9402a5d2dbdc1373301dbb5609bcdf9c3e77e3d3",
+            "author": "Nikita1081",
+            "subject": "docs: normalize Multi-Agent panel docstrings across student routes",
+            "url": "https://github.com/jackie-trng05/FIND/commit/9402a5d2dbdc1373301dbb5609bcdf9c3e77e3d3"
+          },
+          {
+            "commit": "492bb354cdfc43c5ef85345f5da232a69b54acc6",
+            "author": "Nikita1081",
+            "subject": "refactor(student-3): send explicit applications domain and caller-scoped status",
+            "url": "https://github.com/jackie-trng05/FIND/commit/492bb354cdfc43c5ef85345f5da232a69b54acc6"
+          },
+          {
+            "commit": "ec1343c7fbda59eca0b7b7e192a8650f37b4fde7",
+            "author": "Kushi Immadi",
+            "subject": "feat: add human-review decision controls with inline validation to student-3 UI",
+            "url": "https://github.com/jackie-trng05/FIND/commit/ec1343c7fbda59eca0b7b7e192a8650f37b4fde7"
+          },
+          {
+            "commit": "dfcc52c9f02272c3609c1dd2118fee03255868bf",
+            "author": "Kushi Immadi",
+            "subject": "feat: proxy human decisions with reason and evidence-used in student-3 backend",
+            "url": "https://github.com/jackie-trng05/FIND/commit/dfcc52c9f02272c3609c1dd2118fee03255868bf"
+          },
+          {
+            "commit": "05cfaff0a5b0b6d69715367704ce10cd771f9849",
+            "author": "Kushi Immadi",
+            "subject": "feat: add multi-agent orchestrator panel to student-3 candidate profile",
+            "url": "https://github.com/jackie-trng05/FIND/commit/05cfaff0a5b0b6d69715367704ce10cd771f9849"
+          },
+          {
+            "commit": "ae0ae0a0c6dcb149c436e01b1bac75d0e08708b8",
+            "author": "Kushi Immadi",
+            "subject": "feat: add multi-agent proxy routes and register blueprint for all students",
+            "url": "https://github.com/jackie-trng05/FIND/commit/ae0ae0a0c6dcb149c436e01b1bac75d0e08708b8"
+          },
+          {
+            "commit": "86cfa37cef76164e9dbf5002b6024c3f7e2a6a49",
+            "author": "Kushi Immadi",
+            "subject": "feat: add multi-agent service client to all student backends",
+            "url": "https://github.com/jackie-trng05/FIND/commit/86cfa37cef76164e9dbf5002b6024c3f7e2a6a49"
+          },
+          {
+            "commit": "5752f2263591ec61403ffbd3692854118ba09785",
+            "author": "Kushi Immadi",
+            "subject": "student-3: set RAG placeholder question to shortlisted-applications query",
+            "url": "https://github.com/jackie-trng05/FIND/commit/5752f2263591ec61403ffbd3692854118ba09785"
+          }
+        ]
+      }
+    }
+  ]
+}
