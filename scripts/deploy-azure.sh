@@ -35,6 +35,30 @@ fi
 
 REGISTRY_SERVER=$(az acr show --name "$REGISTRY_NAME" --resource-group "$RESOURCE_GROUP" --query loginServer -o tsv)
 
+# Step 1b: Provision a shared user-assigned managed identity for ACR pulls and grant it
+# AcrPull on the registry. One pre-provisioned identity (instead of a system-assigned
+# identity per app) lets us create the role assignment with an explicit object id and
+# principal type, which avoids the "Failed to query ... by invoking Graph API" warning
+# the implicit per-app grant emits when the deploying identity can't read the directory.
+ACR_PULL_IDENTITY_NAME="find-acr-pull"
+echo "Ensuring ACR pull identity ${ACR_PULL_IDENTITY_NAME} exists..."
+az identity create --resource-group "$RESOURCE_GROUP" --name "$ACR_PULL_IDENTITY_NAME" >/dev/null
+ACR_PULL_IDENTITY_ID=$(az identity show --resource-group "$RESOURCE_GROUP" --name "$ACR_PULL_IDENTITY_NAME" --query id -o tsv)
+ACR_PULL_PRINCIPAL_ID=$(az identity show --resource-group "$RESOURCE_GROUP" --name "$ACR_PULL_IDENTITY_NAME" --query principalId -o tsv)
+REGISTRY_ID=$(az acr show --name "$REGISTRY_NAME" --resource-group "$RESOURCE_GROUP" --query id -o tsv)
+
+EXISTING_ACRPULL=$(az role assignment list --assignee "$ACR_PULL_PRINCIPAL_ID" --role AcrPull --scope "$REGISTRY_ID" --query "[0].id" -o tsv 2>/dev/null || true)
+if [[ -z "$EXISTING_ACRPULL" ]]; then
+  echo "Granting AcrPull on the registry to the pull identity..."
+  az role assignment create \
+    --assignee-object-id "$ACR_PULL_PRINCIPAL_ID" \
+    --assignee-principal-type ServicePrincipal \
+    --role AcrPull \
+    --scope "$REGISTRY_ID" >/dev/null
+  # Allow the role assignment to propagate before the apps pull images.
+  sleep 30
+fi
+
 # Step 2: Resolve the environment's default domain and precompute all FQDNs
 DEFAULT_DOMAIN=$(az containerapp env show --name "$ENV_NAME" --resource-group "$RESOURCE_GROUP" \
   --query properties.defaultDomain -o tsv)
@@ -65,8 +89,8 @@ ALLOWED_ORIGINS="${SHARED_FRONTEND_URL},${S1_FE},${S2_FE},${S3_FE},${S4_FE},${S5
 PROFILE="AI_MODE_ENABLED=false MCP_ENABLED=false RAG_ENABLED=false MULTI_AGENT_ENABLED=false"
 
 # deploy_app <name> <image> <target-port> <internal|external> <env-var...>
-# All apps authenticate to ACR with their own system-assigned managed identity
-# (--registry-identity system) — no registry credentials are stored.
+# All apps authenticate to ACR with the shared user-assigned managed identity
+# ($ACR_PULL_IDENTITY_ID, granted AcrPull above) — no registry credentials are stored.
 deploy_app() {
   local name="$1" image="$2" port="$3" ingress="$4"
   shift 4
@@ -79,7 +103,8 @@ deploy_app() {
     --target-port "$port" \
     --ingress "$ingress" \
     --registry-server "$REGISTRY_SERVER" \
-    --registry-identity system \
+    --registry-identity "$ACR_PULL_IDENTITY_ID" \
+    --user-assigned "$ACR_PULL_IDENTITY_ID" \
     --cpu 0.25 --memory 0.5Gi \
     --min-replicas 1 --max-replicas 1 \
     --env-vars "$@"
