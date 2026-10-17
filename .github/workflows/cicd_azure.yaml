@@ -23,7 +23,9 @@ jobs:
           python-version: "3.11"
 
       - name: Install test dependencies
-        run: pip install pytest ruff detect-secrets pip-audit
+        run: |
+          python -m pip install --upgrade pip "setuptools>=83.0.0"
+          pip install pytest ruff detect-secrets pip-audit
 
       - name: Run pre-commit evidence tests
         run: |
