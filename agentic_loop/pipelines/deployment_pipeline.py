@@ -21,6 +21,6 @@ Observed Evidence:
 {evidence}
 
 Validate the deployment assessment against the evidence.
-Identify any gaps or risks in managed identity usage, ingress isolation, or deployment validation evidence.
+Identify any gaps or risks in managed identity, ingress isolation, or deployment validation.
 
 Reply in at most 40 words and stay evidence-based.""".strip()

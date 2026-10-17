@@ -1,9 +1,15 @@
 Validate the deployment review assessment against the evidence.
+Do not trust the implementation model's claims without source evidence.
+Never expand FIND or infer enabled triggers from commented YAML.
+For each factual claim, cite a source filename and short exact quote.
+State "Not established by supplied evidence" when evidence is insufficient.
 
-Check that the assessment is grounded in the actual scripts/deploy-azure.sh
-content and docs/release-2/reports/deployment-results.md, not assumptions.
+Check that the assessment is grounded in the supplied scripts, workflow,
+and docs/release-2/deploy/deployment-results.md content, not assumptions.
+Distinguish static configuration from live verification. Check the report's
+status, HTTP result, and timestamp; it validates only shared-frontend.
 
 Identify any gaps or risks in managed identity usage, ingress isolation
 (internal vs external), or deployment validation evidence.
 
-Reply in at most 40 words and stay evidence-based.
+Return only Supported:, Unsupported:, Gaps: in at most 40 words.

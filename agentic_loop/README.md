@@ -29,8 +29,9 @@ not fully satisfy the requirement.
 | Release 2 (local) | Worker Agent | Y | [worker_agent.py](../multi-agent-server/agents/worker_agent.py) (`generate_output`) grounds output in real FIND DB records |
 | Release 2 (local) | Reviewer Agent | Y | [reviewer_agent.py](../multi-agent-server/agents/reviewer_agent.py) (`review_output`) is an independent reviewer sequenced after planner + worker |
 | Release 2 (local) | Human review | Y | A human reads the printed output and decides the next action; the multi-agent workflow adds an explicit Accept / Correction / Reject gate |
-| Release 2 (cloud) | AI-Mode / Ollama / approved LLM(s) deployed to cloud | Partial | **Cloud Pre-Commit**, **Cloud CI/CD Tests**, and **Cloud Deployment** review modes exist. They self-register against the planned FIND locations (`.pre-commit-config.yaml`, `scripts/`, `tests/pre_commit/`, `tests/post_commit/`, `docs/release-2/reports/`), which currently hold placeholder scaffolds — replace the placeholders with the real cloud artifacts and the modes validate them automatically |
-| Release 2 (cloud) | MCP/RAG/Multi-Agent explicitly disabled in cloud | N/A | Not applicable until the real cloud deployment artifacts replace the placeholder scaffolds |
+| Release 2 (cloud) | AI-Mode / Ollama / approved LLM(s) deployed to cloud | N | The local cloud review modes assess deployment evidence; they do not deploy Ollama or AI features to Azure. |
+| Release 2 (cloud) | MCP/RAG/Multi-Agent explicitly disabled in cloud | Y | `scripts/deploy-azure.sh` disables these features and AI mode in the cloud profile. |
+
 
 ## Running the review tool
 
@@ -51,4 +52,3 @@ python agentic_loop/agentic_loop.py
 If you see `ModuleNotFoundError: No module named 'openai'`, the root
 `requirements.txt` above hasn't been installed for whichever Python interpreter
 you're running the script with.
-

@@ -1,11 +1,16 @@
 Review the Azure deployment configuration for FIND.
+Use only supplied evidence. Never expand FIND. Cite factual claims using source
+filenames and short exact quotes. Commented YAML triggers are inactive.
+If a fact is unclear, state "Not established by supplied evidence".
 
 Evaluate:
 - Container Apps environment and ACR setup
-- Managed identity configuration (--registry-identity system)
-- deploy-azure.sh script logic (resource group tags, ACR build, deployment order, FQDN wiring)
+- Managed identity configuration (--registry-identity, identity provisioning, and AcrPull role assignment)
+- env-setup.sh, build-images.sh, and deploy-azure-env.sh (resource group tags, Docker build/push, environment setup)
+- deploy-azure.sh (deployment order, FQDN wiring)
 - container resource sizing
 - ingress isolation (internal vs external) and scaling configuration
+- docs/release-2/deploy/deployment-results.md status, HTTP result, timestamp, and entry-point-only coverage
 
 Return:
 Strengths:
