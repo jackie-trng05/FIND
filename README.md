@@ -28,6 +28,11 @@ development tooling rather than a product service. Cloud deployment must target 
 integrated application, with one shared deployment on Microsoft Azure or Amazon Web Services,
 not individual student microservices.
 
+Release 2 report evidence and population commands are documented in the
+[report runbook](docs/release-2/reports/README.md). The generated
+[completion checklist](docs/release-2/reports/completion-checklist.md) distinguishes
+captured evidence from outstanding security, CI, deployment and human-review work.
+
 
 <a id="project-structure"></a>
 

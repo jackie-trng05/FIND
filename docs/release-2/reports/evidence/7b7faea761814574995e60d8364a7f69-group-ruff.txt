@@ -1,0 +1,741 @@
+Command: C:\git\FIND\.venv\Scripts\python.exe -m ruff check --select S --per-file-ignores **/tests/**:S101,**/test_*.py:S101 student-1 student-2 student-3 student-4 student-5 shared agentic_loop mcp-server rag-server multi-agent-server
+Exit: 1
+S104 Possible binding to all interfaces
+  --> mcp-server\config.py:24:34
+   |
+22 | # host.docker.internal:<MCP_PORT>. Bind to 0.0.0.0 so the Docker host gateway
+23 | # can route into the process.
+24 | MCP_HOST = os.getenv("MCP_HOST", "0.0.0.0")
+   |                                  ^^^^^^^^^
+25 | MCP_PORT = int(os.getenv("MCP_PORT", "16050"))
+   |
+
+S112 `try`-`except`-`continue` detected, consider logging the exception
+   --> mcp-server\tools.py:170:17
+    |
+168 |                   try:
+169 |                       pages.append(page.extract_text() or "")
+170 | /                 except Exception:
+171 | |                     continue
+    | |____________________________^
+172 |               text = "\n".join(p.strip() for p in pages if p.strip())
+173 |           except Exception:
+    |
+
+S112 `try`-`except`-`continue` detected, consider logging the exception
+   --> multi-agent-server\agents\worker_agent.py:129:17
+    |
+127 |                   try:
+128 |                       pages.append(page.extract_text() or "")
+129 | /                 except Exception:
+130 | |                     continue
+    | |____________________________^
+131 |               text = "\n".join(p.strip() for p in pages if p.strip())
+132 |           except Exception:
+    |
+
+S104 Possible binding to all interfaces
+   --> multi-agent-server\app.py:105:42
+    |
+104 | def main() -> None:
+105 |     host = os.getenv("MULTI_AGENT_HOST", "0.0.0.0")
+    |                                          ^^^^^^^^^
+106 |     port = int(os.getenv("PORT", os.getenv("MULTI_AGENT_PORT", "16080")))
+107 |     server = ThreadingHTTPServer((host, port), MultiAgentHandler)
+    |
+
+S104 Possible binding to all interfaces
+  --> rag-server\rag_http_server.py:96:34
+   |
+95 | def main() -> None:
+96 |     host = os.getenv("RAG_HOST", "0.0.0.0")
+   |                                  ^^^^^^^^^
+97 |     port = int(os.getenv("PORT", os.getenv("RAG_PORT", "16070")))
+98 |     server = ThreadingHTTPServer((host, port), RAGHandler)
+   |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> rag-server\rag_pipeline.py:138:5
+    |
+136 |       try:
+137 |           client.delete_collection(name=COLLECTION_NAME)
+138 | /     except Exception:  # noqa: BLE001 - collection may not exist yet
+139 | |         pass
+    | |____________^
+140 |       _collection = client.get_or_create_collection(
+141 |               name=COLLECTION_NAME, metadata={"hnsw:space": "cosine"}
+    |
+
+S113 Probable use of `requests` call without timeout
+  --> shared\backend\app.py:57:12
+   |
+55 |     password_hash = hash_password(password)
+56 |
+57 |     resp = requests.post(f"{DB_SERVICE_URL}/users", json={
+   |            ^^^^^^^^^^^^^
+58 |         "user_email": email,
+59 |         "user_password_hash": password_hash,
+   |
+
+S113 Probable use of `requests` call without timeout
+  --> shared\backend\app.py:85:12
+   |
+83 |         return jsonify({"error": "Email and password are required"}), 400
+84 |
+85 |     resp = requests.get(f"{DB_SERVICE_URL}/users/by-email", params={"email": email})
+   |            ^^^^^^^^^^^^
+86 |     if resp.status_code == 404:
+87 |         return jsonify({"error": "Invalid email or password"}), 401
+   |
+
+S113 Probable use of `requests` call without timeout
+   --> shared\backend\app.py:98:5
+    |
+ 96 |     expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+ 97 |
+ 98 |     requests.post(f"{DB_SERVICE_URL}/sessions", json={
+    |     ^^^^^^^^^^^^^
+ 99 |         "user_id": user["user_id"],
+100 |         "session_token": token,
+    |
+
+S113 Probable use of `requests` call without timeout
+   --> shared\backend\app.py:128:12
+    |
+126 |         return jsonify({"error": "No token provided"}), 401
+127 |
+128 |     resp = requests.get(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token})
+    |            ^^^^^^^^^^^^
+129 |     if resp.status_code == 404:
+130 |         return jsonify({"error": "Invalid or expired session"}), 401
+    |
+
+S113 Probable use of `requests` call without timeout
+   --> shared\backend\app.py:134:9
+    |
+132 |     session = resp.json()
+133 |     if datetime.fromisoformat(session["expires_at"]) < datetime.utcnow():
+134 |         requests.delete(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token})
+    |         ^^^^^^^^^^^^^^^
+135 |         return jsonify({"error": "Session expired"}), 401
+    |
+
+S113 Probable use of `requests` call without timeout
+   --> shared\backend\app.py:156:20
+    |
+154 |         return jsonify({"error": "Not authenticated"}), 401
+155 |
+156 |     session_resp = requests.get(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token})
+    |                    ^^^^^^^^^^^^
+157 |     if session_resp.status_code != 200:
+158 |         return jsonify({"error": "Invalid session"}), 401
+    |
+
+S113 Probable use of `requests` call without timeout
+   --> shared\backend\app.py:168:5
+    |
+166 |         return jsonify({"error": "First name and last name are required"}), 400
+167 |
+168 |     requests.put(f"{DB_SERVICE_URL}/users/{user_id}", json={
+    |     ^^^^^^^^^^^^
+169 |         "user_first_name": data.get("first_name", ""),
+170 |         "user_last_name": data.get("last_name", ""),
+    |
+
+S113 Probable use of `requests` call without timeout
+   --> shared\backend\app.py:181:9
+    |
+179 |         token = request.cookies.get("session_token", "")
+180 |     if token:
+181 |         requests.delete(f"{DB_SERVICE_URL}/sessions/by-token", params={"token": token})
+    |         ^^^^^^^^^^^^^^^
+182 |     resp = make_response(jsonify({"message": "Logged out"}), 200)
+183 |     resp.delete_cookie("session_token", domain=COOKIE_DOMAIN)
+    |
+
+S104 Possible binding to all interfaces
+   --> shared\backend\app.py:188:18
+    |
+187 | if __name__ == "__main__":
+188 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)
+    |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+   --> shared\backend\app.py:188:66
+    |
+187 | if __name__ == "__main__":
+188 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)
+    |                                                                  ^^^^^^^^^^
+
+S104 Possible binding to all interfaces
+   --> shared\database\app.py:181:18
+    |
+180 | if __name__ == "__main__":
+181 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6000")), debug=True)
+    |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+   --> shared\database\app.py:181:66
+    |
+180 | if __name__ == "__main__":
+181 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6000")), debug=True)
+    |                                                                  ^^^^^^^^^^
+
+S104 Possible binding to all interfaces
+  --> shared\frontend\app.py:63:18
+   |
+62 | if __name__ == "__main__":
+63 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3000")), debug=True)
+   |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+  --> shared\frontend\app.py:63:66
+   |
+62 | if __name__ == "__main__":
+63 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3000")), debug=True)
+   |                                                                  ^^^^^^^^^^
+
+S603 `subprocess` call: check for execution of untrusted input
+  --> shared\release2_reports.py:37:14
+   |
+36 | def git(*arguments):
+37 |     result = subprocess.run(["git", *arguments], cwd=ROOT, capture_output=True, text=True, check=False)
+   |              ^^^^^^^^^^^^^^
+38 |     if result.returncode:
+39 |         raise ValueError(result.stderr.strip() or "Git command failed")
+   |
+
+S607 Starting a process with a partial executable path
+  --> shared\release2_reports.py:37:29
+   |
+36 | def git(*arguments):
+37 |     result = subprocess.run(["git", *arguments], cwd=ROOT, capture_output=True, text=True, check=False)
+   |                             ^^^^^^^^^^^^^^^^^^^
+38 |     if result.returncode:
+39 |         raise ValueError(result.stderr.strip() or "Git command failed")
+   |
+
+S603 `subprocess` call: check for execution of untrusted input
+   --> shared\release2_reports.py:209:18
+    |
+207 |     passed = bool(commands)
+208 |     for command in commands:
+209 |         result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, errors="replace", check=False)
+    |                  ^^^^^^^^^^^^^^
+210 |         success = result.returncode == 0
+211 |         output = result.stdout + result.stderr
+    |
+
+S607 Starting a process with a partial executable path
+   --> shared\release2_reports.py:308:29
+    |
+307 | def snapshot():
+308 |     result = subprocess.run(["docker", "compose", "ps", "--all", "--format", "json"], cwd=ROOT, capture_output=True, text=True, checkâ€¦
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+309 |     path = artifact("local-services.txt", f"Captured: {now()}\nExit: {result.returncode}\n{result.stdout}\n{result.stderr}")
+310 |     save_event("snapshot", "group", "CAPTURED" if result.returncode == 0 else "FAIL", artifact=path)
+    |
+
+S104 Possible binding to all interfaces
+  --> student-1\backend\app.py:51:18
+   |
+50 | if __name__ == "__main__":
+51 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+   |                  ^^^^^^^^^
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-1\backend\routes\mcp_mode.py:207:5
+    |
+205 |           if narrative:
+206 |               return narrative
+207 | /     except Exception:  # noqa: BLE001 - fall back to the deterministic grounded summary
+208 | |         pass
+    | |____________^
+209 |       return summary
+    |
+
+S112 `try`-`except`-`continue` detected, consider logging the exception
+  --> student-1\backend\services\llm_client.py:36:17
+   |
+34 |                   try:
+35 |                       pages.append(page.extract_text() or "")
+36 | /                 except Exception:
+37 | |                     continue
+   | |____________________________^
+38 |               text = "\n".join(p.strip() for p in pages if p.strip())
+39 |           except Exception:
+   |
+
+S104 Possible binding to all interfaces
+   --> student-1\database\app.py:275:18
+    |
+274 | if __name__ == "__main__":
+275 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6001")), debug=True)
+    |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+   --> student-1\database\app.py:275:66
+    |
+274 | if __name__ == "__main__":
+275 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6001")), debug=True)
+    |                                                                  ^^^^^^^^^^
+
+S104 Possible binding to all interfaces
+  --> student-1\frontend\app.py:57:18
+   |
+56 | if __name__ == "__main__":
+57 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+   |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+  --> student-1\frontend\app.py:57:40
+   |
+56 | if __name__ == "__main__":
+57 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+   |                                        ^^^^^^^^^^
+
+S104 Possible binding to all interfaces
+  --> student-2\backend\app.py:55:18
+   |
+54 | if __name__ == "__main__":
+55 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+   |                  ^^^^^^^^^
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-2\backend\routes\mcp_mode.py:200:5
+    |
+198 |           if narrative:
+199 |               return narrative
+200 | /     except Exception:  # noqa: BLE001 - fall back to the deterministic grounded verdict
+201 | |         pass
+    | |____________^
+202 |       return verdict
+    |
+
+S608 Possible SQL injection vector through string-based query construction
+   --> student-2\database\app.py:200:9
+    |
+198 |     params = list(updates.values()) + [posting_id]
+199 |     conn.execute(
+200 |         f"UPDATE job_postings SET {set_clause} WHERE JobPosting_Id = ?", params
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+201 |     )
+202 |     conn.commit()
+    |
+
+S104 Possible binding to all interfaces
+   --> student-2\database\app.py:263:18
+    |
+262 | if __name__ == "__main__":
+263 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+    |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+   --> student-2\database\app.py:263:40
+    |
+262 | if __name__ == "__main__":
+263 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+    |                                        ^^^^^^^^^^
+
+S104 Possible binding to all interfaces
+  --> student-2\frontend\app.py:78:18
+   |
+77 | if __name__ == "__main__":
+78 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+   |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+  --> student-2\frontend\app.py:78:40
+   |
+77 | if __name__ == "__main__":
+78 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+   |                                        ^^^^^^^^^^
+
+S104 Possible binding to all interfaces
+  --> student-3\backend\app.py:69:18
+   |
+68 | if __name__ == "__main__":
+69 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+   |                  ^^^^^^^^^
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-3\backend\routes\mcp_mode.py:222:5
+    |
+220 |           if narrative:
+221 |               return narrative
+222 | /     except Exception:  # noqa: BLE001 - fall back to the deterministic grounded verdict
+223 | |         pass
+    | |____________^
+224 |       return verdict
+    |
+
+S112 `try`-`except`-`continue` detected, consider logging the exception
+  --> student-3\backend\services\llm_client.py:31:17
+   |
+29 |                   try:
+30 |                       pages.append(page.extract_text() or "")
+31 | /                 except Exception:
+32 | |                     continue
+   | |____________________________^
+33 |               text = "\n".join(p.strip() for p in pages if p.strip())
+34 |           except Exception:
+   |
+
+S608 Possible SQL injection vector through string-based query construction
+   --> student-3\database\app.py:213:18
+    |
+211 |     set_clause = ", ".join(f"{col} = ?" for col in updates)
+212 |     params = list(updates.values()) + [application_id]
+213 |     conn.execute(f"UPDATE applications SET {set_clause} WHERE application_id = ?", params)
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+214 |     conn.commit()
+215 |     row = conn.execute("SELECT * FROM applications WHERE application_id = ?", (application_id,)).fetchone()
+    |
+
+S104 Possible binding to all interfaces
+   --> student-3\database\app.py:292:18
+    |
+291 | if __name__ == "__main__":
+292 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6003")), debug=True)
+    |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+   --> student-3\database\app.py:292:66
+    |
+291 | if __name__ == "__main__":
+292 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6003")), debug=True)
+    |                                                                  ^^^^^^^^^^
+
+S104 Possible binding to all interfaces
+   --> student-3\frontend\app.py:267:18
+    |
+266 | if __name__ == "__main__":
+267 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+    |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+   --> student-3\frontend\app.py:267:40
+    |
+266 | if __name__ == "__main__":
+267 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+    |                                        ^^^^^^^^^^
+
+S104 Possible binding to all interfaces
+  --> student-4\backend\app.py:46:18
+   |
+45 | if __name__ == "__main__":
+46 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+   |                  ^^^^^^^^^
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-4\backend\routes\mcp_mode.py:210:5
+    |
+208 |           if narrative:
+209 |               return narrative
+210 | /     except Exception:  # noqa: BLE001 - fall back to the deterministic grounded summary
+211 | |         pass
+    | |____________^
+212 |       return verdict
+    |
+
+S608 Possible SQL injection vector through string-based query construction
+  --> student-4\database\app.py:30:9
+   |
+28 |     conn = get_db_connection()
+29 |     interviews = conn.execute(
+30 |         f"SELECT {INTERVIEW_COLUMNS} FROM interviews ORDER BY interview_datetime"
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+31 |     ).fetchall()
+32 |     conn.close()
+   |
+
+S608 Possible SQL injection vector through string-based query construction
+  --> student-4\database\app.py:40:9
+   |
+38 |     conn = get_db_connection()
+39 |     interview = conn.execute(
+40 |         f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+41 |         (interview_id,),
+42 |     ).fetchone()
+   |
+
+S608 Possible SQL injection vector through string-based query construction
+  --> student-4\database\app.py:80:9
+   |
+78 |     new_id = cursor.lastrowid
+79 |     interview = conn.execute(
+80 |         f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+81 |         (new_id,),
+82 |     ).fetchone()
+   |
+
+S608 Possible SQL injection vector through string-based query construction
+  --> student-4\database\app.py:94:9
+   |
+92 |     conn = get_db_connection()
+93 |     existing = conn.execute(
+94 |         f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+95 |         (interview_id,),
+96 |     ).fetchone()
+   |
+
+S608 Possible SQL injection vector through string-based query construction
+   --> student-4\database\app.py:132:9
+    |
+130 |     conn.commit()
+131 |     interview = conn.execute(
+132 |         f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+133 |         (interview_id,),
+134 |     ).fetchone()
+    |
+
+S104 Possible binding to all interfaces
+   --> student-4\database\app.py:160:18
+    |
+159 | if __name__ == "__main__":
+160 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6004")), debug=True)
+    |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+   --> student-4\database\app.py:160:66
+    |
+159 | if __name__ == "__main__":
+160 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6004")), debug=True)
+    |                                                                  ^^^^^^^^^^
+
+S104 Possible binding to all interfaces
+   --> student-4\frontend\app.py:101:18
+    |
+100 | if __name__ == "__main__":
+101 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3004")))
+    |                  ^^^^^^^^^
+
+S104 Possible binding to all interfaces
+  --> student-5\backend\app.py:57:18
+   |
+56 | if __name__ == "__main__":
+57 |     app.run(host="0.0.0.0", port=PORT, debug=True)
+   |                  ^^^^^^^^^
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+  --> student-5\backend\routes\ai_mode.py:94:5
+   |
+92 |               if user_resp.status_code == 200:
+93 |                   applicant_info = json.dumps(user_resp.json(), indent=2)
+94 | /     except Exception:
+95 | |         pass
+   | |____________^
+96 |
+97 |       try:
+   |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-5\backend\routes\ai_mode.py:107:5
+    |
+105 |               ]
+106 |               interview_notes = "\n\n".join(notes)
+107 | /     except Exception:
+108 | |         pass
+    | |____________^
+109 |
+110 |       system_prompt = load_prompt("system_prompt.txt")
+    |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+  --> student-5\backend\routes\evaluations.py:86:9
+   |
+84 |           try:
+85 |               detail = (resp.json() or {}).get("error", "")
+86 | /         except Exception:
+87 | |             pass
+   | |________________^
+88 |           return _hx_trigger({"showErrorToast": detail or "Failed to save evaluation"})
+   |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+  --> student-5\backend\routes\evaluations.py:93:5
+   |
+91 |       try:
+92 |           saved = resp.json() or {}
+93 | /     except Exception:
+94 | |         pass
+   | |____________^
+95 |
+96 |       rec = data.get("Evaluation_FinalRecommendation")
+   |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-5\backend\routes\evaluations.py:102:9
+    |
+100 |           try:
+101 |               integration_api.apply_decision(application_id, action)
+102 | /         except Exception:
+103 | |             pass
+    | |________________^
+104 |           msg = f"Evaluation completed. Applicant has been marked {action}."
+105 |       else:
+    |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-5\backend\routes\evaluations.py:228:5
+    |
+226 |           if get_resp.status_code == 200:
+227 |               application_id = get_resp.json().get("Application_Id")
+228 | /     except Exception:
+229 | |         pass
+    | |____________^
+230 |
+231 |       resp = database_api.delete_evaluation(evaluation_id)
+    |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-5\backend\routes\mcp_mode.py:212:5
+    |
+210 |           if narrative:
+211 |               return narrative
+212 | /     except Exception:  # noqa: BLE001 - fall back to the deterministic grounded verdict
+213 | |         pass
+    | |____________^
+214 |       return verdict
+    |
+
+S113 Probable use of `requests` call without timeout
+  --> student-5\backend\services\database_api.py:26:12
+   |
+25 | def create_evaluation(payload):
+26 |     return http_requests.post(f"{DB_SERVICE_URL}/evaluations", json=payload)
+   |            ^^^^^^^^^^^^^^^^^^
+
+S113 Probable use of `requests` call without timeout
+  --> student-5\backend\services\database_api.py:30:12
+   |
+29 | def update_evaluation(evaluation_id, payload):
+30 |     return http_requests.put(
+   |            ^^^^^^^^^^^^^^^^^
+31 |         f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", json=payload
+32 |     )
+   |
+
+S113 Probable use of `requests` call without timeout
+  --> student-5\backend\services\database_api.py:36:12
+   |
+35 | def delete_evaluation(evaluation_id):
+36 |     return http_requests.delete(f"{DB_SERVICE_URL}/evaluations/{evaluation_id}")
+   |            ^^^^^^^^^^^^^^^^^^^^
+
+S113 Probable use of `requests` call without timeout
+  --> student-5\backend\services\integration_api.py:37:12
+   |
+35 |     if not headers:
+36 |         return None, (jsonify({"error": "Not authenticated"}), 401)
+37 |     resp = http_requests.get(f"{SHARED_API_URL}/api/auth/session", headers=headers)
+   |            ^^^^^^^^^^^^^^^^^
+38 |     if resp.status_code != 200:
+39 |         return None, (jsonify({"error": "Invalid or expired session"}), 401)
+   |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+  --> student-5\backend\services\integration_api.py:54:5
+   |
+52 |               json={"application_status": new_status}, timeout=5,
+53 |           )
+54 | /     except Exception:
+55 | |         pass
+   | |____________^
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+  --> student-5\backend\services\integration_api.py:66:5
+   |
+64 |               json={"application_status": new_status}, timeout=5,
+65 |           )
+66 | /     except Exception:
+67 | |         pass
+   | |____________^
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+  --> student-5\backend\services\integration_api.py:86:5
+   |
+84 |                   if iv.get("application_id") == application_id:
+85 |                       return iv
+86 | /     except Exception:
+87 | |         pass
+   | |____________^
+88 |       return None
+   |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-5\backend\services\integration_api.py:106:5
+    |
+104 |               u = resp.json()
+105 |               name = f"{u.get('user_first_name', '')} {u.get('user_last_name', '')}".strip()
+106 | /     except Exception:
+107 | |         pass
+    | |____________^
+108 |       return name, number
+    |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-5\backend\services\integration_api.py:134:5
+    |
+132 |               if posting_resp.status_code == 200:
+133 |                   ev["job_title"] = posting_resp.json().get("Job_Title", "")
+134 | /     except Exception:
+135 | |         pass
+    | |____________^
+136 |       return ev
+    |
+
+S110 `try`-`except`-`pass` detected, consider logging the exception
+   --> student-5\backend\services\integration_api.py:151:5
+    |
+149 |           if posting_resp.status_code == 200:
+150 |               a["job_title"] = posting_resp.json().get("Job_Title", "")
+151 | /     except Exception:
+152 | |         pass
+    | |____________^
+153 |       return a
+    |
+
+S608 Possible SQL injection vector through string-based query construction
+  --> student-5\database\app.py:49:25
+   |
+48 |     where = " WHERE " + " AND ".join(filters) if filters else ""
+49 |     rows = conn.execute(f"SELECT * FROM evaluations{where} ORDER BY updated_at DESC", params).fetchall()
+   |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+50 |     conn.close()
+51 |     return jsonify([dict(r) for r in rows])
+   |
+
+S104 Possible binding to all interfaces
+   --> student-5\database\app.py:214:18
+    |
+213 | if __name__ == "__main__":
+214 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6005")), debug=True)
+    |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+   --> student-5\database\app.py:214:66
+    |
+213 | if __name__ == "__main__":
+214 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6005")), debug=True)
+    |                                                                  ^^^^^^^^^^
+
+S104 Possible binding to all interfaces
+  --> student-5\frontend\app.py:67:18
+   |
+66 | if __name__ == "__main__":
+67 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3005")), debug=True)
+   |                  ^^^^^^^^^
+
+S201 Use of `debug=True` in Flask app detected
+  --> student-5\frontend\app.py:67:66
+   |
+66 | if __name__ == "__main__":
+67 |     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3005")), debug=True)
+   |                                                                  ^^^^^^^^^^
+
+Found 79 errors.

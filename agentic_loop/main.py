@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 
 from dotenv import load_dotenv
 
@@ -13,6 +14,8 @@ def _resolve_roots() -> tuple[Path, Path, Path]:
     module_dir = Path(__file__).resolve().parent  # agentic_loop package (holds prompts/)
     app_dir = module_dir.parent  # FIND repository root (collector evidence source)
     repo_root = app_dir
+    if str(app_dir) not in sys.path:
+        sys.path.insert(0, str(app_dir))
     return module_dir, app_dir, repo_root
 
 
