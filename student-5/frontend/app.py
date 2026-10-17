@@ -64,4 +64,5 @@ def shared_js(filename):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3005")), debug=True)
+    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3005")), debug=debug_mode)  # noqa: S104 - container needs to bind all interfaces

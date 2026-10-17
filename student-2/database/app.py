@@ -197,7 +197,7 @@ def update_job_posting(posting_id: int):
     set_clause = ", ".join(f"{col} = ?" for col in updates)
     params = list(updates.values()) + [posting_id]
     conn.execute(
-        f"UPDATE job_postings SET {set_clause} WHERE JobPosting_Id = ?", params
+        f"UPDATE job_postings SET {set_clause} WHERE JobPosting_Id = ?", params  # noqa: S608
     )
     conn.commit()
     row = conn.execute(
@@ -260,4 +260,5 @@ def delete_job_posting(posting_id: int):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=PORT, debug=True)
+    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=PORT, debug=debug_mode)  # noqa: S104 - container needs to bind all interfaces

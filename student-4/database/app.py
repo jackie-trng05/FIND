@@ -27,7 +27,7 @@ def health():
 def get_interviews():
     conn = get_db_connection()
     interviews = conn.execute(
-        f"SELECT {INTERVIEW_COLUMNS} FROM interviews ORDER BY interview_datetime"
+        f"SELECT {INTERVIEW_COLUMNS} FROM interviews ORDER BY interview_datetime"  # noqa: S608
     ).fetchall()
     conn.close()
     return jsonify([dict(row) for row in interviews])
@@ -37,7 +37,7 @@ def get_interviews():
 def get_interview(interview_id):
     conn = get_db_connection()
     interview = conn.execute(
-        f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",
+        f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",  # noqa: S608
         (interview_id,),
     ).fetchone()
     conn.close()
@@ -77,7 +77,7 @@ def create_interview():
     conn.commit()
     new_id = cursor.lastrowid
     interview = conn.execute(
-        f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",
+        f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",  # noqa: S608
         (new_id,),
     ).fetchone()
     conn.close()
@@ -91,7 +91,7 @@ def update_interview(interview_id):
 
     conn = get_db_connection()
     existing = conn.execute(
-        f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",
+        f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",  # noqa: S608
         (interview_id,),
     ).fetchone()
 
@@ -129,7 +129,7 @@ def update_interview(interview_id):
     )
     conn.commit()
     interview = conn.execute(
-        f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",
+        f"SELECT {INTERVIEW_COLUMNS} FROM interviews WHERE interview_id = ?",  # noqa: S608
         (interview_id,),
     ).fetchone()
     conn.close()
@@ -157,4 +157,5 @@ def delete_interview(interview_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6004")), debug=True)
+    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6004")), debug=debug_mode)  # noqa: S104 - container needs to bind all interfaces

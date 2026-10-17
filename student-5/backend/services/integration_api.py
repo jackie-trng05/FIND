@@ -7,6 +7,8 @@ users database. All lookups are best-effort so a missing service degrades to
 empty values rather than failing the request.
 """
 
+import logging
+
 import requests as http_requests
 from flask import jsonify, request
 
@@ -17,6 +19,8 @@ from services.config import (
     SHARED_API_URL,
     SHARED_DB_URL,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # --------------------------------------------------------------------------- #
@@ -34,7 +38,7 @@ def require_session():
         headers["Authorization"] = auth_header
     if not headers:
         return None, (jsonify({"error": "Not authenticated"}), 401)
-    resp = http_requests.get(f"{SHARED_API_URL}/api/auth/session", headers=headers)
+    resp = http_requests.get(f"{SHARED_API_URL}/api/auth/session", headers=headers, timeout=5)
     if resp.status_code != 200:
         return None, (jsonify({"error": "Invalid or expired session"}), 401)
     return resp.json()["user"], None
@@ -51,8 +55,8 @@ def update_application_status(application_id, new_status):
             f"{APPLICATIONS_DB_URL}/applications/{application_id}",
             json={"application_status": new_status}, timeout=5,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("update_application_status failed for %s: %s", application_id, exc)
 
 
 def apply_decision(application_id, action):
@@ -63,8 +67,8 @@ def apply_decision(application_id, action):
             f"{APPLICATIONS_DB_URL}/applications/{application_id}",
             json={"application_status": new_status}, timeout=5,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("apply_decision failed for %s: %s", application_id, exc)
 
 
 def list_applications_response():
@@ -83,8 +87,8 @@ def fetch_interview(application_id):
             for iv in resp.json():
                 if iv.get("application_id") == application_id:
                     return iv
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("fetch_interview failed for %s: %s", application_id, exc)
     return None
 
 
@@ -103,8 +107,8 @@ def evaluator_fields(user_id):
         if resp.status_code == 200:
             u = resp.json()
             name = f"{u.get('user_first_name', '')} {u.get('user_last_name', '')}".strip()
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("evaluator_fields lookup failed for user %s: %s", user_id, exc)
     return name, number
 
 
@@ -131,8 +135,8 @@ def enrich_evaluation(ev, include_application_status=False):
             )
             if posting_resp.status_code == 200:
                 ev["job_title"] = posting_resp.json().get("Job_Title", "")
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("enrich_evaluation failed: %s", exc)
     return ev
 
 
@@ -148,6 +152,6 @@ def enrich_application(a):
         )
         if posting_resp.status_code == 200:
             a["job_title"] = posting_resp.json().get("Job_Title", "")
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("enrich_application failed: %s", exc)
     return a
