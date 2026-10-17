@@ -1,9 +1,9 @@
 [tool.ruff]
-# Lab 11: security-only static scan. The per-student Lab 11 pre-commit hooks each
+# Security-only static scan. The per-student pre-commit hooks each
 # scan their own student-N directory using this shared configuration.
 
 [tool.ruff.lint]
-# Lab 11: static code security scan - only flag flake8-bandit (S) security rules
+# Static code security scan - only flag flake8-bandit (S) security rules
 select = ["S"]
 
 [tool.ruff.lint.per-file-ignores]
