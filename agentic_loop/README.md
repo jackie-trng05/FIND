@@ -29,18 +29,15 @@ not fully satisfy the requirement.
 | Release 2 (local) | Worker Agent | Y | [worker_agent.py](../multi-agent-server/agents/worker_agent.py) (`generate_output`) grounds output in real FIND DB records |
 | Release 2 (local) | Reviewer Agent | Y | [reviewer_agent.py](../multi-agent-server/agents/reviewer_agent.py) (`review_output`) is an independent reviewer sequenced after planner + worker |
 | Release 2 (local) | Human review | Y | A human reads the printed output and decides the next action; the multi-agent workflow adds an explicit Accept / Correction / Reject gate |
-| Release 2 | Testing and deployment evidence reviews | Partial | Multi-Agent, pre-test, CI/CD and deployment menu modes consume captured report evidence and save real model transcripts. Missing evidence remains pending; see the [Release 2 runbook](../docs/release-2/reports/README.md). |
+| Release 2 | Testing and deployment evidence reviews | Partial | Menu modes use the existing collectors and two-model pipelines. Collected source evidence is not proof of runtime success; see the [Release 2 report index](../docs/release-2/reports/README.md). |
 | Release 2 (cloud) | AI-Mode/MCP/RAG/Multi-Agent disabled by default | Pending deployment evidence | The required baseline disables all four services. Cloud AI hosting is optional bonus work, not a baseline requirement. |
 
 ## Release 2 Reports
 
-Follow the [report runbook](../docs/release-2/reports/README.md) to capture scans,
-import each student's CI artifact, record deployment validation, snapshot workflow
-history and make a human release decision. The Release 2 menu uses the same shared
-report implementation as `python shared/release2_reports.py review --mode ...`.
-It reviews actual artifact content and persists OBSERVE/IMPLEMENTATION/REVIEW logs.
-Legacy structural collectors remain available in source but are not sufficient
-evidence of runtime success. A completed model call is not a passing assessment.
+See the [report index](../docs/release-2/reports/README.md) for captured results.
+The menu uses the existing collectors and pipelines; it does not regenerate these
+reports. Source inspection and completed model calls are not proof of runtime
+success or human approval. Retain actual execution evidence with each report.
 
 ## Running the review tool
 

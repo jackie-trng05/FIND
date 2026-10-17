@@ -1,4 +1,0 @@
-pre-commit
-ruff
-detect-secrets
-pip-audit

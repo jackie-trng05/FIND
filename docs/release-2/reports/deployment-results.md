@@ -1,6 +1,6 @@
 # Release 2 Cloud Deployment Report
 
-Generated from captured evidence. PENDING means not demonstrated. Do not edit generated reports: record evidence and refresh instead. Source inspection and health checks are not proof of integrated functionality.
+Captured evidence snapshot. PENDING means not demonstrated. Source inspection and health checks are not proof of integrated functionality.
 
 | Student | Recorded validation | Evidence |
 | --- | --- | --- |

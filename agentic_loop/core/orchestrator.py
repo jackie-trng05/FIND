@@ -287,14 +287,6 @@ def run_mode(mode: ModeConfig, app_dir, repo_root, prompts: PromptRegistry, ai: 
     _stage(mode.label, "START", "Starting review flow")
     _stage(mode.label, "OBSERVE", "Collecting evidence")
 
-    if mode.key in ("multi_agent", "pre_test", "cicd_test", "deployment"):
-        from shared.release2_reports import review
-        try:
-            status = review(mode.key)
-        except (OSError, ValueError, KeyError) as error:
-            return f"OBSERVE FAILED: {error}. Capture Release 2 report evidence first; see docs/release-2/reports/README.md."
-        return f"Report review {'complete' if status == 0 else 'failed'}; saved report and validation transcript under docs/release-2/reports/."
-
     collector = COLLECTORS[mode.key]
     if mode.key in ("architecture", "devops"):
         ok, evidence = collector(app_dir, repo_root, mode.scope)
