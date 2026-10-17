@@ -41,11 +41,67 @@ def git(*arguments):
     return result.stdout.strip()
 
 
+def canonical_events():
+    events = []
+    for student in STUDENTS:
+        number = student.rsplit("-", 1)[1]
+        precommit = REPORTS.parent / "pre-commit" / f"pre-commit-results-student{number}.md"
+        if precommit.exists():
+            text = precommit.read_text(encoding="utf-8")
+            generated = re.search(r"\*\*Generated:\*\*\s*(\S+)", text)
+            section = text.split("Captured hook output during an actual", 1)
+            hook_text = section[1] if len(section) == 2 else ""
+            commit = re.search(r"\[[^\]\r\n]+ ([0-9a-f]{7,40})\]", hook_text)
+            for scanner, label in (("ruff", "Ruff"), ("detect-secrets", "detect-secrets"), ("pip-audit", "pip-audit")):
+                result = re.search(rf"^{re.escape(label)} Scan \({re.escape(student)}\)[^\r\n]*\b(Passed|Failed|Skipped)\s*$", hook_text, re.MULTILINE)
+                status = "PASS" if result and result[1] == "Passed" and commit else "FAIL" if result and result[1] == "Failed" else "PENDING"
+                reference = f"../pre-commit/{precommit.name}"
+                events.append({"id": hashlib.sha256((reference + scanner + text).encode()).hexdigest()[:32],
+                               "timestamp": generated[1] if generated else "Not recorded", "commit": "", "dirty": None,
+                               "kind": "security", "student": student, "scanner": scanner, "status": status,
+                               "invocation": "commit-hook" if commit else "not demonstrated", "canonical": True,
+                               "tested_commit": commit[1] if commit else "Not recorded", "artifact": reference,
+                               "summary": {"scanner": scanner, "result": result[1] if result else "Missing",
+                                           "scope": "Canonical main report; only its recorded student hooks and temporary commit. Working-tree state and full commit SHA are not supplied."}})
+        source = REPORTS.parent / "post-commit" / student
+        audit_path, results_path = source / "test-audit.jsonl", source / "test-results.md"
+        if audit_path.exists() and results_path.exists():
+            audits = [json.loads(line) for line in audit_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+            if not audits:
+                raise ValueError(f"Empty canonical post-commit audit for {student}")
+            audit = audits[-1]
+            text = results_path.read_text(encoding="utf-8")
+            tests = re.findall(r"([^\s]+::test_[^\s]+)\s+(PASSED|FAILED|SKIPPED)", text)
+            passed = bool(tests) and all(status == "PASSED" for _, status in tests) and audit.get("status") == "PASS"
+            reference = f"../post-commit/{student}/test-results.md"
+            events.append({"id": hashlib.sha256((reference + json.dumps(audits) + text).encode()).hexdigest()[:32],
+                           "timestamp": audit["timestamp"], "commit": "", "dirty": None,
+                           "kind": "ci", "student": student, "status": "PASS" if passed else "FAIL",
+                           "canonical": True, "tested_commit": audit["commit_sha"], "artifact": reference,
+                           "summary": {"post_commit_tests": [name for name, _ in tests],
+                                       "audit": f"../post-commit/{student}/test-audit.jsonl",
+                                       "scope": "Canonical main post-commit output and audit. Does not claim unit-suite results, a workflow URL, or authenticated-backend coverage not supplied in those files."}})
+    return events
+
+
 def read_events():
     path = REPORTS / "evidence" / "report-audit.jsonl"
-    if not path.exists():
-        return []
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    events = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()] if path.exists() else []
+    canonical = canonical_events()
+    replaced = {(event["kind"], event["student"], event.get("scanner")) for event in canonical}
+    students_with_ci = {event["student"] for event in canonical if event["kind"] == "ci"}
+    contexts = []
+    for event in events:
+        if event["kind"] != "ci" or event["student"] not in students_with_ci:
+            continue
+        summary = {key: value for key, value in event.get("summary", {}).items() if key not in ("post_commit_tests", "post_commit_status")}
+        supporting = latest(events, "ci-supporting", event["student"])
+        if supporting:
+            summary["endpoint_evidence"] = {key: supporting[key] for key in ("id", "timestamp", "tested_commit", "summary") if key in supporting}
+        summary["scope"] = "Distinct downloaded CI context only; post-commit output is held in the canonical main report. Original capture provenance is preserved, not a new execution."
+        contexts.append({**{key: value for key, value in event.items() if key != "artifact"}, "kind": "ci-context", "summary": summary})
+    return [event for event in events if (event["kind"], event["student"], event.get("scanner")) not in replaced
+            and not (event["kind"] == "ci-supporting" and event["student"] in students_with_ci)] + contexts + canonical
 
 
 def latest(events, kind, student, **filters):
@@ -85,13 +141,17 @@ def event_line(event):
 
 def consolidate_evidence():
     events = read_events()
+    canonical = [event for event in events if event.get("canonical")]
     selected = {}
     for event in events:
         key = (event["kind"], event["student"], event.get("scanner"), event.get("feature"), event.get("mode"))
         selected[key] = event
     retained = sorted(selected.values(), key=lambda event: event["timestamp"])
-    destinations = {student: f"evidence/{student}-evidence.json" for student in (*STUDENTS, "group")}
-    references = {event["artifact"]: destinations[event["student"]] for event in events if event.get("artifact")}
+    destinations = {student: f"../local/{student}/evidence.json" if canonical and student != "group" else f"evidence/{student}-evidence.json"
+                    for student in (*STUDENTS, "group")}
+    references = {event["artifact"]: destinations[event["student"]] for event in events if event.get("artifact") and not event.get("canonical")}
+    if canonical:
+        references.update({f"evidence/{student}-evidence.json": destinations[student] for student in STUDENTS})
 
     def relocate(value):
         if isinstance(value, dict):
@@ -103,15 +163,17 @@ def consolidate_evidence():
     packs = {student: {"student": student, "scope": "One retained capture per evidence type. Original execution timestamps, commits and statuses are preserved. Consolidation is not a new test run.", "records": []}
              for student in (*STUDENTS, "group")}
     for event in retained:
+        if event.get("canonical"):
+            continue
         original = event.get("artifact")
         record = {"event": relocate(event)}
         if original:
             path = REPORTS / original
             raw = path.read_bytes()
-            if original in destinations.values():
-                existing = json.loads(raw)
+            existing = json.loads(raw) if path.suffix == ".json" else None
+            if isinstance(existing, dict) and existing.get("student") == event["student"] and "records" in existing:
                 record = next(item for item in existing["records"] if item["event"]["id"] == event["id"])
-                record = {**record, "event": relocate(event)}
+                record = {**relocate(record), "event": relocate(event)}
             else:
                 record.update({"capture_filename": path.name, "capture_sha256": hashlib.sha256(raw).hexdigest()})
                 text = raw.decode("utf-8")
@@ -134,13 +196,28 @@ def consolidate_evidence():
     directory = REPORTS / "evidence"
     directory.mkdir(parents=True, exist_ok=True)
     for student, pack in packs.items():
-        (REPORTS / destinations[student]).write_text(json.dumps(pack, indent=2) + "\n", encoding="utf-8")
+        path = REPORTS / destinations[student]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(pack, indent=2) + "\n", encoding="utf-8")
+        if canonical and student != "group":
+            local = latest(retained, "local", student) or {}
+            checks = local.get("summary", {}).get("checks", {})
+            body = f"# Local Integration Test Report - {student}\n\n**Status:** {local.get('status', 'PENDING')}\n**Captured:** {local.get('timestamp', 'Not recorded')}\n**Source commit:** {local.get('commit', 'Not recorded')}\n\n| Check | Result | Evidence detail |\n| --- | --- | --- |\n"
+            for name in CHECKS["local"]:
+                check = checks.get(name, {})
+                detail = str(check.get("detail", "See execution record" if check else "Not executed")).replace("|", "\\|").replace("\n", " ")
+                body += f"| {name} | {check.get('status', 'PENDING')} | {detail} |\n"
+            body += "\nSee [evidence.json](evidence.json) for the original execution records, synthetic AI responses and provenance. These are authenticated backend checks, not full frontend CRUD or human approval. RAG validates retrieval, not generated-answer quality. Multi-Agent runs do not submit human decisions.\n\nPre-commit evidence: [canonical report](../../pre-commit/pre-commit-results-student" + student.rsplit("-", 1)[1] + ".md). Post-commit CI: [canonical results](../../post-commit/" + student + "/test-results.md) and [audit](../../post-commit/" + student + "/test-audit.jsonl).\n"
+            (path.parent / "test-results.md").write_text(body, encoding="utf-8")
     updated = [relocate(event) for event in retained]
-    (directory / "report-audit.jsonl").write_text("".join(json.dumps(event) + "\n" for event in updated), encoding="utf-8")
+    (directory / "report-audit.jsonl").write_text("".join(json.dumps(event) + "\n" for event in updated if not event.get("canonical")), encoding="utf-8")
     ci_audit = REPORTS / "test-audit.jsonl"
     if ci_audit.exists():
-        ci_audit.write_text("".join(json.dumps(event) + "\n" for event in updated if event["kind"] == "ci"), encoding="utf-8")
-    managed = {REPORTS / event["artifact"] for event in events if event.get("artifact")}
+        if canonical:
+            ci_audit.unlink()
+        else:
+            ci_audit.write_text("".join(json.dumps(event) + "\n" for event in updated if event["kind"] == "ci"), encoding="utf-8")
+    managed = {REPORTS / event["artifact"] for event in events if event.get("artifact") and not event.get("canonical")}
     managed.update(path for path in directory.iterdir() if re.match(r"^[0-9a-f]{32}-", path.name))
     protected = {REPORTS / path for path in destinations.values()}
     removed = 0
@@ -148,14 +225,21 @@ def consolidate_evidence():
         if path.parent == directory and path.is_file():
             path.unlink()
             removed += 1
-    index = "# Evidence Index\n\nOne named pack per student consolidates their retained CI, local CRUD, AI integration and contribution-draft evidence. Shared execution evidence is stored once, not copied into every student's pack.\n\n| Student | CI | Backend checks | Overall local sign-off | Evidence pack |\n| --- | --- | --- | --- | --- |\n"
+    if len([event for event in canonical if event["kind"] == "ci"]) == len(STUDENTS):
+        (REPORTS / "test-results.md").unlink(missing_ok=True)
+    if len([event for event in canonical if event["kind"] == "security"]) == len(STUDENTS) * len(SCANNERS):
+        (REPORTS / "pre-commit-security-report.md").unlink(missing_ok=True)
+    index = "# Evidence Index\n\nOne named pack per student consolidates their distinct local CRUD, AI integration, CI context and contribution-draft evidence. Shared execution evidence is stored once, not copied into every student's pack.\n\n| Student | CI | Backend checks | Overall local sign-off | Evidence pack |\n| --- | --- | --- | --- | --- |\n"
     for student in STUDENTS:
         ci = latest(updated, "ci", student) or {}
         local = latest(updated, "local", student) or {}
         checks = local.get("summary", {}).get("checks", {})
         passed = sum(checks.get(name, {}).get("status") == "PASS" for name in ("create", "read", "update", "delete", "ai-mode", "mcp", "rag", "multi-agent"))
-        index += f"| {student} | {ci.get('status', 'PENDING')} | {passed}/8 PASS | {local.get('status', 'PENDING')} | [{student}-evidence.json]({student}-evidence.json) |\n"
-    index += "\nShared evidence: [group-evidence.json](group-evidence.json). Machine-readable retained record index: [report-audit.jsonl](report-audit.jsonl).\n\nEach pack's `records` list identifies its evidence by `event.kind`, with `feature`, `scanner` or `mode` where applicable. CI records preserve run URLs, tested commits, actual results and endpoint assertions. Local records preserve authenticated checks and synthetic AI output.\n\nDuplicate captures, superseded attempts and verbose CI logs were removed. Original execution timestamps, commits, statuses and checksums are retained; consolidation is not a new execution. Remaining FAIL/PENDING records are compactly disclosed, not changed to PASS. Cloud deployment and human evidence remain pending.\n"
+        target = f"../../local/{student}/test-results.md" if canonical else f"{student}-evidence.json"
+        index += f"| {student} | {ci.get('status', 'PENDING')} | {passed}/8 PASS | {local.get('status', 'PENDING')} | [{student} results]({target}) |\n"
+    if canonical:
+        index += "\nCanonical reports from main: [pre-commit](../../pre-commit/) and [post-commit](../../post-commit/). They are read directly and are not duplicated in local evidence. Local reports follow the same category/student layout.\n"
+    index += "\nShared evidence: [group-evidence.json](group-evidence.json). Machine-readable retained record index: [report-audit.jsonl](report-audit.jsonl).\n\nEach pack's `records` list identifies its evidence by `event.kind`, with `feature`, `scanner` or `mode` where applicable. CI context preserves distinct run URLs, unit totals, tested commits and endpoint assertions without copying canonical post-commit output. Local records preserve authenticated checks and synthetic AI output.\n\nDuplicate captures, superseded attempts and verbose CI logs were removed. Original execution timestamps, commits, statuses and checksums are retained; consolidation is not a new execution. Remaining FAIL/PENDING records are compactly disclosed, not changed to PASS. Cloud deployment and human evidence remain pending.\n"
     (directory / "README.md").write_text(index, encoding="utf-8")
     render()
     print(f"Consolidated {len(events)} records to {len(updated)} retained records in five student packs and one group pack; removed {removed} redundant files")
@@ -173,11 +257,13 @@ def write_report(filename, title, body):
 
 def render():
     events = read_events()
+    canonical = [event for event in events if event.get("canonical")]
     security = "| Student | Scanner | Status | Evidence |\n| --- | --- | --- | --- |\n"
     for student in (*STUDENTS, "group"):
         for scanner in SCANNERS:
             security += f"| {student} | {scanner} | {event_line(latest(events, 'security', student, scanner=scanner))} |\n"
-    write_report("pre-commit-security-report.md", "Release 2 Pre-Commit Security Testing Report", security +
+    if len([event for event in canonical if event["kind"] == "security"]) != len(STUDENTS) * len(SCANNERS):
+        write_report("pre-commit-security-report.md", "Release 2 Pre-Commit Security Testing Report", security +
                  "\nLatest active 15-hook preflight (not individual commit participation): " + event_line(latest(events, "hook-preflight", "group")) + ".\n" +
                  "\nLatest local production-fix verification (not a commit-hook run): " + event_line(latest(events, "verification", "group")) + ".\n" +
                  "\nEach student must capture all three scans and the actual commit-hook transcript. "
@@ -196,7 +282,8 @@ def render():
     testing += "\n## Workflow Provenance and Endpoint Assertions\n\n"
     for student in STUDENTS:
         testing += f"- {student}: {event_line(latest(events, 'ci-supporting', student))}\n"
-    write_report("test-results.md", "Release 2 Post-Commit CI/CD Testing Report", testing +
+    if len([event for event in canonical if event["kind"] == "ci"]) != len(STUDENTS):
+        write_report("test-results.md", "Release 2 Post-Commit CI/CD Testing Report", testing +
                  "\nLatest local production-fix regressions (not GitHub CI): " + event_line(latest(events, "verification", "group")) + ".\n" +
                  "\nEach evidence pack must identify two assigned endpoint functions, expected/actual results, "
                  "the workflow URL and tested commit SHA. Token-library tests and health checks alone do not meet "
@@ -217,7 +304,7 @@ def render():
                     check = checks.get(name, {})
                     status = check.get("status", "PENDING")
                     reference = check.get("evidence", "") if name in ("ai-mode", "mcp", "rag", "multi-agent") else recorded.get("artifact", "")
-                    values.append(f"[{status}]({reference})" if reference.startswith("evidence/") else status)
+                    values.append(f"[{status}]({reference})" if reference.startswith(("evidence/", "../local/")) else status)
                 deployment += "| " + " | ".join((student, *values)) + " |\n"
             deployment += "\nSynthetic fixtures only. These checks exercise authenticated backends, not full browser CRUD. AI PASS means populated feature-specific output; it is not factual-quality approval. RAG PASS is grounded retrieval, not generated-answer evaluation. Multi-Agent PASS requires three agents, nonempty evidence and no recorded model fallback; no human decisions are submitted.\n"
             deployment += "\nBrowser-shell evidence (not full frontend interaction): " + event_line(latest(events, "browser", "group")) + ".\n"
@@ -262,11 +349,16 @@ def render():
                  "\nRecord responsibilities, completed work, commit/PR URLs and remaining limitations. "
                  "Git history alone does not assign group work to a particular student.")
     gaps = completion_gaps(events)
+    supplements = "\n\n## Additional Local Checks\n\nThese broader checks are distinct from main's per-student commit-hook evidence and do not replace it.\n\n"
+    for scanner in SCANNERS:
+        supplements += f"- Group {scanner}: {event_line(latest(events, 'security', 'group', scanner=scanner))}\n"
+    supplements += "\nActive-hook preflight (not student participation): " + event_line(latest(events, "hook-preflight", "group"))
+    supplements += "\n\nLocal regression execution (not GitHub CI): " + event_line(latest(events, "verification", "group"))
     write_report("completion-checklist.md", "Release 2 Evidence Completion Checklist",
                  "Status: " + ("NOT READY" if gaps else "EVIDENCE RECORDED - HUMAN VERIFICATION REQUIRED") +
                  "\n\n" + "\n".join(f"- [ ] {gap}" for gap in gaps) +
                  "\n\nThis checks evidence records, not software correctness. Confirm evidence applies to the final "
-                 "release commit. This checklist covers in-repository evidence only; it does not certify the application or deployment infrastructure.")
+                 "release commit. This checklist covers in-repository evidence only; it does not certify the application or deployment infrastructure." + supplements)
 
 
 def completion_gaps(events):

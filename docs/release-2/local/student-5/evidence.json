@@ -8,46 +8,14 @@
         "timestamp": "2026-10-17T00:45:47.136507+00:00",
         "commit": "b573b15a5074f5df64e90900cb9d3b7eb740b5de",
         "dirty": true,
-        "kind": "ci",
+        "kind": "ci-context",
         "student": "student-5",
         "status": "PASS",
-        "artifact": "evidence/student-5-evidence.json",
         "run_url": "https://github.com/jackie-trng05/FIND/actions/runs/38985346157",
         "tested_commit": "cae018c09a9cb7702730dbbbb3977523168f4fc0",
         "summary": {
           "tested_commit": "cae018c09a9cb7702730dbbbb3977523168f4fc0",
           "run_url": "https://github.com/jackie-trng05/FIND/actions/runs/38985346157",
-          "post_commit_status": "PASS",
-          "post_commit_tests": [
-            {
-              "test": "tests/post_commit/test_api_evaluations.py::test_service_health",
-              "status": "PASSED"
-            },
-            {
-              "test": "tests/post_commit/test_api_evaluations.py::test_evaluations_exist",
-              "status": "PASSED"
-            },
-            {
-              "test": "tests/post_commit/test_api_evaluations.py::test_evaluation_by_id",
-              "status": "PASSED"
-            },
-            {
-              "test": "tests/post_commit/test_api_evaluations.py::test_evaluations_by_status",
-              "status": "PASSED"
-            },
-            {
-              "test": "tests/post_commit/test_token_auth.py::test_valid_token_decodes",
-              "status": "PASSED"
-            },
-            {
-              "test": "tests/post_commit/test_token_auth.py::test_expired_token_rejected",
-              "status": "PASSED"
-            },
-            {
-              "test": "tests/post_commit/test_token_auth.py::test_invalid_signature_rejected",
-              "status": "PASSED"
-            }
-          ],
           "unit_tests": {
             "status": "passed",
             "total": 66,
@@ -55,61 +23,47 @@
             "failed": 0,
             "errors": 0,
             "skipped": 0
-          }
-        }
-      },
-      "capture_filename": "64c0d2e4032c4814a8f517d967d971a5-student-5-ci.md",
-      "capture_sha256": "f99f6341f1c8085eeb9c0b8dbfdcbeb410ef607060fb7c0f41e3edb4e5b8974e",
-      "capture": "# student-5 CI Evidence\r\n\r\nRun: https://github.com/jackie-trng05/FIND/actions/runs/38985346157\r\n\r\nTested commit: cae018c09a9cb7702730dbbbb3977523168f4fc0\r\n\r\n============================= test session starts ==============================\r\nplatform linux -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /opt/hostedtoolcache/Python/3.11.17/x64/bin/python\r\ncachedir: .pytest_cache\r\nrootdir: /home/runner/work/FIND/FIND\r\nconfigfile: pyproject.toml\r\ncollecting ... collected 7 items\r\n\r\ntests/post_commit/test_api_evaluations.py::test_service_health PASSED    [ 14%]\r\ntests/post_commit/test_api_evaluations.py::test_evaluations_exist PASSED [ 28%]\r\ntests/post_commit/test_api_evaluations.py::test_evaluation_by_id PASSED  [ 42%]\r\ntests/post_commit/test_api_evaluations.py::test_evaluations_by_status PASSED [ 57%]\r\ntests/post_commit/test_token_auth.py::test_valid_token_decodes PASSED    [ 71%]\r\ntests/post_commit/test_token_auth.py::test_expired_token_rejected PASSED [ 85%]\r\ntests/post_commit/test_token_auth.py::test_invalid_signature_rejected PASSED [100%]\r\n\r\n=============================== warnings summary ===============================\r\nstudent-5/tests/post_commit/test_token_auth.py::test_invalid_signature_rejected\r\n  /opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/jwt/api_jwt.py:370: InsecureKeyLengthWarning: The HMAC key is 12 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.\r\n    decoded = self.decode_complete(\r\n\r\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\r\n========================= 7 passed, 1 warning in 0.10s =========================\r\n\r\n\r\n## Audit\r\n\r\n```json\r\n{\"status\": \"PASS\", \"commit_sha\": \"cae018c09a9cb7702730dbbbb3977523168f4fc0\", \"timestamp\": \"2026-10-17T00:15:17Z\"}\r\n\r\n```\r\n\r\n## Downloaded CI Unit Report\r\n\r\n```json\r\n{\r\n  \"workflow_name\": \"student-5-ci\",\r\n  \"run_id\": \"38985346157\",\r\n  \"commit_sha\": \"cae018c09a9cb7702730dbbbb3977523168f4fc0\",\r\n  \"branch\": \"main\",\r\n  \"repository\": \"jackie-trng05/FIND\",\r\n  \"tests\": {\r\n    \"status\": \"passed\",\r\n    \"total\": 66,\r\n    \"passed\": 66,\r\n    \"failed\": 0,\r\n    \"errors\": 0,\r\n    \"skipped\": 0\r\n  }\r\n}\r\n```\r\n\r\n## pytest-output.txt\r\n\r\n```text\r\n============================= test session starts ==============================\r\nplatform linux -- Python 3.11.17, pytest-9.1.1, pluggy-1.7.0 -- /opt/hostedtoolcache/Python/3.11.17/x64/bin/python\r\ncachedir: .pytest_cache\r\nrootdir: /home/runner/work/FIND/FIND\r\nconfigfile: pyproject.toml\r\nplugins: requests-mock-1.12.1, anyio-4.15.1\r\ncollecting ... collected 66 items\r\n\r\ntests/test_backend.py::test_list_evaluations_requires_auth PASSED        [  1%]\r\ntests/test_backend.py::test_list_evaluations_requires_staff PASSED       [  3%]\r\ntests/test_backend.py::test_create_evaluation_success PASSED             [  4%]\r\ntests/test_backend.py::test_create_evaluation_injects_user_id PASSED     [  6%]\r\ntests/test_backend.py::test_create_draft_evaluation PASSED               [  7%]\r\ntests/test_backend.py::test_htmx_create_draft_sets_evaluation_in_progress PASSED [  9%]\r\ntests/test_backend.py::test_htmx_submit_hire_sets_hired PASSED           [ 10%]\r\ntests/test_backend.py::test_htmx_submit_reject_sets_rejected PASSED      [ 12%]\r\ntests/test_backend.py::test_get_evaluation_enriches_with_applicant_info PASSED [ 13%]\r\ntests/test_backend.py::test_get_evaluation_not_found PASSED              [ 15%]\r\ntests/test_backend.py::test_update_evaluation_success PASSED             [ 16%]\r\ntests/test_backend.py::test_delete_evaluation_success PASSED             [ 18%]\r\ntests/test_backend.py::test_delete_evaluation_reverts_application_status PASSED [ 19%]\r\ntests/test_backend.py::test_delete_evaluation_htmx_triggers PASSED       [ 21%]\r\ntests/test_backend.py::test_eligible_applications_filters_evaluated PASSED [ 22%]\r\ntests/test_database.py::test_create_draft_with_no_scores PASSED          [ 24%]\r\ntests/test_database.py::test_create_with_full_scores_and_decision PASSED [ 25%]\r\ntests/test_database.py::test_create_missing_user_id_rejected PASSED      [ 27%]\r\ntests/test_database.py::test_create_missing_application_id_rejected PASSED [ 28%]\r\ntests/test_database.py::test_create_duplicate_application_rejected PASSED [ 30%]\r\ntests/test_database.py::test_create_decision_without_scores_rejected PASSED [ 31%]\r\ntests/test_database.py::test_create_partial_scores_with_decision_rejected PASSED [ 33%]\r\ntests/test_database.py::test_create_invalid_score_range_rejected PASSED  [ 34%]\r\ntests/test_database.py::test_create_score_zero_rejected PASSED           [ 36%]\r\ntests/test_database.py::test_create_invalid_recommendation_rejected PASSED [ 37%]\r\ntests/test_database.py::test_create_no_json_body PASSED                  [ 39%]\r\ntests/test_database.py::test_get_evaluation_by_id PASSED                 [ 40%]\r\ntests/test_database.py::test_get_evaluation_not_found PASSED             [ 42%]\r\ntests/test_database.py::test_list_evaluations_empty PASSED               [ 43%]\r\ntests/test_database.py::test_list_evaluations_returns_all PASSED         [ 45%]\r\ntests/test_database.py::test_list_filter_by_recommendation PASSED        [ 46%]\r\ntests/test_database.py::test_list_filter_in_progress PASSED              [ 48%]\r\ntests/test_database.py::test_list_filter_decided PASSED                  [ 50%]\r\ntests/test_database.py::test_update_draft_add_scores PASSED              [ 51%]\r\ntests/test_database.py::test_update_finalize_with_decision PASSED        [ 53%]\r\ntests/test_database.py::test_update_decision_without_scores_rejected PASSED [ 54%]\r\ntests/test_database.py::test_update_not_found PASSED                     [ 56%]\r\ntests/test_database.py::test_update_invalid_score_rejected PASSED        [ 57%]\r\ntests/test_database.py::test_delete_draft_evaluation PASSED              [ 59%]\r\ntests/test_database.py::test_delete_finalized_evaluation_rejected PASSED [ 60%]\r\ntests/test_database.py::test_delete_not_found PASSED                     [ 62%]\r\ntests/test_database.py::test_health PASSED                               [ 63%]\r\ntests/test_evaluation_scores_tool.py::test_finalized_evaluation_is_high_confidence_with_citations PASSED [ 65%]\r\ntests/test_evaluation_scores_tool.py::test_draft_evaluation_is_medium_confidence PASSED [ 66%]\r\ntests/test_evaluation_scores_tool.py::test_missing_evaluation_is_low_confidence PASSED [ 68%]\r\ntests/test_evaluation_scores_tool.py::test_service_unreachable_is_low_confidence PASSED [ 69%]\r\ntests/test_evaluation_scores_tool.py::test_non_numeric_application_id_is_low_confidence PASSED [ 71%]\r\ntests/test_frontend.py::test_health PASSED                               [ 72%]\r\ntests/test_frontend.py::test_index_renders_evaluations_page PASSED       [ 74%]\r\ntests/test_frontend.py::test_evaluate_renders_form_with_application_id PASSED [ 75%]\r\ntests/test_frontend.py::test_edit_renders_form_with_evaluation_id PASSED [ 77%]\r\ntests/test_frontend.py::test_submit_button_is_guarded_by_validation PASSED [ 78%]\r\ntests/test_mcp_mode.py::test_mcp_status_reports_disabled_flags PASSED    [ 80%]\r\ntests/test_mcp_mode.py::test_project_files_disabled_when_mcp_off PASSED  [ 81%]\r\ntests/test_mcp_mode.py::test_ci_report_disabled_when_mcp_off PASSED      [ 83%]\r\ntests/test_mcp_mode.py::test_evaluation_scores_disabled_when_mcp_off PASSED [ 84%]\r\ntests/test_mcp_mode.py::test_hire_recommendation_disabled_when_mcp_off PASSED [ 86%]\r\ntests/test_mcp_mode.py::test_evaluation_scores_rejects_non_numeric_id PASSED [ 87%]\r\ntests/test_mcp_mode.py::test_hire_recommendation_rejects_non_numeric_id PASSED [ 89%]\r\ntests/test_rag_mode.py::test_rag_status_reports_disabled_flags PASSED    [ 90%]\r\ntests/test_rag_mode.py::test_answer_disabled_when_rag_off PASSED         [ 92%]\r\ntests/test_rag_mode.py::test_retrieve_disabled_when_rag_off PASSED       [ 93%]\r\ntests/test_rag_mode.py::test_refresh_disabled_when_rag_off PASSED        [ 95%]\r\ntests/test_rag_mode.py::test_answer_rejects_empty_query PASSED           [ 96%]\r\ntests/test_rag_mode.py::test_retrieve_rejects_empty_query PASSED         [ 98%]\r\ntests/test_rag_mode.py::test_answer_maps_service_error_to_503 PASSED     [100%]\r\n\r\n- generated xml file: /home/runner/work/FIND/FIND/student-5/pytest-results.xml -\r\n============================== 66 passed in 0.97s ==============================\r\n\r\n```\r\n\r\n## pytest-results.xml\r\n\r\n```text\r\n<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"66\" time=\"0.974\" timestamp=\"2026-10-17T00:14:59.666585+00:00\" hostname=\"runnervm8k3b6\"><testcase classname=\"student-5.tests.test_backend\" name=\"test_list_evaluations_requires_auth\" time=\"0.439\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_list_evaluations_requires_staff\" time=\"0.008\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_create_evaluation_success\" time=\"0.009\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_create_evaluation_injects_user_id\" time=\"0.008\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_create_draft_evaluation\" time=\"0.008\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_htmx_create_draft_sets_evaluation_in_progress\" time=\"0.009\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_htmx_submit_hire_sets_hired\" time=\"0.009\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_htmx_submit_reject_sets_rejected\" time=\"0.009\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_get_evaluation_enriches_with_applicant_info\" time=\"0.011\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_get_evaluation_not_found\" time=\"0.008\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_update_evaluation_success\" time=\"0.008\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_delete_evaluation_success\" time=\"0.009\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_delete_evaluation_reverts_application_status\" time=\"0.009\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_delete_evaluation_htmx_triggers\" time=\"0.009\" /><testcase classname=\"student-5.tests.test_backend\" name=\"test_eligible_applications_filters_evaluated\" time=\"0.010\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_draft_with_no_scores\" time=\"0.013\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_with_full_scores_and_decision\" time=\"0.006\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_missing_user_id_rejected\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_missing_application_id_rejected\" time=\"0.005\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_duplicate_application_rejected\" time=\"0.006\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_decision_without_scores_rejected\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_partial_scores_with_decision_rejected\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_invalid_score_range_rejected\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_score_zero_rejected\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_invalid_recommendation_rejected\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_create_no_json_body\" time=\"0.006\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_get_evaluation_by_id\" time=\"0.006\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_get_evaluation_not_found\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_list_evaluations_empty\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_list_evaluations_returns_all\" time=\"0.007\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_list_filter_by_recommendation\" time=\"0.008\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_list_filter_in_progress\" time=\"0.007\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_list_filter_decided\" time=\"0.007\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_update_draft_add_scores\" time=\"0.006\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_update_finalize_with_decision\" time=\"0.006\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_update_decision_without_scores_rejected\" time=\"0.006\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_update_not_found\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_update_invalid_score_rejected\" time=\"0.005\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_delete_draft_evaluation\" time=\"0.008\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_delete_finalized_evaluation_rejected\" time=\"0.006\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_delete_not_found\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_database\" name=\"test_health\" time=\"0.004\" /><testcase classname=\"student-5.tests.test_evaluation_scores_tool\" name=\"test_finalized_evaluation_is_high_confidence_with_citations\" time=\"0.000\" /><testcase classname=\"student-5.tests.test_evaluation_scores_tool\" name=\"test_draft_evaluation_is_medium_confidence\" time=\"0.000\" /><testcase classname=\"student-5.tests.test_evaluation_scores_tool\" name=\"test_missing_evaluation_is_low_confidence\" time=\"0.000\" /><testcase classname=\"student-5.tests.test_evaluation_scores_tool\" name=\"test_service_unreachable_is_low_confidence\" time=\"0.000\" /><testcase classname=\"student-5.tests.test_evaluation_scores_tool\" name=\"test_non_numeric_application_id_is_low_confidence\" time=\"0.000\" /><testcase classname=\"student-5.tests.test_frontend\" name=\"test_health\" time=\"0.003\" /><testcase classname=\"student-5.tests.test_frontend\" name=\"test_index_renders_evaluations_page\" time=\"0.005\" /><testcase classname=\"student-5.tests.test_frontend\" name=\"test_evaluate_renders_form_with_application_id\" time=\"0.018\" /><testcase classname=\"student-5.tests.test_frontend\" name=\"test_edit_renders_form_with_evaluation_id\" time=\"0.009\" /><testcase classname=\"student-5.tests.test_frontend\" name=\"test_submit_button_is_guarded_by_validation\" time=\"0.009\" /><testcase classname=\"student-5.tests.test_mcp_mode\" name=\"test_mcp_status_reports_disabled_flags\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_mcp_mode\" name=\"test_project_files_disabled_when_mcp_off\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_mcp_mode\" name=\"test_ci_report_disabled_when_mcp_off\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_mcp_mode\" name=\"test_evaluation_scores_disabled_when_mcp_off\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_mcp_mode\" name=\"test_hire_recommendation_disabled_when_mcp_off\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_mcp_mode\" name=\"test_evaluation_scores_rejects_non_numeric_id\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_mcp_mode\" name=\"test_hire_recommendation_rejects_non_numeric_id\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_rag_mode\" name=\"test_rag_status_reports_disabled_flags\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_rag_mode\" name=\"test_answer_disabled_when_rag_off\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_rag_mode\" name=\"test_retrieve_disabled_when_rag_off\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_rag_mode\" name=\"test_refresh_disabled_when_rag_off\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_rag_mode\" name=\"test_answer_rejects_empty_query\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_rag_mode\" name=\"test_retrieve_rejects_empty_query\" time=\"0.002\" /><testcase classname=\"student-5.tests.test_rag_mode\" name=\"test_answer_maps_service_error_to_503\" time=\"0.002\" /></testsuite></testsuites>\r\n```\r\n"
-    },
-    {
-      "event": {
-        "id": "143f520731a64aaaab40aea5d10d0547",
-        "timestamp": "2026-10-17T00:45:52.235195+00:00",
-        "commit": "b573b15a5074f5df64e90900cb9d3b7eb740b5de",
-        "dirty": true,
-        "kind": "ci-supporting",
-        "student": "student-5",
-        "status": "CAPTURED",
-        "artifact": "evidence/student-5-evidence.json",
-        "tested_commit": "cae018c09a9cb7702730dbbbb3977523168f4fc0",
-        "summary": {
-          "workflow_conclusion": "success",
-          "endpoint_test_source": "student-5/tests/post_commit/test_api_evaluations.py",
-          "functions": [
-            {
-              "name": "test_service_health",
-              "assertions": [
-                "assert response.status_code == 200"
-              ]
-            },
-            {
-              "name": "test_evaluations_exist",
-              "assertions": [
-                "assert response.status_code == 200",
-                "assert len(evaluations) > 0"
-              ]
-            },
-            {
-              "name": "test_evaluation_by_id",
-              "assertions": [
-                "assert response.status_code == 200"
-              ]
-            },
-            {
-              "name": "test_evaluations_by_status",
-              "assertions": [
-                "assert response.status_code == 200"
-              ]
+          },
+          "endpoint_evidence": {
+            "id": "143f520731a64aaaab40aea5d10d0547",
+            "timestamp": "2026-10-17T00:45:52.235195+00:00",
+            "tested_commit": "cae018c09a9cb7702730dbbbb3977523168f4fc0",
+            "summary": {
+              "workflow_conclusion": "success",
+              "endpoint_test_source": "student-5/tests/post_commit/test_api_evaluations.py",
+              "functions": [
+                {
+                  "name": "test_service_health",
+                  "assertions": [
+                    "assert response.status_code == 200"
+                  ]
+                },
+                {
+                  "name": "test_evaluations_exist",
+                  "assertions": [
+                    "assert response.status_code == 200",
+                    "assert len(evaluations) > 0"
+                  ]
+                },
+                {
+                  "name": "test_evaluation_by_id",
+                  "assertions": [
+                    "assert response.status_code == 200"
+                  ]
+                },
+                {
+                  "name": "test_evaluations_by_status",
+                  "assertions": [
+                    "assert response.status_code == 200"
+                  ]
+                }
+              ],
+              "boundary": "database/API service; not authenticated-backend coverage"
             }
-          ],
-          "boundary": "database/API service; not authenticated-backend coverage"
+          },
+          "scope": "Distinct downloaded CI context only; post-commit output is held in the canonical main report. Original capture provenance is preserved, not a new execution."
         }
-      },
-      "capture_filename": "a8330677b5cb4eff8333f8da66ab439b-student-5-ci-workflow-and-coverage.txt",
-      "capture_sha256": "22d9ae040b121e00865bc7a763bfd6e8a6ab8496cfcdedde8d851846f1915b4d",
-      "capture_excerpt": "Run: https://github.com/jackie-trng05/FIND/actions/runs/38985346157\r\nTested commit: cae018c09a9cb7702730dbbbb3977523168f4fc0\r\nWorkflow conclusion: success\r\nEndpoint test source: student-5/tests/post_commit/test_api_evaluations.py\r\n\r\n\"\"\"Post-commit CI/CD endpoint tests for the Student 5 Evaluation API service.\r\n\r\nMirrors Lab 11's ``test_api_students.py``: live HTTP tests that run in GitHub\r\nActions after a push, against the running Student 5 database/API service\r\n(``docker compose up`` first). Covers the service health check and two\r\nEvaluation endpoint functions (list and get-by-id).\r\n\"\"\"\r\n\r\nimport os\r\n\r\nimport requests\r\n\r\n\r\nDATABASE_SERVICE_URL = os.getenv(\"DATABASE_SERVICE_URL\", \"http://localhost:16018\")\r\n\r\n\r\ndef test_service_health():\r\n    response = requests.get(f\"{DATABASE_SERVICE_URL}/health\", timeout=5)\r\n    assert response.status_code == 200\r\n\r\n\r\ndef test_evaluations_exist():\r\n    response = requests.get(f\"{DATABASE_SERVICE_URL}/evaluations\", timeout=5)\r\n    assert response.status_code == 200\r\n    evaluations = response.json()\r\n    assert len(evaluations) > 0\r\n\r\n\r\ndef test_evaluation_by_id():\r\n    response = requests.get(f\"{DATABASE_SERVICE_URL}/evaluations/1\", timeout=5)\r\n    assert response.status_code == 200\r\n\r\n\r\ndef test_evaluations_by_status():\r\n    response = requests.get(\r\n        f\"{DATABASE_SERVICE_URL}/evaluations\",\r\n        params={\"status\": \"in_progress\"},\r\n        timeout=5,\r\n    )\r\n    assert response.status_code == 200",
-      "omitted": "Verbose workflow logs removed; original GitHub run URL, tested SHA and endpoint assertions retained."
+      }
     },
     {
       "event": {
@@ -121,7 +75,7 @@
         "student": "student-5",
         "status": "PASS",
         "feature": "ai-mode",
-        "artifact": "evidence/student-5-evidence.json",
+        "artifact": "../local/student-5/evidence.json",
         "summary": {
           "student": "student-5",
           "kind": "ai-mode",
@@ -161,7 +115,7 @@
         "student": "student-5",
         "status": "PASS",
         "feature": "mcp",
-        "artifact": "evidence/student-5-evidence.json",
+        "artifact": "../local/student-5/evidence.json",
         "summary": {
           "student": "student-5",
           "kind": "mcp",
@@ -200,7 +154,7 @@
         "student": "student-5",
         "status": "PASS",
         "feature": "rag",
-        "artifact": "evidence/student-5-evidence.json",
+        "artifact": "../local/student-5/evidence.json",
         "summary": {
           "student": "student-5",
           "kind": "rag",
@@ -261,7 +215,7 @@
         "student": "student-5",
         "status": "PASS",
         "feature": "multi-agent",
-        "artifact": "evidence/student-5-evidence.json",
+        "artifact": "../local/student-5/evidence.json",
         "summary": {
           "student": "student-5",
           "kind": "multi-agent",
@@ -301,7 +255,7 @@
         "kind": "local",
         "student": "student-5",
         "status": "PENDING",
-        "artifact": "evidence/student-5-evidence.json",
+        "artifact": "../local/student-5/evidence.json",
         "summary": {
           "checks": {
             "frontend": {
@@ -326,22 +280,22 @@
             },
             "ai-mode": {
               "status": "PASS",
-              "evidence": "evidence/student-5-evidence.json",
+              "evidence": "../local/student-5/evidence.json",
               "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval"
             },
             "mcp": {
               "status": "PASS",
-              "evidence": "evidence/student-5-evidence.json",
+              "evidence": "../local/student-5/evidence.json",
               "detail": "Backend MCP context returned explicit source citations"
             },
             "rag": {
               "status": "PASS",
-              "evidence": "evidence/student-5-evidence.json",
+              "evidence": "../local/student-5/evidence.json",
               "detail": "Nonempty retrieved chunks returned through backend"
             },
             "multi-agent": {
               "status": "PASS",
-              "evidence": "evidence/student-5-evidence.json",
+              "evidence": "../local/student-5/evidence.json",
               "detail": "Three agents and grounded evidence recorded; human decision remains pending"
             },
             "human-review": {
@@ -385,22 +339,22 @@
           },
           "ai-mode": {
             "status": "PASS",
-            "evidence": "evidence/student-5-evidence.json",
+            "evidence": "../local/student-5/evidence.json",
             "detail": "Expected populated AI fields and synthetic-input terms returned; not human quality approval"
           },
           "mcp": {
             "status": "PASS",
-            "evidence": "evidence/student-5-evidence.json",
+            "evidence": "../local/student-5/evidence.json",
             "detail": "Backend MCP context returned explicit source citations"
           },
           "rag": {
             "status": "PASS",
-            "evidence": "evidence/student-5-evidence.json",
+            "evidence": "../local/student-5/evidence.json",
             "detail": "Nonempty retrieved chunks returned through backend"
           },
           "multi-agent": {
             "status": "PASS",
-            "evidence": "evidence/student-5-evidence.json",
+            "evidence": "../local/student-5/evidence.json",
             "detail": "Three agents and grounded evidence recorded; human decision remains pending"
           },
           "human-review": {
@@ -628,7 +582,7 @@
         "kind": "contribution-draft",
         "student": "student-5",
         "status": "CAPTURED",
-        "artifact": "evidence/student-5-evidence.json"
+        "artifact": "../local/student-5/evidence.json"
       },
       "capture_filename": "fcbdcc94ac4349bd95d13e5d373aac1b-student-5-contribution-draft.json",
       "capture_sha256": "dd69886864e6cd4208120f0325a2166e1e3aaacc09dc5c1d204f93daa146ebef",

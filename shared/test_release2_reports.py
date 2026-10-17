@@ -38,6 +38,46 @@ class Release2ReportsTest(unittest.TestCase):
                  "tested_commit": "b" * 40, "dirty": True}
         self.assertIn("tested commit " + "b" * 12, reports.event_line(event))
 
+    def test_main_post_commit_report_takes_precedence_without_copying_it(self):
+        old = reports.artifact("duplicate.txt", "Duplicate branch CI capture")
+        reports.save_event("ci", "student-1", "FAIL", artifact=old)
+        directory = reports.REPORTS.parent / "post-commit/student-1"
+        directory.mkdir(parents=True)
+        results = directory / "test-results.md"
+        output = "tests/post_commit/test_api_profiles.py::test_profile_by_id PASSED"
+        results.write_text(output)
+        (directory / "test-audit.jsonl").write_text(json.dumps({"status": "PASS", "commit_sha": "b" * 40, "timestamp": "2026-10-17T00:15:22Z"}))
+        events = reports.read_events()
+        canonical = reports.latest(events, "ci", "student-1")
+        self.assertEqual(canonical["status"], "PASS")
+        self.assertEqual(canonical["tested_commit"], "b" * 40)
+        self.assertEqual(canonical["artifact"], "../post-commit/student-1/test-results.md")
+        self.assertEqual(reports.latest(events, "ci-context", "student-1")["status"], "FAIL")
+        self.assertEqual(results.read_text(), output)
+        local = reports.artifact("local.json", json.dumps({"scope": "Actual backend results", "checks": {"ai-mode": {"evidence": "evidence/student-1-evidence.json"}}}))
+        reports.save_event("local", "student-1", "PENDING", artifact=local)
+        reports.consolidate_evidence()
+        self.assertEqual(results.read_text(), output)
+        pack = reports.REPORTS.parent / "local/student-1/evidence.json"
+        self.assertTrue(pack.exists())
+        self.assertNotIn("Duplicate branch CI capture", pack.read_text())
+        self.assertNotIn('"evidence/student-1-evidence.json"', pack.read_text())
+        self.assertTrue((pack.parent / "test-results.md").exists())
+        snapshot = pack.read_text()
+        reports.consolidate_evidence()
+        self.assertEqual(pack.read_text(), snapshot)
+
+    def test_main_hook_report_uses_actual_student_commit_section(self):
+        directory = reports.REPORTS.parent / "pre-commit"
+        directory.mkdir(parents=True)
+        source = directory / "pre-commit-results-student1.md"
+        source.write_text("**Generated:** 2026-10-17T11:53:52+11:00\nCaptured hook output during an actual git commit\nRuff Scan (student-1)....Passed\ndetect-secrets Scan (student-1)....Passed\npip-audit Scan (student-1)....Passed\n[branch 8f657b1] actual commit")
+        events = reports.read_events()
+        self.assertEqual(len(events), 3)
+        self.assertTrue(all(event["status"] == "PASS" and event["invocation"] == "commit-hook" for event in events))
+        self.assertTrue(all(event["tested_commit"] == "8f657b1" and event["dirty"] is None for event in events))
+        self.assertNotIn("student-1: passing ruff commit-hook evidence", reports.completion_gaps(events))
+
     def test_consolidation_keeps_latest_capture_and_rewrites_nested_links(self):
         old = reports.artifact("old.txt", "Superseded failed attempt")
         reports.save_event("integration", "student-1", "FAIL", feature="ai-mode", artifact=old)
