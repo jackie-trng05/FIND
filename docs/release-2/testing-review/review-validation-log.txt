@@ -27,3 +27,16 @@ Models: implementation=qwen2.5:0.5b, review=llama3.1:8b
 [Cloud CI/CD Tests][LLM] Running review model
 [Cloud CI/CD Tests][LLM] Review model complete
 [Cloud CI/CD Tests][DONE] Review complete
+
+# Multi-Agent
+[Multi-Agent][START] Starting review flow
+[Multi-Agent][OBSERVE] Collecting evidence
+[Multi-Agent][OBSERVE] Complete
+[Multi-Agent][PROMPTS] Loading prompt family: multi_agent
+[Multi-Agent][PROMPTS] Loaded implementation prompt
+[Multi-Agent][LLM] Running implementation model
+[Multi-Agent][LLM] Implementation model complete
+[Multi-Agent][PROMPTS] Loaded review prompt
+[Multi-Agent][LLM] Running review model
+[Multi-Agent][LLM] Review model complete
+[Multi-Agent][DONE] Review complete
