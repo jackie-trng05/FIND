@@ -1,0 +1,90 @@
+name: cicd_azure
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  pre_commit_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install pytest ruff detect-secrets pip-audit
+
+      - name: Run pre-commit evidence tests
+        run: |
+          mkdir -p reports/deploy
+          python -m pytest tests/lab11/pre_commit/ -v > reports/deploy/test-results.md
+          status=$?
+          echo "{\"status\": \"$([ $status -eq 0 ] && echo PASS || echo FAIL)\", \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" >> reports/deploy/test-audit.jsonl
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: find-azure-test-evidence
+          path: reports/deploy
+
+  deploy_azure:
+    runs-on: ubuntu-latest
+    needs: [pre_commit_tests]
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up deployment environment
+        run: bash scripts/env-setup.sh
+
+      - name: Build and push images
+        run: bash scripts/build-images.sh
+
+      - name: Azure login (refresh)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create Container Apps environment
+        run: bash scripts/deploy-azure-env.sh
+
+      - name: Azure login (refresh again)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to Azure Container Apps
+        run: bash scripts/deploy-azure.sh
+
+      - name: Validate deployment and generate evidence
+        run: bash scripts/deployment-testing.sh
+
+      - name: Upload deployment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: find-azure-deployment-evidence
+          path: reports/deploy/deployment-results.md

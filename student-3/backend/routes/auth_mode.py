@@ -1,6 +1,6 @@
 """JWT auth blueprint for the Student 3 backend.
 
-Mirrors Lab 11's enrolment-service ``routes/auth_mode.py``: a small token issue
+Mirrors the reference enrolment-service ``routes/auth_mode.py``: a small token issue
 and verify endpoint pair backed by PyJWT. The post-commit token tests
 (``tests/post_commit/test_token_auth.py``) exercise the same JWT logic and
 shared secret.

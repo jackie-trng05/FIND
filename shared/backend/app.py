@@ -14,7 +14,7 @@ ALLOWED_ORIGINS = os.environ["ALLOWED_ORIGINS"].split(",")
 app = Flask(__name__)
 CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
 
-DB_SERVICE_URL = "http://find-shared-db:6000"
+DB_SERVICE_URL = os.getenv("SHARED_DB_URL", "http://find-shared-db:6000")
 
 
 def hash_password(password):

@@ -1,6 +1,6 @@
 """Post-commit CI/CD endpoint tests for the Student 1 Profile API service.
 
-Mirrors Lab 11's ``test_api_students.py``: live HTTP tests that run in GitHub
+Mirrors the reference ``test_api_students.py``: live HTTP tests that run in GitHub
 Actions after a push, against the running Student 1 database/API service
 (``docker compose up`` first). Covers the service health check and two
 Profile endpoint functions (get-by-id and get-by-user).
