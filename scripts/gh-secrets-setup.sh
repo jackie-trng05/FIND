@@ -101,6 +101,37 @@ else
     echo "User Access Administrator role already assigned."
 fi
 
+# Grant the service principal the Directory Readers role so the Azure CLI can resolve
+# principals via Microsoft Graph when creating role assignments. Without it,
+# deploy-azure.sh's managed-identity registry auth emits "Failed to query ... Graph API"
+# warnings (it still works, falling back to the object id). Requires the user running
+# this script to be able to manage directory role memberships (tenant admin).
+SP_OBJECT_ID=$(az ad sp show --id "$CLIENT_ID" --query id -o tsv)
+DIR_READERS_TEMPLATE_ID="88d8e3e3-8f55-4a1e-953a-9b9898b8876b"
+DIR_READERS_MEMBER=$(az rest --method GET \
+  --uri "https://graph.microsoft.com/v1.0/servicePrincipals/${SP_OBJECT_ID}/memberOf" \
+  --query "value[?roleTemplateId=='${DIR_READERS_TEMPLATE_ID}'] | [0].id" -o tsv 2>/dev/null || true)
+
+if [ -n "$DIR_READERS_MEMBER" ]; then
+    echo "Service principal already has the Directory Readers role."
+else
+    DIR_READERS_ROLE_ID=$(az rest --method GET \
+      --uri "https://graph.microsoft.com/v1.0/directoryRoles" \
+      --query "value[?roleTemplateId=='${DIR_READERS_TEMPLATE_ID}'].id | [0]" -o tsv 2>/dev/null || true)
+    if [ -z "$DIR_READERS_ROLE_ID" ]; then
+        DIR_READERS_ROLE_ID=$(az rest --method POST \
+          --uri "https://graph.microsoft.com/v1.0/directoryRoles" \
+          --headers "Content-Type=application/json" \
+          --body "{\"roleTemplateId\":\"${DIR_READERS_TEMPLATE_ID}\"}" \
+          --query id -o tsv)
+    fi
+    az rest --method POST \
+      --uri "https://graph.microsoft.com/v1.0/directoryRoles/${DIR_READERS_ROLE_ID}/members/\$ref" \
+      --headers "Content-Type=application/json" \
+      --body "{\"@odata.id\":\"https://graph.microsoft.com/v1.0/directoryObjects/${SP_OBJECT_ID}\"}"
+    echo "Granted Directory Readers role to the service principal."
+fi
+
 gh secret set AZURE_SUBSCRIPTION_ID --body "$SUBSCRIPTION_ID"
 gh secret set AZURE_TENANT_ID --body "$TENANT_ID"
 gh secret set AZURE_CLIENT_ID --body "$CLIENT_ID"

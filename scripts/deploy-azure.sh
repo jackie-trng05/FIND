@@ -104,7 +104,6 @@ deploy_app() {
     --ingress "$ingress" \
     --registry-server "$REGISTRY_SERVER" \
     --registry-identity "$ACR_PULL_IDENTITY_ID" \
-    --user-assigned "$ACR_PULL_IDENTITY_ID" \
     --cpu 0.25 --memory 0.5Gi \
     --min-replicas 1 --max-replicas 1 \
     --env-vars "$@"
