@@ -28,7 +28,7 @@ jobs:
       - name: Run pre-commit evidence tests
         run: |
           mkdir -p reports/deploy
-          python -m pytest tests/lab11/pre_commit/ -v > reports/deploy/test-results.md
+          python -m pytest tests/pre_commit/ -v > reports/deploy/test-results.md
           status=$?
           echo "{\"status\": \"$([ $status -eq 0 ] && echo PASS || echo FAIL)\", \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" >> reports/deploy/test-audit.jsonl
 
