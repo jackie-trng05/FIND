@@ -84,8 +84,10 @@ password:
   propagation delay.
 - **Local runs:** work after `az login`, provided your user can push to the registry
   (Owner/Contributor/AcrPush).
-- **Image pulls** by the Container Apps stay on each app's **managed identity**
-  (`--registry-identity system`) — unaffected by admin access being disabled.
+- **Image pulls** by the Container Apps use a **shared user-assigned managed identity**
+  (`find-acr-pull`) that `deploy-azure.sh` creates once and grants `AcrPull` on the
+  registry — no registry credentials are stored, and the explicit role grant avoids the
+  Graph-lookup warning the per-app system-identity grant would emit.
 - `az acr login` still writes a short-lived token into the local Docker config; on
   ephemeral CI runners this is discarded with the runner.
 
