@@ -21,9 +21,17 @@ if [[ -z "$APP_URL" ]]; then
   exit 1
 fi
 
-# Step 2: Validate the entry point responds
+# Step 2: Validate the entry point responds (retry while the app cold-starts)
 echo "Validating https://$APP_URL ..."
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$APP_URL")
+HTTP_STATUS="000"
+for i in $(seq 1 20); do
+  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "https://$APP_URL" || echo "000")
+  if [[ "$HTTP_STATUS" == "200" ]]; then
+    break
+  fi
+  echo "Attempt $i: HTTP $HTTP_STATUS - waiting for the app to become ready..."
+  sleep 15
+done
 
 if [[ "$HTTP_STATUS" == "200" ]]; then
   STATUS="Success"
