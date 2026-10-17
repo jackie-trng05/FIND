@@ -19,12 +19,12 @@ Generated from captured evidence. PENDING means not demonstrated. Do not edit ge
 | student-5 | ruff | PENDING | No captured evidence |
 | student-5 | detect-secrets | PENDING | No captured evidence |
 | student-5 | pip-audit | PENDING | No captured evidence |
-| group | ruff | FAIL | [evidence](evidence/8106113c828b4ef69fc176678ddbeb3e-group-ruff.txt); captured 2026-10-17T00:52:47.760356+00:00; tested commit b573b15a5074 (capture dirty=True) |
-| group | detect-secrets | FAIL | [evidence](evidence/03a7a99171d648358e6f9c1fb4e34462-group-detect-secrets.txt); captured 2026-10-17T00:52:53.907564+00:00; tested commit b573b15a5074 (capture dirty=True) |
-| group | pip-audit | PASS | [evidence](evidence/5f850d96a4ed477aa4dc1d36cff14258-group-pip-audit.txt); captured 2026-10-17T00:53:13.342368+00:00; tested commit b573b15a5074 (capture dirty=True) |
+| group | ruff | FAIL | [evidence](evidence/group-evidence.json); captured 2026-10-17T00:52:47.760356+00:00; tested commit b573b15a5074 (capture dirty=True) |
+| group | detect-secrets | FAIL | [evidence](evidence/group-evidence.json); captured 2026-10-17T00:52:53.907564+00:00; tested commit b573b15a5074 (capture dirty=True) |
+| group | pip-audit | PASS | [evidence](evidence/group-evidence.json); captured 2026-10-17T00:53:13.342368+00:00; tested commit b573b15a5074 (capture dirty=True) |
 
-Latest active 15-hook preflight (not individual commit participation): PASS | [evidence](evidence/ebafd1ab3f454e3f9f58a098d7b9497a-active-hook-preflight.txt); captured 2026-10-17T01:33:53.410065+00:00; tested commit d261e6649ac3 (capture dirty=True).
+Latest active 15-hook preflight (not individual commit participation): PASS | [evidence](evidence/group-evidence.json); captured 2026-10-17T01:33:53.410065+00:00; tested commit d261e6649ac3 (capture dirty=True).
 
-Latest local production-fix verification (not a commit-hook run): PASS | [evidence](evidence/069a2fd1b5b14a9982e6974066c01a2c-all-students-local-regressions.txt); captured 2026-10-17T01:35:39.707324+00:00; tested commit d261e6649ac3 (capture dirty=True).
+Latest local production-fix verification (not a commit-hook run): PASS | [evidence](evidence/group-evidence.json); captured 2026-10-17T01:35:39.707324+00:00; tested commit d261e6649ac3 (capture dirty=True).
 
 Each student must capture all three scans and the actual commit-hook transcript. A manual run is not evidence that git commit invoked the hooks. Group scans do not establish individual participation. Findings and retests remain in the linked evidence.

@@ -38,6 +38,51 @@ class Release2ReportsTest(unittest.TestCase):
                  "tested_commit": "b" * 40, "dirty": True}
         self.assertIn("tested commit " + "b" * 12, reports.event_line(event))
 
+    def test_consolidation_keeps_latest_capture_and_rewrites_nested_links(self):
+        old = reports.artifact("old.txt", "Superseded failed attempt")
+        reports.save_event("integration", "student-1", "FAIL", feature="ai-mode", artifact=old)
+        current = reports.artifact("ai.json", json.dumps({"response": "Actual successful model output"}))
+        reports.save_event("integration", "student-1", "PASS", feature="ai-mode", artifact=current)
+        local = reports.artifact("local.json", json.dumps({"checks": {"ai-mode": {"status": "PASS", "evidence": current}}}))
+        reports.save_event("local", "student-1", "PENDING", artifact=local,
+                           summary={"checks": {"ai-mode": {"status": "PASS", "evidence": current}}})
+        events = reports.read_events()
+        reports.consolidate_evidence()
+        retained = reports.read_events()
+        self.assertEqual(len(retained), 2)
+        self.assertEqual(retained[0]["id"], events[1]["id"])
+        self.assertEqual(retained[0]["timestamp"], events[1]["timestamp"])
+        self.assertFalse((reports.REPORTS / old).exists())
+        self.assertFalse((reports.REPORTS / current).exists())
+        pack = reports.REPORTS / "evidence/student-1-evidence.json"
+        text = pack.read_text()
+        self.assertIn("Actual successful model output", text)
+        self.assertNotIn("Superseded failed attempt", text)
+        self.assertEqual(retained[1]["summary"]["checks"]["ai-mode"]["evidence"], "evidence/student-1-evidence.json")
+        reports.consolidate_evidence()
+        self.assertEqual(pack.read_text(), text)
+
+    def test_consolidation_discloses_unresolved_failure_and_preserves_unmanaged_files(self):
+        failed = reports.artifact("scan.txt", "Large failed scanner transcript")
+        reports.save_event("security", "group", "FAIL", artifact=failed, scanner="ruff", summary={"finding_count": 2})
+        custom = reports.REPORTS / "evidence/human-note.txt"
+        custom.write_text("Human-owned file")
+        reports.consolidate_evidence()
+        event = reports.read_events()[0]
+        self.assertEqual(event["status"], "FAIL")
+        self.assertEqual(event["summary"]["finding_count"], 2)
+        pack = json.loads((reports.REPORTS / event["artifact"]).read_text())
+        self.assertIn("no passing replacement", pack["records"][0]["omitted"])
+        self.assertEqual(custom.read_text(), "Human-owned file")
+
+    def test_consolidation_trims_windows_workflow_logs_but_keeps_assertions(self):
+        path = reports.artifact("workflow.txt", "Run: https://github.com/team/find/actions/runs/123\r\nassert response.status_code == 200\r\n\r\nWORKFLOW LOGS:\r\nVERBOSE WORKFLOW LOG")
+        reports.save_event("ci-supporting", "student-1", "CAPTURED", artifact=path)
+        reports.consolidate_evidence()
+        text = (reports.REPORTS / "evidence/student-1-evidence.json").read_text()
+        self.assertIn("assert response.status_code == 200", text)
+        self.assertNotIn("VERBOSE WORKFLOW LOG", text)
+
     def test_ci_import_includes_matching_downloaded_unit_report(self):
         source = self.root / "student-1-post-commit-evidence"
         source.mkdir()

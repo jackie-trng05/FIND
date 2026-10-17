@@ -83,6 +83,85 @@ def event_line(event):
     return f"{event['status']} | {link}; captured {event['timestamp']}; tested commit {commit[:12]} (capture dirty={dirty})"
 
 
+def consolidate_evidence():
+    events = read_events()
+    selected = {}
+    for event in events:
+        key = (event["kind"], event["student"], event.get("scanner"), event.get("feature"), event.get("mode"))
+        selected[key] = event
+    retained = sorted(selected.values(), key=lambda event: event["timestamp"])
+    destinations = {student: f"evidence/{student}-evidence.json" for student in (*STUDENTS, "group")}
+    references = {event["artifact"]: destinations[event["student"]] for event in events if event.get("artifact")}
+
+    def relocate(value):
+        if isinstance(value, dict):
+            return {key: relocate(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [relocate(item) for item in value]
+        return references.get(value, value) if isinstance(value, str) else value
+
+    packs = {student: {"student": student, "scope": "One retained capture per evidence type. Original execution timestamps, commits and statuses are preserved. Consolidation is not a new test run.", "records": []}
+             for student in (*STUDENTS, "group")}
+    for event in retained:
+        original = event.get("artifact")
+        record = {"event": relocate(event)}
+        if original:
+            path = REPORTS / original
+            raw = path.read_bytes()
+            if original in destinations.values():
+                existing = json.loads(raw)
+                record = next(item for item in existing["records"] if item["event"]["id"] == event["id"])
+                record = {**record, "event": relocate(event)}
+            else:
+                record.update({"capture_filename": path.name, "capture_sha256": hashlib.sha256(raw).hexdigest()})
+                text = raw.decode("utf-8")
+                if event["kind"] == "ci-supporting":
+                    record["capture_excerpt"] = text.split("WORKFLOW LOGS:", 1)[0].rstrip()
+                    record["omitted"] = "Verbose workflow logs removed; original GitHub run URL, tested SHA and endpoint assertions retained."
+                elif event["status"] == "FAIL":
+                    record["omitted"] = "Failed raw capture removed to keep the evidence pack focused. Original FAIL status and structured findings remain; no passing replacement is claimed."
+                    if event["kind"] == "review":
+                        record["execution_header"] = text.split("OBSERVE:", 1)[0].rstrip()
+                elif path.suffix == ".json":
+                    record["capture"] = relocate(json.loads(text))
+                else:
+                    record["capture"] = text
+        if "capture_excerpt" in record and event["kind"] == "ci-supporting":
+            record["capture_excerpt"] = record["capture_excerpt"].split("WORKFLOW LOGS:", 1)[0].rstrip()
+        if "execution_header" in record and event["kind"] == "review" and event["status"] == "FAIL":
+            record["execution_header"] = record["execution_header"].split("OBSERVE:", 1)[0].rstrip()
+        packs[event["student"]]["records"].append(record)
+    directory = REPORTS / "evidence"
+    directory.mkdir(parents=True, exist_ok=True)
+    for student, pack in packs.items():
+        (REPORTS / destinations[student]).write_text(json.dumps(pack, indent=2) + "\n", encoding="utf-8")
+    updated = [relocate(event) for event in retained]
+    (directory / "report-audit.jsonl").write_text("".join(json.dumps(event) + "\n" for event in updated), encoding="utf-8")
+    ci_audit = REPORTS / "test-audit.jsonl"
+    if ci_audit.exists():
+        ci_audit.write_text("".join(json.dumps(event) + "\n" for event in updated if event["kind"] == "ci"), encoding="utf-8")
+    managed = {REPORTS / event["artifact"] for event in events if event.get("artifact")}
+    managed.update(path for path in directory.iterdir() if re.match(r"^[0-9a-f]{32}-", path.name))
+    protected = {REPORTS / path for path in destinations.values()}
+    removed = 0
+    for path in managed - protected:
+        if path.parent == directory and path.is_file():
+            path.unlink()
+            removed += 1
+    index = "# Evidence Index\n\nOne named pack per student consolidates their retained CI, local CRUD, AI integration and contribution-draft evidence. Shared execution evidence is stored once, not copied into every student's pack.\n\n| Student | CI | Backend checks | Overall local sign-off | Evidence pack |\n| --- | --- | --- | --- | --- |\n"
+    for student in STUDENTS:
+        ci = latest(updated, "ci", student) or {}
+        local = latest(updated, "local", student) or {}
+        checks = local.get("summary", {}).get("checks", {})
+        passed = sum(checks.get(name, {}).get("status") == "PASS" for name in ("create", "read", "update", "delete", "ai-mode", "mcp", "rag", "multi-agent"))
+        index += f"| {student} | {ci.get('status', 'PENDING')} | {passed}/8 PASS | {local.get('status', 'PENDING')} | [{student}-evidence.json]({student}-evidence.json) |\n"
+    index += "\nShared evidence: [group-evidence.json](group-evidence.json). Machine-readable retained record index: [report-audit.jsonl](report-audit.jsonl).\n\nEach pack's `records` list identifies its evidence by `event.kind`, with `feature`, `scanner` or `mode` where applicable. CI records preserve run URLs, tested commits, actual results and endpoint assertions. Local records preserve authenticated checks and synthetic AI output.\n\nDuplicate captures, superseded attempts and verbose CI logs were removed. Original execution timestamps, commits, statuses and checksums are retained; consolidation is not a new execution. Remaining FAIL/PENDING records are compactly disclosed, not changed to PASS. Cloud deployment and human evidence remain pending.\n"
+    (directory / "README.md").write_text(index, encoding="utf-8")
+    render()
+    print(f"Consolidated {len(events)} records to {len(updated)} retained records in five student packs and one group pack; removed {removed} redundant files")
+    return 0
+
+
 def write_report(filename, title, body):
     REPORTS.mkdir(parents=True, exist_ok=True)
     (REPORTS / filename).write_text(
@@ -114,7 +193,7 @@ def render():
         unit = summary.get("unit_tests", {})
         unit_result = f"{unit['passed']}/{unit['total']} passed; {unit['status']}" if unit else "PENDING: no downloaded unit summary"
         testing += f"| {student} | {unit_result} | {len(summary.get('post_commit_tests', []))} captured |\n"
-    testing += "\n## Workflow Logs and Endpoint Assertions\n\n"
+    testing += "\n## Workflow Provenance and Endpoint Assertions\n\n"
     for student in STUDENTS:
         testing += f"- {student}: {event_line(latest(events, 'ci-supporting', student))}\n"
     write_report("test-results.md", "Release 2 Post-Commit CI/CD Testing Report", testing +
@@ -161,9 +240,9 @@ def render():
                  "without copying personal application records. Retain terminal and frontend evidence for each "
                  "student in their local deployment records. Pending human decisions and model fallbacks are not successful workflows.")
     write_report("multi-agent-validation-report.md", "Multi-Agent Validation Report",
-                 "## Evidence Collected (OBSERVE)\n\nThe linked transcript contains the exact evidence supplied to both models.\n\n"
-                 "## Implementation Agent Assessment\n\nSee IMPLEMENTATION in the transcript.\n\n"
-                 "## Review Agent Assessment\n\nSee REVIEW in the transcript.\n\n"
+                 "## Evidence Collected (OBSERVE)\n\nSee the mode=multi_agent review record in the linked evidence pack. Successful review captures retain OBSERVE, IMPLEMENTATION and REVIEW; failed attempts retain their status and execution header only.\n\n"
+                 "## Implementation Agent Assessment\n\nA failed assessment is not approval; rerun pending reviews.\n\n"
+                 "## Review Agent Assessment\n\nReview completion and human approval remain separate gates.\n\n"
                  "Latest execution: " + event_line(latest(events, "review", "group", mode="multi_agent")) +
                  ".\n\nCOMPLETE means both models returned text, not that the application passed. Human review remains required.")
     summary = ""
@@ -516,7 +595,7 @@ def review_evidence(mode):
             if event["kind"] == "local":
                 summary = {"checks": {name: check["status"] for name, check in summary.get("checks", {}).items()},
                            "scope": "Authenticated backend checks on synthetic fixtures; no full browser CRUD or human approval. See raw artifact for exact evidence references."}
-            evidence += "Derived structured summary (raw artifact retained): " + json.dumps(summary) + "\n"
+            evidence += "Derived structured summary (see linked evidence and any consolidation omission notes): " + json.dumps(summary) + "\n"
         else:
             evidence += (REPORTS / event["artifact"]).read_text(encoding="utf-8")
     if len(evidence) > 12000:
@@ -596,6 +675,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("refresh")
+    commands.add_parser("consolidate")
     commands.add_parser("snapshot")
     commands.add_parser("workflow")
     commands.add_parser("status")
@@ -629,6 +709,8 @@ def main():
         if arguments.command == "refresh":
             render()
             return 0
+        if arguments.command == "consolidate":
+            return consolidate_evidence()
         if arguments.command == "security":
             if arguments.hook:
                 REPORTS = ROOT / ".release2-hook-evidence"

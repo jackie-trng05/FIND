@@ -1,1 +1,0 @@
-{"fixture": "release2-3fe936331c67", "interview_id": 11, "application_id": 21, "delete_status": 200, "absent_status": 404, "reason": "Prior collector cleanup ordering error; only matching synthetic fixture removed through persistence API"}
