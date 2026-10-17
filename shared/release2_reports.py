@@ -97,6 +97,7 @@ def render():
         for scanner in SCANNERS:
             security += f"| {student} | {scanner} | {event_line(latest(events, 'security', student, scanner=scanner))} |\n"
     write_report("pre-commit-security-report.md", "Release 2 Pre-Commit Security Testing Report", security +
+                 "\nLatest local production-fix verification (not a commit-hook run): " + event_line(latest(events, "verification", "group")) + ".\n" +
                  "\nEach student must capture all three scans and the actual commit-hook transcript. "
                  "A manual run is not evidence that git commit invoked the hooks. "
                  "Group scans do not establish individual participation. Findings and retests remain in the linked evidence.")
@@ -104,6 +105,7 @@ def render():
     for student in STUDENTS:
         testing += f"| {student} | {event_line(latest(events, 'ci', student))} |\n"
     write_report("test-results.md", "Release 2 Post-Commit CI/CD Testing Report", testing +
+                 "\nLatest local production-fix regressions (not GitHub CI): " + event_line(latest(events, "verification", "group")) + ".\n" +
                  "\nEach evidence pack must identify two assigned endpoint functions, expected/actual results, "
                  "the workflow URL and tested commit SHA. Token-library tests and health checks alone do not meet "
                  "the two-endpoint requirement. Existing suites target database/API services: confirm the assigned "

@@ -16,6 +16,7 @@ from services.config import (
     POSTINGS_DB_URL,
     SHARED_API_URL,
     SHARED_DB_URL,
+    TIMEOUT,
 )
 
 
@@ -34,7 +35,7 @@ def require_session():
         headers["Authorization"] = auth_header
     if not headers:
         return None, (jsonify({"error": "Not authenticated"}), 401)
-    resp = http_requests.get(f"{SHARED_API_URL}/api/auth/session", headers=headers)
+    resp = http_requests.get(f"{SHARED_API_URL}/api/auth/session", headers=headers, timeout=TIMEOUT)
     if resp.status_code != 200:
         return None, (jsonify({"error": "Invalid or expired session"}), 401)
     return resp.json()["user"], None

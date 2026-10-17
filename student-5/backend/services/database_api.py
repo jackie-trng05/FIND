@@ -7,30 +7,30 @@ Cross-service calls (shared-api and other students' databases) live in
 
 import requests as http_requests
 
-from services.config import DB_SERVICE_URL
+from services.config import DB_SERVICE_URL, TIMEOUT
 
 
-def list_evaluations_response(params=None, timeout=None):
+def list_evaluations_response(params=None, timeout=TIMEOUT):
     return http_requests.get(
-        f"{DB_SERVICE_URL}/evaluations", params=params or {}, timeout=timeout
+        f"{DB_SERVICE_URL}/evaluations", params=params or {}, timeout=TIMEOUT if timeout is None else timeout
     )
 
 
-def get_evaluation_response(evaluation_id, timeout=None):
+def get_evaluation_response(evaluation_id, timeout=TIMEOUT):
     return http_requests.get(
-        f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", timeout=timeout
+        f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", timeout=TIMEOUT if timeout is None else timeout
     )
 
 
 def create_evaluation(payload):
-    return http_requests.post(f"{DB_SERVICE_URL}/evaluations", json=payload)
+    return http_requests.post(f"{DB_SERVICE_URL}/evaluations", json=payload, timeout=TIMEOUT)
 
 
 def update_evaluation(evaluation_id, payload):
     return http_requests.put(
-        f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", json=payload
+        f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", json=payload, timeout=TIMEOUT
     )
 
 
 def delete_evaluation(evaluation_id):
-    return http_requests.delete(f"{DB_SERVICE_URL}/evaluations/{evaluation_id}")
+    return http_requests.delete(f"{DB_SERVICE_URL}/evaluations/{evaluation_id}", timeout=TIMEOUT)

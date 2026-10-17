@@ -18,6 +18,14 @@ This is repository evidence, not the group PDF. Reports follow [Lab 10, sections
 
 Four individual report categories are consolidated with five identifiable student sections/rows; the brief does not prescribe 23 separate files. Review transcripts in `evidence/` are the corresponding review/validation logs, not another invented result. Optional bonus claims require additional genuine evidence and are not assumed.
 
+## Approved Production Fixes
+
+Shared authentication and Student 5 database/session calls now use five-second default timeouts. Both backends return generic JSON 504 responses for upstream timeouts and 503 for transport failures, without exposing upstream exception details. Existing explicit finite read-timeout overrides are preserved; `None` uses the finite default.
+
+Forced debugging was removed from the 12 approved shared/frontend/database launchers. These use Flask's default debug-off behavior and retain explicit `FLASK_DEBUG=1` local opt-in. Five additional student backend launchers still force debugging; they were outside the approved list of 12 and have not been changed. The change does not make Flask's development server a production WSGI server.
+
+Local regression transcripts are linked from the security and testing reports. They do not prove GitHub CI, individual commit-hook participation, cloud deployment or that existing containers were rebuilt. SQL construction, required container bindings, local Ollama placeholders and unrelated fallback behavior were not rewritten. Container images must be rebuilt before these source changes affect the running deployment.
+
 ## Setup
 
 Run from the repository root in PowerShell, using a project virtual environment:

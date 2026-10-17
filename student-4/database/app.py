@@ -157,4 +157,4 @@ def delete_interview(interview_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6004")), debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6004")))
