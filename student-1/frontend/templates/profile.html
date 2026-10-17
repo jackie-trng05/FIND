@@ -360,15 +360,27 @@
         const panel = document.getElementById("multi-agent-result");
         const reasonInput = document.getElementById("multi-agent-reason");
         const reason = reasonInput ? reasonInput.value.trim() : "";
-        if (decision === "Correction" && !reason) {
+        const evidenceInput = document.getElementById("multi-agent-evidence");
+        const evidenceUsed = evidenceInput ? evidenceInput.value.trim() : "";
+        const reasonWarn = document.getElementById("multi-agent-reason-warn");
+        const evidenceWarn = document.getElementById("multi-agent-evidence-warn");
+        const setWarn = function (el, msg) { if (el) { el.textContent = msg; el.style.display = msg ? "block" : "none"; } };
+        setWarn(reasonWarn, "");
+        setWarn(evidenceWarn, "");
+        if (!reason) {
             if (reasonInput) reasonInput.focus();
-            panel.innerHTML = '<p class="mcp-off">Enter a reason before recording a Correction.</p>';
+            setWarn(reasonWarn, "Enter a reason before recording a decision.");
+            return;
+        }
+        if (!evidenceUsed) {
+            if (evidenceInput) evidenceInput.focus();
+            setWarn(evidenceWarn, "Enter the evidence used before recording a decision.");
             return;
         }
         panel.innerHTML = '<span class="mcp-spinner"></span> Recording decision…';
         try {
             panel.innerHTML = await callMultiAgentBackend("POST", "/multi-agent/decision",
-                new URLSearchParams({ workflow_id: workflowId, decision: decision, reason: reason }));
+                new URLSearchParams({ workflow_id: workflowId, decision: decision, reason: reason, evidence_used: evidenceUsed }));
         } catch (e) {
             panel.innerHTML = '<p class="mcp-off">Failed to reach the multi-agent server. Is it running on port 16080?</p>';
         } finally {

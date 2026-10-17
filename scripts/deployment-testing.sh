@@ -21,9 +21,19 @@ if [[ -z "$APP_URL" ]]; then
   exit 1
 fi
 
-# Step 2: Validate the entry point responds
-echo "Validating https://$APP_URL ..."
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$APP_URL")
+# Step 2: Validate the entry point's health endpoint (retry while the app cold-starts).
+# The root path returns 302 (redirect to /login), so check /health, which returns 200.
+HEALTH_URL="https://$APP_URL/health"
+echo "Validating $HEALTH_URL ..."
+HTTP_STATUS="000"
+for i in $(seq 1 20); do
+  HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$HEALTH_URL" || echo "000")
+  if [[ "$HTTP_STATUS" == "200" ]]; then
+    break
+  fi
+  echo "Attempt $i: HTTP $HTTP_STATUS - waiting for the app to become ready..."
+  sleep 15
+done
 
 if [[ "$HTTP_STATUS" == "200" ]]; then
   STATUS="Success"

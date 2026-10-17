@@ -1,7 +1,8 @@
 services:
   shared-frontend:
     build:
-      context: ./shared/frontend
+      context: .
+      dockerfile: shared/frontend/Dockerfile
     container_name: find-shared-frontend
     ports:
       - "16001:3000"
@@ -51,7 +52,8 @@ services:
 
   student-1-frontend:
     build:
-      context: ./student-1/frontend
+      context: .
+      dockerfile: student-1/frontend/Dockerfile
     container_name: find-student-1-frontend
     ports:
       - "16004:3000"
@@ -111,7 +113,8 @@ services:
 
   student-2-frontend:
     build:
-      context: ./student-2/frontend
+      context: .
+      dockerfile: student-2/frontend/Dockerfile
     container_name: find-student-2-frontend
     ports:
       - "16007:3002"
@@ -173,7 +176,8 @@ services:
 
   student-3-frontend:
     build:
-      context: ./student-3/frontend
+      context: .
+      dockerfile: student-3/frontend/Dockerfile
     container_name: find-student-3-frontend
     ports:
       - "16010:3003"
@@ -243,7 +247,8 @@ services:
 
   student-4-frontend:
     build:
-      context: ./student-4/frontend
+      context: .
+      dockerfile: student-4/frontend/Dockerfile
     container_name: find-student-4-frontend
     ports:
       - "16013:3004"
@@ -308,7 +313,8 @@ services:
 
   student-5-frontend:
     build:
-      context: ./student-5/frontend
+      context: .
+      dockerfile: student-5/frontend/Dockerfile
     container_name: find-student-5-frontend
     ports:
       - "16016:3005"
