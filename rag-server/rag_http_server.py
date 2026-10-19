@@ -1,19 +1,17 @@
-"""Shared FIND RAG HTTP server (non-containerised).
+"""Shared FIND RAG HTTP server.
 
 The containerised student backends cannot depend on the MCP stdio transport, so
-this thin HTTP wrapper exposes the same three RAG tools over JSON. It runs as a
-local host process (default port 16070) and is reached from the student backend
-containers via ``http://host.docker.internal:16070``.
+this thin HTTP wrapper exposes the same three RAG tools over JSON. It is deployed
+as a container (docker-compose service ``rag-server``, default port 16070), where
+student backends reach it at ``http://find-rag-server:16070`` (and in the cloud
+at the app's internal FQDN). When run instead as a local host process,
+containerised backends reach it via ``http://host.docker.internal:16070``.
 
 Endpoints:
     GET  /health    -> {"status": "ok", "service": "rag-server"}
     POST /refresh   -> refresh_corpus(caller)
     POST /retrieve  -> retrieve_context(query, k, caller)
     POST /answer    -> answer_question(query, k, caller, model)
-
-This server is intentionally NOT added to docker-compose: the Release 0
-containerised feature microservices keep running unchanged, and AI-Mode / RAG /
-the agentic loop stay local host processes.
 """
 
 import json

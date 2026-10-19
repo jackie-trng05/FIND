@@ -1,9 +1,11 @@
-"""Configuration for the shared, non-containerised FIND MCP server.
+"""Configuration for the shared FIND MCP server.
 
-The MCP server runs as a local host process (NOT in docker-compose). It reaches
-each student feature's database microservice through the service's host-mapped
-port (the same canonical ports documented in the FIND README). Containerised
-student backends reach this MCP server at ``http://host.docker.internal:16050``.
+The MCP server runs as a container (docker-compose service ``mcp-server``) and
+reaches each student feature's database microservice over the container network
+(e.g. ``http://find-student-1-db:6001``). When run instead as a local host
+process, it reaches each database service through its host-mapped port and
+containerised backends reach the MCP server at
+``http://host.docker.internal:16050``.
 
 Every value can be overridden with an environment variable so the same module
 works whether the server is started by a developer, by the agentic loop, or by

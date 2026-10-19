@@ -87,10 +87,11 @@ services:
       OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
       OLLAMA_MODEL: llama3.1:8b
       MCP_ENABLED: "true"
+      MCP_SERVER_URL: http://find-mcp-server:16050/mcp
       RAG_ENABLED: "true"
-      RAG_SERVER_URL: http://host.docker.internal:16070
+      RAG_SERVER_URL: http://find-rag-server:16070
       MULTI_AGENT_ENABLED: "true"
-      MULTI_AGENT_SERVER_URL: http://host.docker.internal:16080
+      MULTI_AGENT_SERVER_URL: http://find-multi-agent-server:16080
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -123,6 +124,7 @@ services:
       BACKEND_PUBLIC_URL: http://localhost:16008
       SHARED_API_PUBLIC_URL: http://localhost:16002
       LOGIN_URL: http://localhost:16001/login
+      FIND_HOME_URL: http://localhost:16001/dashboard
     volumes:
       - ./shared/css:/app/shared-css:ro
       - ./shared/frontend/static/js:/app/shared-js:ro
@@ -149,10 +151,11 @@ services:
       OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
       OLLAMA_MODEL: llama3.1:8b
       MCP_ENABLED: "true"
+      MCP_SERVER_URL: http://find-mcp-server:16050/mcp
       RAG_ENABLED: "true"
-      RAG_SERVER_URL: http://host.docker.internal:16070
+      RAG_SERVER_URL: http://find-rag-server:16070
       MULTI_AGENT_ENABLED: "true"
-      MULTI_AGENT_SERVER_URL: http://host.docker.internal:16080
+      MULTI_AGENT_SERVER_URL: http://find-multi-agent-server:16080
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -219,10 +222,11 @@ services:
       OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
       OLLAMA_MODEL: llama3.1:8b
       MCP_ENABLED: "true"
+      MCP_SERVER_URL: http://find-mcp-server:16050/mcp
       RAG_ENABLED: "true"
-      RAG_SERVER_URL: http://host.docker.internal:16070
+      RAG_SERVER_URL: http://find-rag-server:16070
       MULTI_AGENT_ENABLED: "true"
-      MULTI_AGENT_SERVER_URL: http://host.docker.internal:16080
+      MULTI_AGENT_SERVER_URL: http://find-multi-agent-server:16080
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -286,10 +290,11 @@ services:
       OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
       OLLAMA_MODEL: llama3.1:8b
       MCP_ENABLED: "true"
+      MCP_SERVER_URL: http://find-mcp-server:16050/mcp
       RAG_ENABLED: "true"
-      RAG_SERVER_URL: http://host.docker.internal:16070
+      RAG_SERVER_URL: http://find-rag-server:16070
       MULTI_AGENT_ENABLED: "true"
-      MULTI_AGENT_SERVER_URL: http://host.docker.internal:16080
+      MULTI_AGENT_SERVER_URL: http://find-multi-agent-server:16080
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -353,10 +358,11 @@ services:
       OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
       OLLAMA_MODEL: llama3.1:8b
       MCP_ENABLED: "true"
+      MCP_SERVER_URL: http://find-mcp-server:16050/mcp
       RAG_ENABLED: "true"
-      RAG_SERVER_URL: http://host.docker.internal:16070
+      RAG_SERVER_URL: http://find-rag-server:16070
       MULTI_AGENT_ENABLED: "true"
-      MULTI_AGENT_SERVER_URL: http://host.docker.internal:16080
+      MULTI_AGENT_SERVER_URL: http://find-multi-agent-server:16080
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -377,6 +383,85 @@ services:
       - "16018:6005"
     environment:
       PORT: 6005
+    networks:
+      - find-network
+    restart: unless-stopped
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: mcp-server/Dockerfile
+    container_name: find-mcp-server
+    ports:
+      - "16050:16050"
+    environment:
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 16050
+      SHARED_DB_URL: http://find-shared-db:6000
+      STUDENT_1_DB_URL: http://find-student-1-db:6001
+      STUDENT_2_DB_URL: http://find-student-2-db:6002
+      STUDENT_3_DB_URL: http://find-student-3-db:6003
+      STUDENT_4_DB_URL: http://find-student-4-db:6004
+      STUDENT_5_DB_URL: http://find-student-5-db:6005
+    depends_on:
+      - shared-db
+      - student-1-db
+      - student-2-db
+      - student-3-db
+      - student-4-db
+      - student-5-db
+    networks:
+      - find-network
+    restart: unless-stopped
+
+  rag-server:
+    build:
+      context: .
+      dockerfile: rag-server/Dockerfile
+    container_name: find-rag-server
+    ports:
+      - "16070:16070"
+    environment:
+      PORT: 16070
+      MCP_SERVER_URL: http://find-mcp-server:16050/mcp
+      # AI-Mode LLM: local Ollama by default; override OLLAMA_BASE_URL/OLLAMA_MODEL
+      # and set LLM_API_KEY to use OpenRouter (see scripts/deploy-azure.sh).
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
+      OLLAMA_MODEL: llama3.1:8b
+      AI_MODE_ENABLED: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - mcp-server
+    networks:
+      - find-network
+    restart: unless-stopped
+
+  multi-agent-server:
+    build:
+      context: ./multi-agent-server
+    container_name: find-multi-agent-server
+    ports:
+      - "16080:16080"
+    environment:
+      PORT: 16080
+      SHARED_DB_URL: http://find-shared-db:6000
+      STUDENT_1_DB_URL: http://find-student-1-db:6001
+      STUDENT_2_DB_URL: http://find-student-2-db:6002
+      STUDENT_3_DB_URL: http://find-student-3-db:6003
+      STUDENT_4_DB_URL: http://find-student-4-db:6004
+      STUDENT_5_DB_URL: http://find-student-5-db:6005
+      # Multi-agent LLM: local Ollama by default; override OLLAMA_BASE_URL/models
+      # and set LLM_API_KEY to use OpenRouter (see scripts/deploy-azure.sh).
+      OLLAMA_BASE_URL: http://host.docker.internal:11434/v1
+      OLLAMA_MODEL: qwen2.5:0.5b
+      OLLAMA_REVIEW_MODEL: llama3.1:8b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - student-1-db
+      - student-3-db
+      - student-4-db
     networks:
       - find-network
     restart: unless-stopped

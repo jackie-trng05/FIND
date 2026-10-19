@@ -1,4 +1,4 @@
-# FIND Multi-Agent Server (shared, non-containerised)
+# FIND Multi-Agent Server (shared)
 
 A shared three-agent coordination service for the FIND platform. It is the
 multi-agent analogue of the shared **MCP server** (port 16050)

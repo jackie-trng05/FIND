@@ -1,4 +1,4 @@
-# FIND — Shared MCP Server (non-containerised)
+# FIND — Shared MCP Server
 
 **One** shared MCP server used by **all five** student features. It runs as a
 **local host process** over the **streamable-HTTP** transport on a fixed port
@@ -59,7 +59,7 @@ python server.py
 Expected:
 
 ```
-Starting FIND MCP Server (shared, non-containerised)...
+Starting FIND MCP Server (shared)...
 Transport: streamable-http  Address: 0.0.0.0:16050
 Server status: RUNNING
 Available tools:

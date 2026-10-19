@@ -16,8 +16,11 @@ set -e
 # so every URL is computed up front from the environment's default domain, which
 # breaks the cycle without ordering constraints.
 #
-# Deployment profile: AI_MODE/MCP/RAG/MULTI_AGENT are disabled — the mcp-server,
-# rag-server, multi-agent-server and Ollama run locally only and are not deployed.
+# Deployment profile: when OPENROUTER_API_KEY is set, the full AI stack is
+# deployed — the mcp-server, rag-server and multi-agent-server run as internal
+# Container Apps and the LLM (AI-Mode / RAG generation / multi-agent) runs on
+# OpenRouter (Ollama is local-only and unavailable in the cloud). When the key
+# is absent, AI_MODE/MCP/RAG/MULTI_AGENT stay disabled and those apps are skipped.
 
 echo "=== FIND Cloud Deployment: Azure ==="
 
@@ -85,8 +88,34 @@ LOGIN_URL="${SHARED_FRONTEND_URL}/login"
 FIND_HOME_URL="${SHARED_FRONTEND_URL}/dashboard"
 ALLOWED_ORIGINS="${SHARED_FRONTEND_URL},${S1_FE},${S2_FE},${S3_FE},${S4_FE},${S5_FE}"
 
-# Cloud deployment profile (local-only AI stack disabled)
-PROFILE="AI_MODE_ENABLED=false MCP_ENABLED=false RAG_ENABLED=false MULTI_AGENT_ENABLED=false"
+# Internal AI-server FQDNs (deterministic once the environment exists), reached
+# only by the student backends and the rag-server inside the environment.
+MCP_SERVER_URL="$(intu mcp-server)/mcp"
+RAG_SERVER_URL=$(intu rag-server)
+MULTI_AGENT_SERVER_URL=$(intu multi-agent-server)
+
+# Cloud LLM (OpenRouter) — enabled only when an API key is provided.
+OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
+LLM_BASE_URL="${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}"
+LLM_MODEL="${OPENROUTER_MODEL:-meta-llama/llama-3.1-8b-instruct}"
+
+if [[ -n "$OPENROUTER_API_KEY" ]]; then
+  AI_ENABLED=1
+  echo "OPENROUTER_API_KEY detected: deploying the full AI stack on OpenRouter."
+  # The OpenRouter key is injected as a Container Apps secret (secretref:llm-api-key),
+  # never inlined as a plaintext env var. OLLAMA_* names are reused as the generic
+  # OpenAI-compatible endpoint/model knobs (see services/config.py and the servers).
+  PROFILE="AI_MODE_ENABLED=true MCP_ENABLED=true RAG_ENABLED=true MULTI_AGENT_ENABLED=true \
+LLM_API_KEY=secretref:llm-api-key \
+OLLAMA_BASE_URL=$LLM_BASE_URL OLLAMA_MODEL=$LLM_MODEL OLLAMA_REVIEW_MODEL=$LLM_MODEL \
+MCP_SERVER_URL=$MCP_SERVER_URL RAG_SERVER_URL=$RAG_SERVER_URL MULTI_AGENT_SERVER_URL=$MULTI_AGENT_SERVER_URL"
+  SECRET_ARGS=(--secrets "llm-api-key=$OPENROUTER_API_KEY")
+else
+  AI_ENABLED=0
+  echo "OPENROUTER_API_KEY not set: deploying with the AI stack disabled."
+  PROFILE="AI_MODE_ENABLED=false MCP_ENABLED=false RAG_ENABLED=false MULTI_AGENT_ENABLED=false"
+  SECRET_ARGS=()
+fi
 
 # deploy_app <name> <image> <target-port> <internal|external> <env-var...>
 # All apps authenticate to ACR with the shared user-assigned managed identity
@@ -106,6 +135,7 @@ deploy_app() {
     --registry-identity "$ACR_PULL_IDENTITY_ID" \
     --cpu 0.25 --memory 0.5Gi \
     --min-replicas 1 --max-replicas 1 \
+    "${SECRET_ARGS[@]}" \
     --env-vars "$@"
 }
 
@@ -123,6 +153,40 @@ deploy_app shared-api shared-api 5000 external \
   SHARED_DB_URL="$SHARED_DB_URL" \
   COOKIE_DOMAIN="$DEFAULT_DOMAIN" \
   ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
+
+# --- Shared AI servers (internal, deployed only when AI is enabled) ----------
+# Reached by the student backends (and the rag-server) over internal ingress.
+if [[ "$AI_ENABLED" == "1" ]]; then
+  deploy_app mcp-server mcp-server 16050 internal \
+    MCP_PORT=16050 \
+    SHARED_DB_URL="$SHARED_DB_URL" \
+    STUDENT_1_DB_URL="$S1_DB" \
+    STUDENT_2_DB_URL="$S2_DB" \
+    STUDENT_3_DB_URL="$S3_DB" \
+    STUDENT_4_DB_URL="$S4_DB" \
+    STUDENT_5_DB_URL="$S5_DB"
+
+  deploy_app rag-server rag-server 16070 internal \
+    PORT=16070 \
+    AI_MODE_ENABLED=true \
+    MCP_SERVER_URL="$MCP_SERVER_URL" \
+    LLM_API_KEY=secretref:llm-api-key \
+    OLLAMA_BASE_URL="$LLM_BASE_URL" \
+    OLLAMA_MODEL="$LLM_MODEL"
+
+  deploy_app multi-agent-server multi-agent-server 16080 internal \
+    PORT=16080 \
+    SHARED_DB_URL="$SHARED_DB_URL" \
+    STUDENT_1_DB_URL="$S1_DB" \
+    STUDENT_2_DB_URL="$S2_DB" \
+    STUDENT_3_DB_URL="$S3_DB" \
+    STUDENT_4_DB_URL="$S4_DB" \
+    STUDENT_5_DB_URL="$S5_DB" \
+    LLM_API_KEY=secretref:llm-api-key \
+    OLLAMA_BASE_URL="$LLM_BASE_URL" \
+    OLLAMA_MODEL="$LLM_MODEL" \
+    OLLAMA_REVIEW_MODEL="$LLM_MODEL"
+fi
 
 # --- Student backends (external) ---------------------------------------------
 deploy_app student-1-backend student-1-backend 5001 external \
@@ -192,7 +256,8 @@ deploy_app student-2-frontend student-2-frontend 3002 external \
   PORT=3002 \
   BACKEND_PUBLIC_URL="$S2_BE" \
   SHARED_API_PUBLIC_URL="$SHARED_API_URL" \
-  LOGIN_URL="$LOGIN_URL"
+  LOGIN_URL="$LOGIN_URL" \
+  FIND_HOME_URL="$FIND_HOME_URL"
 
 deploy_app student-3-frontend student-3-frontend 3003 external \
   PORT=3003 \
@@ -217,7 +282,8 @@ deploy_app student-5-frontend student-5-frontend 3005 external \
   FIND_HOME_URL="$FIND_HOME_URL" \
   SHARED_API_PUBLIC_URL="$SHARED_API_URL" \
   LOGIN_URL="$LOGIN_URL" \
-  APPLICATIONS_PUBLIC_URL="$S3_FE"
+  APPLICATIONS_PUBLIC_URL="$S3_FE" \
+  INTERVIEWS_PUBLIC_URL="$S4_FE"
 
 # --- Shared frontend (external, public entry point) --------------------------
 deploy_app shared-frontend shared-frontend 3000 external \

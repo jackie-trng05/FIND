@@ -60,7 +60,7 @@ _INTERVIEW_FIELDS = ("interview_id", "application_id", "user_id", "interview_dat
 
 client = OpenAI(
     base_url=OLLAMA_BASE_URL,
-    api_key="ollama",
+    api_key=os.getenv("LLM_API_KEY", "ollama"),
     timeout=OLLAMA_TIMEOUT_SECONDS,
 )
 
