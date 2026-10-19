@@ -29,6 +29,10 @@ INTERVIEWS_DB_URL = os.getenv("INTERVIEWS_DB_URL", "http://student-4-db:6004")
 # --------------------------------------------------------------------------- #
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+# API key for the OpenAI-compatible endpoint. Defaults to the dummy key Ollama
+# accepts locally; in the cloud this is set to the OpenRouter API key so the same
+# client can talk to https://openrouter.ai/api/v1 (see OLLAMA_BASE_URL override).
+LLM_API_KEY = os.getenv("LLM_API_KEY", "ollama")
 
 PORT = int(os.getenv("PORT", "5003"))
 TIMEOUT = 5

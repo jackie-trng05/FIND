@@ -9,7 +9,7 @@ from io import BytesIO
 
 from openai import OpenAI
 
-from services.config import OLLAMA_BASE_URL, OLLAMA_MODEL
+from services.config import LLM_API_KEY, OLLAMA_BASE_URL, OLLAMA_MODEL
 
 try:
     from pypdf import PdfReader  # type: ignore
@@ -18,7 +18,7 @@ except Exception:  # pragma: no cover
 
 logger = logging.getLogger(__name__)
 
-client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama", timeout=120.0)
+client = OpenAI(base_url=OLLAMA_BASE_URL, api_key=LLM_API_KEY, timeout=120.0)
 
 
 def extract_resume_text(data, mimetype):
