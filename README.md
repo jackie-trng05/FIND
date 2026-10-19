@@ -37,13 +37,16 @@ not individual student microservices.
 FIND/
 ├── .github/
 │   └── workflows/
+│       ├── cicd_azure.yaml            # Azure build and deploy pipeline
 │       ├── student-1-ci.yml
 │       ├── student-2-ci.yml
 │       ├── student-3-ci.yml
 │       ├── student-4-ci.yml
 │       └── student-5-ci.yml
+├── .pre-commit-config.yaml           # pre-commit hooks (ruff, secrets, dependency audit)
 ├── LICENSE
 ├── README.md
+├── pyproject.toml                    # shared tooling config (ruff, pytest)
 ├── requirements.txt                  # root dependencies for dev tooling
 ├── docker-compose.yml                # integrated local service orchestration
 │
@@ -163,6 +166,25 @@ FIND/
 │   ├── tool-contracts.md             # tool input/output contracts and authority tiers
 │   └── corpus/.gitkeep               # generated corpus/vector store are git-ignored
 │
+├── multi-agent-server/               # shared three-agent workflow server (service multi-agent-server)
+│   ├── README.md
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── app.py                        # HTTP/JSON server (port 16080)
+│   ├── coordinator.py                # planner+worker -> reviewer -> human decision; writes evidence logs
+│   ├── workflow_runner.py            # run a single workflow from the terminal
+│   ├── workflow_history.jsonl        # full per-run records (append-only evidence log)
+│   ├── coordination_audit.jsonl      # compact audit lines (append-only evidence log)
+│   ├── agents/
+│   │   ├── __init__.py
+│   │   ├── planner_agent.py          # builds the workflow plan
+│   │   ├── worker_agent.py           # retrieves evidence and generates output
+│   │   └── reviewer_agent.py         # reviews worker output for risk and correction
+│   └── prompts/
+│       ├── planner_prompt.txt
+│       ├── worker_prompt.txt
+│       └── reviewer_prompt.txt
+│
 ├── student-1/                        # profiles and resumes
 │   ├── backend/
 │   │   ├── app.py                    # profile backend entrypoint
@@ -174,7 +196,9 @@ FIND/
 │   │   ├── routes/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_mode.py            # AI profile suggestions endpoint
+│   │   │   ├── auth_mode.py          # token auth endpoints
 │   │   │   ├── mcp_mode.py           # MCP-Mode grounded endpoints
+│   │   │   ├── multi_agent_mode.py   # Multi-Agent-Mode workflow endpoints
 │   │   │   ├── profiles.py           # profile CRUD endpoints
 │   │   │   └── rag_mode.py           # RAG-Mode grounded endpoints
 │   │   ├── services/
@@ -184,6 +208,7 @@ FIND/
 │   │   │   ├── integration_api.py    # calls other FIND services
 │   │   │   ├── llm_client.py         # Ollama/LLM client
 │   │   │   ├── mcp_client.py         # shared MCP server client
+│   │   │   ├── multi_agent_api.py    # shared multi-agent server client
 │   │   │   ├── prompt_loader.py      # reads prompt text files
 │   │   │   └── rag_api.py            # shared RAG server client
 │   │   └── views/
@@ -206,6 +231,9 @@ FIND/
 │   └── tests/
 │       ├── conftest.py
 │       ├── requirements.txt
+│       ├── post_commit/
+│       │   ├── test_api_profiles.py
+│       │   └── test_token_auth.py
 │       ├── test_applicant_profile_tool.py
 │       ├── test_backend.py
 │       ├── test_database.py
@@ -224,8 +252,10 @@ FIND/
 │   │   ├── routes/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_mode.py            # AI job posting helper endpoints
+│   │   │   ├── auth_mode.py          # token auth endpoints
 │   │   │   ├── job_postings.py       # job posting CRUD endpoints
 │   │   │   ├── mcp_mode.py           # MCP-Mode grounded endpoints
+│   │   │   ├── multi_agent_mode.py   # Multi-Agent-Mode workflow endpoints
 │   │   │   └── rag_mode.py           # RAG-Mode grounded endpoints
 │   │   ├── services/
 │   │   │   ├── __init__.py
@@ -234,6 +264,7 @@ FIND/
 │   │   │   ├── integration_api.py    # calls other FIND services
 │   │   │   ├── llm_client.py         # Ollama/LLM client
 │   │   │   ├── mcp_client.py         # shared MCP server client
+│   │   │   ├── multi_agent_api.py    # shared multi-agent server client
 │   │   │   ├── prompt_loader.py      # reads prompt text files
 │   │   │   └── rag_api.py            # shared RAG server client
 │   │   └── views/
@@ -258,6 +289,9 @@ FIND/
 │   └── tests/
 │       ├── conftest.py
 │       ├── requirements.txt
+│       ├── post_commit/
+│       │   ├── test_api_job_postings.py
+│       │   └── test_token_auth.py
 │       ├── test_backend.py
 │       ├── test_database.py
 │       ├── test_job_postings_tool.py
@@ -276,7 +310,9 @@ FIND/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_mode.py            # AI application helper endpoints
 │   │   │   ├── applications.py       # application workflow endpoints
+│   │   │   ├── auth_mode.py          # token auth endpoints
 │   │   │   ├── mcp_mode.py           # MCP-Mode grounded endpoints
+│   │   │   ├── multi_agent_mode.py   # Multi-Agent-Mode workflow endpoints
 │   │   │   └── rag_mode.py           # RAG-Mode grounded endpoints
 │   │   ├── services/
 │   │   │   ├── __init__.py
@@ -285,6 +321,7 @@ FIND/
 │   │   │   ├── integration_api.py    # calls other FIND services
 │   │   │   ├── llm_client.py         # Ollama/LLM client
 │   │   │   ├── mcp_client.py         # shared MCP server client
+│   │   │   ├── multi_agent_api.py    # shared multi-agent server client
 │   │   │   ├── prompt_loader.py      # reads prompt text files
 │   │   │   └── rag_api.py            # shared RAG server client
 │   │   └── views/
@@ -313,6 +350,9 @@ FIND/
 │   └── tests/
 │       ├── conftest.py
 │       ├── requirements.txt
+│       ├── post_commit/
+│       │   ├── test_api_applications.py
+│       │   └── test_token_auth.py
 │       ├── test_applications_for_job_tool.py
 │       ├── test_backend.py
 │       ├── test_database.py
@@ -330,8 +370,10 @@ FIND/
 │   │   ├── routes/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_mode.py            # AI interview helper endpoints
+│   │   │   ├── auth_mode.py          # token auth endpoints
 │   │   │   ├── interviews.py         # interview scheduling endpoints
 │   │   │   ├── mcp_mode.py           # MCP-Mode grounded endpoints
+│   │   │   ├── multi_agent_mode.py   # Multi-Agent-Mode workflow endpoints
 │   │   │   └── rag_mode.py           # RAG-Mode grounded endpoints
 │   │   ├── services/
 │   │   │   ├── __init__.py
@@ -340,6 +382,7 @@ FIND/
 │   │   │   ├── integration_api.py    # calls other FIND services
 │   │   │   ├── llm_client.py         # Ollama/LLM client
 │   │   │   ├── mcp_client.py         # shared MCP server client
+│   │   │   ├── multi_agent_api.py    # shared multi-agent server client
 │   │   │   ├── prompt_loader.py      # reads prompt text files
 │   │   │   └── rag_api.py            # shared RAG server client
 │   │   └── views/
@@ -367,6 +410,9 @@ FIND/
 │   └── tests/
 │       ├── conftest.py
 │       ├── requirements.txt
+│       ├── post_commit/
+│       │   ├── test_api_interviews.py
+│       │   └── test_token_auth.py
 │       ├── test_backend.py
 │       ├── test_database.py
 │       ├── test_interview_details_tool.py
@@ -384,8 +430,10 @@ FIND/
 │   │   ├── routes/
 │   │   │   ├── __init__.py
 │   │   │   ├── ai_mode.py            # AI evaluation helper endpoints
+│   │   │   ├── auth_mode.py          # token auth endpoints
 │   │   │   ├── evaluations.py        # candidate evaluation endpoints
 │   │   │   ├── mcp_mode.py           # MCP-Mode grounded endpoints
+│   │   │   ├── multi_agent_mode.py   # Multi-Agent-Mode workflow endpoints
 │   │   │   └── rag_mode.py           # RAG-Mode grounded endpoints
 │   │   ├── services/
 │   │   │   ├── __init__.py
@@ -394,6 +442,7 @@ FIND/
 │   │   │   ├── integration_api.py    # calls other FIND services
 │   │   │   ├── llm_client.py         # Ollama/LLM client
 │   │   │   ├── mcp_client.py         # shared MCP server client
+│   │   │   ├── multi_agent_api.py    # shared multi-agent server client
 │   │   │   ├── prompt_loader.py      # reads prompt text files
 │   │   │   └── rag_api.py            # shared RAG server client
 │   │   └── views/
@@ -414,12 +463,33 @@ FIND/
 │   └── tests/
 │       ├── conftest.py
 │       ├── requirements.txt
+│       ├── post_commit/
+│       │   ├── test_api_evaluations.py
+│       │   └── test_token_auth.py
 │       ├── test_backend.py
 │       ├── test_database.py
 │       ├── test_evaluation_scores_tool.py
 │       ├── test_frontend.py
 │       ├── test_mcp_mode.py
 │       └── test_rag_mode.py
+│
+├── scripts/                          # deployment and pre-commit tooling
+│   ├── README.md
+│   ├── build-images.sh
+│   ├── cleanup.sh
+│   ├── deploy-azure-env.sh
+│   ├── deploy-azure.sh
+│   ├── deployment-testing.sh
+│   ├── env-setup.sh
+│   ├── gh-secrets-setup.sh
+│   ├── pre_commit_pytest.py
+│   └── security-validation.py
+│
+├── tests/                            # cross-cutting pre-commit test suites
+│   └── pre_commit/
+│       ├── test_dependency_audit_student1.py ... student5.py
+│       ├── test_ruff_scan_student1.py ... student5.py
+│       └── test_secrets_scan_student1.py ... student5.py
 │
 └── docs/
     ├── release-0/reports/            # Release 0 CI evidence reports
@@ -429,13 +499,37 @@ FIND/
     │       ├── report.json
     │       ├── report.md
     │       └── run-view.md
-    └── release-1/reports/            # Release 1 integration, MCP, and RAG reports
-        ├── boundary-analysis.md
-        ├── integration-report.md
-        ├── rag-report.md
-        ├── rag-validation-report.md
-        ├── run-report.md
-        └── tool-review.md
+    ├── release-1/reports/            # Release 1 integration, MCP, and RAG reports
+    │   ├── boundary-analysis.md
+    │   ├── integration-report.md
+    │   ├── rag-report.md
+    │   ├── rag-validation-report.md
+    │   ├── run-report.md
+    │   └── tool-review.md
+    └── release-2/                    # Release 2 deployment, security, and review evidence
+        ├── deploy/
+        │   └── deployment-results.md
+        ├── local/                    # per-student local run logs
+        │   └── student-1/ ... student-5/
+        │       └── test-results.md
+        ├── local-deployment/
+        │   ├── local-deployment-report.md
+        │   └── logs/
+        │       ├── terminal-a-multi-agent-server.log
+        │       ├── terminal-b-docker-compose.log
+        │       └── terminal-c-student-1-workflow.log ... terminal-c-student-5-workflow.log
+        ├── post-commit/              # per-student post-commit reports
+        │   └── student-1/ ... student-5/
+        │       ├── test-audit.jsonl
+        │       └── test-results.md
+        ├── pre-commit/
+        │   └── pre-commit-results-student1.md ... pre-commit-results-student5.md
+        ├── security/
+        │   ├── cloud-security-controls.md
+        │   └── security-validation-output.txt
+        └── testing-review/
+            ├── ai-review-summary.md
+            └── review-validation-log.txt
 ```
 
 
