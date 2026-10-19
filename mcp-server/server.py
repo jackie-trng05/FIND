@@ -1,13 +1,12 @@
-"""Shared, non-containerised FIND MCP server.
+"""Shared FIND MCP server.
 
-ONE MCP server is shared by all five student features. It runs as a local host
-process over the **streamable-HTTP** transport on a fixed port (default 16050),
-so containerised student backends can reach it at
-``http://host.docker.internal:16050/mcp``.
+ONE MCP server is shared by all five student features. It runs over the
+**streamable-HTTP** transport on a fixed port (default 16050).
 
-This server is intentionally NOT part of docker-compose: the Release 0
-containerised feature microservices keep running unchanged, and AI-Mode / MCP /
-the agentic loop stay local host processes.
+It is deployed as a container (docker-compose service ``mcp-server``), where
+student backends reach it at ``http://find-mcp-server:16050/mcp`` (and in the
+cloud at the app's internal FQDN). When run instead as a local host process,
+containerised backends reach it via ``http://host.docker.internal:16050/mcp``.
 
 Step 1 registers the two shared tools (project_files, ci_report). Per-student
 retrieval tools are registered in Step 2 via ``register_student_tools``.
@@ -64,7 +63,7 @@ register_student_tools(mcp)
 
 
 if __name__ == "__main__":
-    print("Starting FIND MCP Server (shared, non-containerised)...")
+    print("Starting FIND MCP Server (shared)...")
     print(f"Transport: streamable-http  Address: {config.MCP_HOST}:{config.MCP_PORT}")
     print("Server status: RUNNING")
     print("Available tools:")
