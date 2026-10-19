@@ -1,4 +1,4 @@
-"""Shared, non-containerised FIND RAG pipeline (Lab 08).
+"""Shared FIND RAG pipeline (Lab 08).
 
 ONE local RAG pipeline is shared by all five student features. It builds an
 authority-tiered corpus from real FIND evidence, indexes it in a local vector
@@ -15,10 +15,9 @@ The three public tools mirror the lab contract and are unit-testable directly:
     retrieve_context(query, k)    -> top-k grounded chunks
     answer_question(query, k)     -> grounded answer + citations + confidence
 
-This module is intentionally NOT containerised. It runs as a local host process
-(see ``rag_http_server.py`` / ``rag_server.py``) so the Release 0 containerised
-feature microservices keep running unchanged and reach it via
-``host.docker.internal``.
+This module is served by a container (docker-compose service ``rag-server``, via
+``rag_http_server.py``). It can also run as a local host process, in which case
+containerised backends reach it via ``host.docker.internal``.
 
 ChromaDB is optional: when it is unavailable the pipeline transparently falls
 back to a deterministic lexical retriever so the server still runs offline / in
@@ -743,10 +742,21 @@ def confidence_from_results(results: list[dict[str, Any]]) -> str:
 
 
 def generate_with_ollama(query: str, context: str, model: str | None = None) -> str:
+    """Grounded generation via the OpenAI-compatible chat endpoint.
+
+    Uses the same OpenAI-compatible API for both providers, so a single set of
+    env vars switches between them:
+      * local  -> Ollama (OLLAMA_BASE_URL=http://host.docker.internal:11434/v1,
+                   LLM_API_KEY defaults to the dummy "ollama" key)
+      * cloud  -> OpenRouter (OLLAMA_BASE_URL=https://openrouter.ai/api/v1,
+                   LLM_API_KEY set to the OpenRouter API key)
+
+    ``openai`` is imported lazily so the module still imports where the package
+    isn't installed and AI-Mode is disabled (e.g. CI).
+    """
     model_name = model or os.getenv("OLLAMA_MODEL", "llama3.1:8b")
-    ollama_generate_url = os.getenv(
-        "OLLAMA_GENERATE_URL", "http://localhost:11434/api/generate"
-    )
+    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+    api_key = os.getenv("LLM_API_KEY", "ollama")
     prompt = f"""
 You are a friendly, user-facing, retrieval-grounded assistant for the FIND platform.
 Use ONLY the provided context. If evidence is missing, return exactly: Insufficient evidence.
@@ -766,15 +776,18 @@ Evidence:
 <summary>
 """
     try:
-        resp = requests.post(
-            ollama_generate_url,
-            json={"model": model_name, "prompt": prompt, "stream": False},
-            timeout=120,
+        from openai import OpenAI
+
+        client = OpenAI(base_url=base_url, api_key=api_key, timeout=120.0)
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.2,
+            stream=False,
         )
-        resp.raise_for_status()
-        return resp.json().get("response", "Insufficient evidence.")
-    except Exception as exc:  # noqa: BLE001 - Ollama is optional / disabled in CI
-        return f"Ollama unavailable: {exc}"
+        return (response.choices[0].message.content or "Insufficient evidence.").strip()
+    except Exception as exc:  # noqa: BLE001 - LLM is optional / disabled in CI
+        return f"LLM unavailable: {exc}"
 
 
 def deterministic_answer(query: str, results: list[dict[str, Any]]) -> str | None:
