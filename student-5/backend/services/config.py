@@ -26,6 +26,10 @@ INTERVIEWS_PUBLIC_URL = os.environ.get("INTERVIEWS_PUBLIC_URL", "http://localhos
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://host.docker.internal:11434/v1")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
+# API key for the OpenAI-compatible endpoint. Defaults to the dummy key Ollama
+# accepts locally; in the cloud this is set to the OpenRouter API key so the same
+# client can talk to https://openrouter.ai/api/v1 (see OLLAMA_BASE_URL override).
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "ollama")
 
 PORT = int(os.environ.get("PORT", "5005"))
 TIMEOUT = 5
