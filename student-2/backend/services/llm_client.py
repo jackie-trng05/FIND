@@ -6,9 +6,9 @@ the reference pattern from the enrolment-app labs.
 
 from openai import OpenAI
 
-from services.config import OLLAMA_BASE_URL, OLLAMA_MODEL
+from services.config import LLM_API_KEY, OLLAMA_BASE_URL, OLLAMA_MODEL
 
-client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama", timeout=120.0)
+client = OpenAI(base_url=OLLAMA_BASE_URL, api_key=LLM_API_KEY, timeout=120.0)
 
 
 def create_chat_completion(messages, max_tokens=300, temperature=0.2, model=None) -> str:
