@@ -6,7 +6,9 @@ the whole app — not individual student microservices.
 
 ## What gets deployed
 
-18 Container Apps in a single Container Apps environment:
+18 Container Apps in a single Container Apps environment (plus 3 internal AI
+servers — `mcp-server`, `rag-server`, `multi-agent-server` — when the AI stack
+is enabled, see **Deployment profile** below):
 
 | Tier | Apps | Ingress | Target port |
 |------|------|---------|-------------|
@@ -16,6 +18,9 @@ the whole app — not individual student microservices.
 | Student frontends | `student-1..5-frontend` | external | 3000 / 3002–3005 |
 | Student backends | `student-1..5-backend` | external | 5001–5005 |
 | Student DBs | `student-1..5-db` | internal | 6001–6005 |
+| MCP server (AI stack) | `mcp-server` | internal | 16050 |
+| RAG server (AI stack) | `rag-server` | internal | 16070 |
+| Multi-agent server (AI stack) | `multi-agent-server` | internal | 16080 |
 
 **Ingress rationale:** FIND frontends call APIs from the browser via `*_PUBLIC_URL`
 env vars, so every frontend, every student backend, and `shared-api` need public
@@ -38,9 +43,48 @@ FQDNs are deterministic once the environment exists
 internal), so `deploy-azure.sh` reads the environment's default domain and computes
 every URL up front, breaking the cycle.
 
-**Deployment profile:** `AI_MODE_ENABLED`, `MCP_ENABLED`, `RAG_ENABLED`,
-`MULTI_AGENT_ENABLED` are all set to `false`. The `mcp-server`, `rag-server`,
-`multi-agent-server`, and Ollama run locally only and are not deployed.
+**Deployment profile — AI stack:** `AI_MODE_ENABLED`, `MCP_ENABLED`, `RAG_ENABLED`
+and `MULTI_AGENT_ENABLED` default to `false` and the three AI servers are skipped.
+Set an `OPENROUTER_API_KEY` GitHub Actions secret to enable the full AI stack:
+`deploy-azure.sh` then deploys the `mcp-server`, `rag-server` and
+`multi-agent-server` as internal Container Apps and routes the LLM (AI-Mode, RAG
+generation, multi-agent) through **OpenRouter** (`https://openrouter.ai/api/v1`,
+default model `meta-llama/llama-3.1-8b-instruct`, overridable via
+`OPENROUTER_MODEL`). Local Ollama is not available in the cloud, so the same
+OpenAI-compatible client is pointed at OpenRouter via `OLLAMA_BASE_URL` /
+`OLLAMA_MODEL` with the key injected as a Container Apps secret
+(`secretref:llm-api-key`). Locally (`docker-compose`) these servers run as
+containers and the LLM stays on local Ollama.
+
+### Setting the OpenRouter secret
+
+1. Create an API key in your own OpenRouter account at
+   <https://openrouter.ai/settings/keys>. Ensure the account has credits and the
+   key permits the configured model. This is an OpenRouter key, not an Ollama or
+   GitHub token. Cloud requests send their prompts and grounding context to the
+   selected hosted provider; use only data you are permitted to send.
+2. In GitHub, open this repository's **Settings > Secrets and variables >
+   Actions > New repository secret**. Use `OPENROUTER_API_KEY` as the name and
+   paste the generated API key as the value.
+3. Alternatively, in your local VS Code PowerShell terminal, run
+   `gh secret set OPENROUTER_API_KEY --repo jackie-trng05/FIND` and paste the key
+   at the hidden prompt. Run `gh auth login` first if necessary. Do not put the
+   real key in a command's `--body` argument, source files, chat, or screenshots.
+4. Commit and push the deployment changes, then use **Actions > cicd_azure >
+   Run workflow** on that branch. Adding a secret does not update running Azure
+   containers by itself. The workflow injects the key at deployment time and
+   stores it as an Azure Container Apps secret.
+
+AI Mode's routes and LLM clients already run inside the five student backend
+containers; there is no separate AI Mode process to containerise. The shared
+MCP, RAG and multi-agent servers are separate processes and therefore have
+separate images. Local Ollama remains on the host; cloud inference is hosted by
+OpenRouter's providers.
+
+The interview time-suggestion endpoint also has a deterministic fallback:
+when model generation fails or provides too few valid slots, it fills the list
+with future weekday business-hour slots. A successful suggestions response
+therefore does not prove the hosted model was reached.
 
 ## Scripts (run in order)
 
@@ -48,9 +92,9 @@ every URL up front, breaking the cycle.
 |--------|---------|
 | `gh-secrets-setup.sh` | One-time, local. Creates the `find-github-oidc` app registration + federated credential and pushes `AZURE_*` secrets to GitHub Actions. |
 | `env-setup.sh` | Creates the resource group, tags it with generated `registryName`/`envName`. |
-| `build-images.sh` | Creates the ACR (admin access disabled) and builds/pushes all 18 images, authenticating to the registry with the Azure identity via `az acr login`. |
+| `build-images.sh` | Creates the ACR (admin access disabled) and builds/pushes all 21 images, authenticating to the registry with the Azure identity via `az acr login`. |
 | `deploy-azure-env.sh` | Creates the Container Apps environment. |
-| `deploy-azure.sh` | Deploys all 18 Container Apps with full env wiring. |
+| `deploy-azure.sh` | Deploys all 18 Container Apps with full env wiring (plus the 3 AI servers when `OPENROUTER_API_KEY` is set). |
 | `deployment-testing.sh` | Validates `shared-frontend` and writes `reports/deploy/deployment-results.md`. |
 | `cleanup.sh` | Deletes the resource group to stop billing. |
 
@@ -107,4 +151,5 @@ A couple of items should be verified before relying on a live deployment:
    app's cookie handling).
 
 3. **Costs.** 18 always-on Container Apps (min 1 replica each) plus ACR incur Azure
-   charges. Run `cleanup.sh` when finished.
+   charges — 21 when the AI stack is enabled, which also incurs OpenRouter API usage.
+   Run `cleanup.sh` when finished.

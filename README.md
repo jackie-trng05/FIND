@@ -19,8 +19,8 @@ it into the complete application.
 | `shared/` | Integrated home page, shared CSS, JavaScript, assets, grounded-answer prompts, and common configuration |
 | `student-1/` through `student-5/` | Student-owned frontend, backend, database, tests, and Docker artefacts |
 | `agentic_loop/` | Development-time architecture, service, DevOps, MCP, and RAG review tooling and prompts |
-| `mcp-server/` | Shared non-containerised MCP server exposing grounded retrieval tools |
-| `rag-server/` | Shared non-containerised RAG server for grounded answers, citations, and confidence |
+| `mcp-server/` | Shared MCP server (containerised) exposing grounded retrieval tools |
+| `rag-server/` | Shared RAG server (containerised) for grounded answers, citations, and confidence |
 | `docker-compose.yml` | Shared local orchestration for the integrated application |
 
 Feature-specific AI integrations belong to their owning student backend; `agentic_loop/` is
@@ -137,7 +137,7 @@ FIND/
 │       └── rag/
 │           └── grounded_answer_prompt.txt # shared grounded RAG answer prompt
 │
-├── mcp-server/                       # shared non-containerised MCP server (local host process)
+├── mcp-server/                       # shared MCP server (docker-compose service mcp-server)
 │   ├── README.md
 │   ├── config.py                     # host/port and MCP server settings
 │   ├── requirements.txt
@@ -152,7 +152,7 @@ FIND/
 │       ├── student_4.py              # interview_details retrieval tool
 │       └── student_5.py              # evaluation_scores retrieval tool
 │
-├── rag-server/                       # shared non-containerised RAG server (local host process)
+├── rag-server/                       # shared RAG server (docker-compose service rag-server)
 │   ├── README.md
 │   ├── mcp-config.json               # MCP client launch config
 │   ├── rag_eval.py                   # P@5 / R@5 retrieval metrics
@@ -500,27 +500,38 @@ The first build may take some time because Docker needs to download the required
 
 ---
 
-## Start the Shared MCP Server (manual step)
+## Shared AI servers & local Ollama
 
-MCP-Mode and grounded AI-Mode features (per-student retrieval tools, citations, confidence)
-depend on the shared MCP server. It is **not** part of `docker-compose.yml` and does **not**
-start with `docker-compose up` — it must be run as a separate local host process.
+MCP-Mode, RAG-Mode, Multi-Agent-Mode and grounded AI-Mode features depend on the
+shared **MCP**, **RAG** and **multi-agent** servers. These are now part of
+`docker-compose.yml` (services `mcp-server`, `rag-server`, `multi-agent-server`)
+and start automatically with `docker-compose up` — no separate process needed.
+The student backends reach them over the container network at
+`http://find-mcp-server:16050/mcp`, `http://find-rag-server:16070` and
+`http://find-multi-agent-server:16080`.
 
-Open a **separate** PowerShell window and run:
+AI-Mode generation itself still uses a **local Ollama** runtime on the host (the
+containers reach it at `http://host.docker.internal:11434/v1`). Start Ollama and
+pull the models before using AI features:
+
+```powershell
+ollama pull llama3.1:8b
+ollama pull qwen2.5:0.5b
+```
+
+> **Cloud note:** Ollama is local-only. In the Azure deployment the same
+> OpenAI-compatible client is pointed at **OpenRouter** instead — see
+> [`scripts/README.md`](scripts/README.md) (set an `OPENROUTER_API_KEY` secret).
+
+The containers do **not** hot-reload. After editing a server's source, rebuild it
+(`docker compose build mcp-server rag-server multi-agent-server`) and restart. For
+quick iteration you can still run a server as a standalone host process instead:
 
 ```powershell
 cd C:\git\FIND\mcp-server
 pip install -r requirements.txt
 python server.py
 ```
-
-Leave this process running alongside `docker-compose up` for as long as you want to test MCP-Mode
-or AI-Mode features. See [`mcp-server/README.md`](mcp-server/README.md) for tool details and the
-retrieval-context contract.
-
-> **Note:** This process does **not** hot-reload. After editing any file under `mcp-server/`
-> (e.g. `tools.py`, `server.py`, `students/*.py`), stop it (`Ctrl+C`) and run `python server.py`
-> again for the change to take effect.
 
 ---
 
@@ -588,25 +599,29 @@ The port mappings follow the course-provided architecture and should not be chan
 
 Database links are provided for local inspection and debugging only; they are not end-user entry points.
 
-| Shared MCP | MCP Server    |   `16050` |          n/a   |    N (local host)     |
-| Shared RAG | RAG Server    |   `16070` |          n/a   |    N (local host)     |
+| Shared MCP | MCP Server          |   `16050` |         `16050` |    Y     |
+| Shared RAG | RAG Server          |   `16070` |         `16070` |    Y     |
+| Shared Multi-Agent | Multi-Agent Server | `16080` |     `16080` |    Y     |
 
 ---
 
-# AI-Mode, MCP & RAG (shared, local, non-containerised)
+# AI-Mode, MCP & RAG (shared, containerised)
 
 Release 1 adds **one shared MCP server** and **one shared RAG server** used by
 **all five** student features to ground AI-Mode answers with source citations
-and a confidence category.
+and a confidence category. Release 2 adds the shared **multi-agent server**.
 
-## Not in Docker Compose (by design)
+## Containerised in Docker Compose
 
-The MCP server, RAG server, AI-Mode, and the agentic loop run as **local host
-processes**. `docker-compose.yml` continues to run only the Release 0
-containerised feature microservices and is **not** extended with MCP, RAG,
-AI-Mode, or the agentic loop. Containerised backends reach the local servers at
-`http://host.docker.internal:16050` (MCP) and
-`http://host.docker.internal:16070` (RAG).
+The MCP, RAG and multi-agent servers run as containers in `docker-compose.yml`
+(services `mcp-server`, `rag-server`, `multi-agent-server`) and start with
+`docker-compose up`. Containerised backends reach them over the container network
+at `http://find-mcp-server:16050/mcp`, `http://find-rag-server:16070` and
+`http://find-multi-agent-server:16080`. AI-Mode generation uses the host's local
+Ollama runtime (`http://host.docker.internal:11434/v1`); in the cloud the LLM
+runs on OpenRouter instead (see [`scripts/README.md`](scripts/README.md)). Each
+server can still be run as a standalone host process for iteration, in which case
+backends reach it via `http://host.docker.internal:<port>`.
 
 ## Shared MCP server
 
