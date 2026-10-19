@@ -148,10 +148,13 @@ deploy_app student-4-db student-4-db 6004 internal PORT=6004
 deploy_app student-5-db student-5-db 6005 internal PORT=6005
 
 # --- Shared API (external) ----------------------------------------------------
+# COOKIE_SECURE=true marks the session cookie Secure and enables HSTS (served
+# over TLS by Container Apps) — B5 endpoint security / B6 data-in-transit.
 deploy_app shared-api shared-api 5000 external \
   PORT=5000 \
   SHARED_DB_URL="$SHARED_DB_URL" \
   COOKIE_DOMAIN="$DEFAULT_DOMAIN" \
+  COOKIE_SECURE=true \
   ALLOWED_ORIGINS="$ALLOWED_ORIGINS"
 
 # --- Shared AI servers (internal, deployed only when AI is enabled) ----------
@@ -288,6 +291,8 @@ deploy_app student-5-frontend student-5-frontend 3005 external \
 # --- Shared frontend (external, public entry point) --------------------------
 deploy_app shared-frontend shared-frontend 3000 external \
   PORT=3000 \
+  COOKIE_SECURE=true \
+  ALLOWED_ORIGINS="$ALLOWED_ORIGINS" \
   STUDENT_1_FRONTEND_URL="$S1_FE" \
   STUDENT_2_FRONTEND_URL="$S2_FE" \
   STUDENT_3_FRONTEND_URL="$S3_FE" \
