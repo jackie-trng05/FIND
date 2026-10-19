@@ -1,8 +1,8 @@
 import os
 import sqlite3
-import hashlib
 import secrets
 from datetime import datetime
+from werkzeug.security import generate_password_hash
 
 DATA_DIR = "/app/data"
 DATABASE_NAME = os.path.join(DATA_DIR, "find.db")
@@ -40,7 +40,8 @@ cursor.execute("DELETE FROM users")
 
 
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    # B6 (Cloud Data Security): salted, iterated PBKDF2 hash (not bare SHA-256).
+    return generate_password_hash(password)
 
 
 seed_users = [

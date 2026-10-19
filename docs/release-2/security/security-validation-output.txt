@@ -1,0 +1,15 @@
+[PASS] B6 password hash is a salted KDF (scrypt/pbkdf2, not bare SHA-256) -> scrypt:32768:8:1
+[PASS] B6 same password yields different hashes (random salt)
+[PASS] B5 login succeeds (200) -> HTTP 200
+[PASS] B5 session cookie is HttpOnly
+[PASS] B5 session cookie is Secure
+[PASS] B5 session cookie is SameSite=Lax
+[PASS] B5 HSTS header present
+[PASS] B5 X-Content-Type-Options nosniff
+[PASS] B5 X-Frame-Options DENY
+[PASS] B5 Referrer-Policy no-referrer
+[PASS] B5 wrong password rejected (401) -> HTTP 401
+[PASS] B5 auth endpoint rate-limited (429 after burst) -> status codes: [401, 401, 401, 429, 429, 429, 429, 429, 429, 429]
+[PASS] B6 legacy SHA-256 hash still verifies (graceful migration)
+
+=== Security validation: 13/13 checks passed ===

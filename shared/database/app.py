@@ -4,7 +4,13 @@ import os
 import sqlite3
 
 app = Flask(__name__)
-CORS(app)
+
+# B6 (Cloud Data Security): this data service uses internal-only ingress in the
+# cloud. As defence-in-depth, CORS is restricted to explicit origins (none by
+# default) rather than a wildcard, so it is never browser-reachable cross-origin.
+ALLOWED_ORIGINS = [o for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o]
+if ALLOWED_ORIGINS:
+    CORS(app, origins=ALLOWED_ORIGINS)
 
 DATABASE_NAME = "/app/data/find.db"
 
@@ -178,4 +184,5 @@ def delete_session_by_token():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6000")), debug=True)
+    debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "6000")), debug=debug)

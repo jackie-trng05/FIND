@@ -3,7 +3,15 @@ from flask_cors import CORS
 import os
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
-CORS(app)
+
+# B5 (Cloud Endpoint Security): restrict CORS to known origins instead of a
+# wildcard. Falls back to same-origin only when ALLOWED_ORIGINS is unset.
+ALLOWED_ORIGINS = [o for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o]
+if ALLOWED_ORIGINS:
+    CORS(app, origins=ALLOWED_ORIGINS)
+
+# B5 (Cloud Endpoint Security): mark HSTS on only when served over TLS (cloud).
+TLS_ENABLED = os.getenv("COOKIE_SECURE", "false").lower() == "true"
 
 student_1_url = os.environ["STUDENT_1_FRONTEND_URL"]
 student_2_url = os.environ["STUDENT_2_FRONTEND_URL"]
@@ -18,6 +26,12 @@ def add_no_cache_headers(response):
     if response.content_type and "text/html" in response.content_type:
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
         response.headers["Pragma"] = "no-cache"
+    # B5 (Cloud Endpoint Security): defence-in-depth security headers.
+    if TLS_ENABLED:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "no-referrer"
     return response
 
 
@@ -60,4 +74,5 @@ def shared_css(filename):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3000")), debug=True)
+    debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "3000")), debug=debug)
