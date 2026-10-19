@@ -1,11 +1,12 @@
 #!/bin/bash
 set -e
 
-# Creates the ACR and builds/pushes all 18 FIND service images.
+# Creates the ACR and builds/pushes all 21 FIND service images.
 #
 # FIND is one integrated application: 3 shared services + 5 student modules
-# (frontend/backend/database each) = 18 images. Each service directory is a
-# self-contained Docker build context with its own Dockerfile.
+# (frontend/backend/database each) + 3 shared AI servers (mcp/rag/multi-agent)
+# = 21 images. Each service directory is a self-contained Docker build context
+# with its own Dockerfile.
 
 echo "=== FIND Cloud Deployment: Image Build ==="
 
@@ -81,9 +82,11 @@ for i in $(seq 1 10); do
   sleep 15
 done
 
-# Step 3: Build and push all 18 container images.
+# Step 3: Build and push all 21 container images.
 # Each entry is "image-name|build-context|dockerfile". Frontends build from the repo
 # root so their images can bake in the shared CSS/JS that compose provides via volumes.
+# The mcp-server and rag-server likewise build from the repo root so they can bake in the
+# docs/README evidence their shared tools read.
 SERVICES=(
   "shared-frontend|.|shared/frontend/Dockerfile"
   "shared-api|shared/backend|shared/backend/Dockerfile"
@@ -103,6 +106,9 @@ SERVICES=(
   "student-5-frontend|.|student-5/frontend/Dockerfile"
   "student-5-backend|student-5/backend|student-5/backend/Dockerfile"
   "student-5-db|student-5/database|student-5/database/Dockerfile"
+  "mcp-server|.|mcp-server/Dockerfile"
+  "rag-server|.|rag-server/Dockerfile"
+  "multi-agent-server|multi-agent-server|multi-agent-server/Dockerfile"
 )
 
 for entry in "${SERVICES[@]}"; do
