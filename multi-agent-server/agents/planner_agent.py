@@ -27,7 +27,7 @@ PLANNER_MAX_TOKENS = int(os.getenv("PLANNER_MAX_TOKENS", "120" if FAST_MODE else
 
 client = OpenAI(
     base_url=OLLAMA_BASE_URL,
-    api_key="ollama",
+    api_key=os.getenv("LLM_API_KEY", "ollama"),
     timeout=OLLAMA_TIMEOUT_SECONDS,
 )
 
