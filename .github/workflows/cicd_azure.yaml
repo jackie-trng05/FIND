@@ -80,6 +80,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Deploy to Azure Container Apps
+        env:
+          # Optional: when set, deploy-azure.sh deploys the AI stack (mcp/rag/
+          # multi-agent) and routes the LLM through OpenRouter. When unset, the
+          # AI features stay disabled and those apps are skipped.
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: bash scripts/deploy-azure.sh
 
       - name: Validate deployment and generate evidence
