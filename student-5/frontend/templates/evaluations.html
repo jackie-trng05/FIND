@@ -115,7 +115,8 @@
 
   <script>
     const BACKEND = '{{ backend_url }}';
-    const API = 'http://localhost:16002';
+    const API = {{ shared_api_url | tojson }};
+    const LOGIN_URL = {{ login_url | tojson }};
 
     function showToast(msg, type) {
       const area = document.getElementById('toast-area');
@@ -152,7 +153,7 @@
 
       try {
         const resp = await fetch(url, { credentials: 'include' });
-        if (resp.status === 401) { window.location.href = 'http://localhost:16001/login'; return; }
+        if (resp.status === 401) { window.location.href = LOGIN_URL; return; }
         if (resp.status === 403) { document.getElementById('eval-tbody').innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);">Staff access only</td></tr>'; return; }
         const evals = await resp.json();
         const tbody = document.getElementById('eval-tbody');
@@ -237,7 +238,7 @@
     async function init() {
       try {
         const resp = await fetch(API + '/api/auth/session', { credentials: 'include' });
-        if (!resp.ok) { window.location.href = 'http://localhost:16001/login'; return; }
+        if (!resp.ok) { window.location.href = LOGIN_URL; return; }
         const data = await resp.json();
         const u = data.user;
         document.getElementById('user-name').textContent = u.first_name + ' ' + u.last_name;
@@ -259,13 +260,13 @@
           const clean = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
           window.history.replaceState({}, '', clean);
         }
-      } catch { window.location.href = 'http://localhost:16001/login'; }
+      } catch { window.location.href = LOGIN_URL; }
     }
     init();
 
     async function handleLogout() {
       await fetch(API + '/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
-      window.location.href = 'http://localhost:16001/login';
+      window.location.href = LOGIN_URL;
     }
   </script>
 </body>
