@@ -1,4 +1,4 @@
-# FIND RAG Server (shared, non-containerised)
+# FIND RAG Server (shared)
 
 ONE local RAG server is shared by all five FIND student features. It extends the
 existing shared local AI-Mode with **grounded RAG answers**: retrieved context,
