@@ -2,23 +2,73 @@
 
 from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
+from werkzeug.security import generate_password_hash, check_password_hash
 import hashlib
 import os
 import secrets
+import threading
+import time
 import requests
+from collections import defaultdict, deque
 from datetime import datetime, timedelta
 
 COOKIE_DOMAIN = os.environ["COOKIE_DOMAIN"]
 ALLOWED_ORIGINS = os.environ["ALLOWED_ORIGINS"].split(",")
+
+# B5 (Cloud Endpoint Security): the session cookie is marked Secure in any
+# TLS-terminated environment (Azure Container Apps serves HTTPS), so it is never
+# transmitted over plaintext HTTP. Defaults to False for local http://localhost dev.
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+
+# B5 (Cloud Endpoint Security): simple per-IP rate limit on authentication
+# endpoints to blunt credential-stuffing / brute-force against exposed login/register.
+RATE_LIMIT_MAX = int(os.getenv("AUTH_RATE_LIMIT_MAX", "10"))
+RATE_LIMIT_WINDOW = int(os.getenv("AUTH_RATE_LIMIT_WINDOW", "60"))
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
 
 DB_SERVICE_URL = os.getenv("SHARED_DB_URL", "http://find-shared-db:6000")
 
+_rate_lock = threading.Lock()
+_rate_hits = defaultdict(deque)
+
+
+def _rate_limited(key):
+    """Return True when `key` has exceeded RATE_LIMIT_MAX hits in the window."""
+    now = time.monotonic()
+    with _rate_lock:
+        hits = _rate_hits[key]
+        while hits and now - hits[0] > RATE_LIMIT_WINDOW:
+            hits.popleft()
+        if len(hits) >= RATE_LIMIT_MAX:
+            return True
+        hits.append(now)
+        return False
+
+
+@app.after_request
+def set_security_headers(response):
+    """B5 (Cloud Endpoint Security): defence-in-depth HTTP response headers."""
+    if COOKIE_SECURE:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers.setdefault("Cache-Control", "no-store")
+    return response
+
 
 def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+    """B6 (Cloud Data Security): salted, iterated PBKDF2 hash (not bare SHA-256)."""
+    return generate_password_hash(password)
+
+
+def verify_password(stored_hash, password):
+    """Verify a password, transparently accepting legacy unsalted SHA-256 hashes."""
+    if stored_hash and len(stored_hash) == 64 and all(c in "0123456789abcdef" for c in stored_hash):
+        return hashlib.sha256(password.encode()).hexdigest() == stored_hash
+    return check_password_hash(stored_hash, password)
 
 
 @app.get("/")
@@ -33,6 +83,9 @@ def health():
 
 @app.post("/api/auth/register")
 def register():
+    if _rate_limited(f"register:{request.remote_addr}"):
+        return jsonify({"error": "Too many requests, please try again later"}), 429
+
     data = request.get_json()
     if not data:
         return jsonify({"error": "JSON body required"}), 400
@@ -72,6 +125,9 @@ def register():
 
 @app.post("/api/auth/login")
 def login():
+    if _rate_limited(f"login:{request.remote_addr}"):
+        return jsonify({"error": "Too many requests, please try again later"}), 429
+
     data = request.get_json()
     if not data:
         return jsonify({"error": "JSON body required"}), 400
@@ -87,9 +143,8 @@ def login():
         return jsonify({"error": "Invalid email or password"}), 401
 
     user = resp.json()
-    password_hash = hash_password(password)
 
-    if user["user_password_hash"] != password_hash:
+    if not verify_password(user["user_password_hash"], password):
         return jsonify({"error": "Invalid email or password"}), 401
 
     token = secrets.token_hex(32)
@@ -113,7 +168,7 @@ def login():
         },
     }), 200)
     resp.set_cookie("session_token", token, domain=COOKIE_DOMAIN,
-                    httponly=True, samesite="Lax", max_age=86400)
+                    httponly=True, secure=COOKIE_SECURE, samesite="Lax", max_age=86400)
     return resp
 
 
@@ -185,4 +240,5 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)
+    debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=debug)
