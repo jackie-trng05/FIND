@@ -1,20 +1,19 @@
-"""Shared FIND multi-agent HTTP server (non-containerised).
+"""Shared FIND multi-agent HTTP server.
 
 Mirrors the shared MCP (16050) and RAG (16070) servers: a thin HTTP/JSON wrapper
-that runs as a local host process (default port 16080) and is reached from the
-containerised student backends via ``http://host.docker.internal:16080``. The
-student backends proxy to it through ``services/multi_agent_api.py``; the browser
-never talks to this server directly.
+deployed as a container (docker-compose service ``multi-agent-server``, default
+port 16080), where student backends reach it at
+``http://find-multi-agent-server:16080`` (and in the cloud at the app's internal
+FQDN). When run instead as a local host process, containerised backends reach it
+via ``http://host.docker.internal:16080``. The student backends proxy to it
+through ``services/multi_agent_api.py``; the browser never talks to this server
+directly.
 
 Endpoints:
     GET  /health                    -> {"status": "ok", "service": "multi-agent-server"}
     POST /workflow                  -> run_workflow(user_request, caller, user_id, evidence_domain)
     GET  /workflow/status            -> workflow_status()
     POST /workflow/<id>/decision     -> record_decision(workflow_id, decision, reason, evidence_used)
-
-This server is intentionally NOT added to docker-compose: the Release 0
-containerised feature microservices keep running unchanged, and MCP / RAG / the
-multi-agent workflow stay local host processes.
 """
 
 import json
