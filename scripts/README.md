@@ -103,6 +103,7 @@ Local run:
 ```bash
 bash scripts/gh-secrets-setup.sh    # one-time
 bash scripts/env-setup.sh
+export IMAGE_TAG="$(git rev-parse HEAD)-$(date -u +%Y%m%d%H%M%S)"
 bash scripts/build-images.sh
 bash scripts/deploy-azure-env.sh
 bash scripts/deploy-azure.sh
@@ -112,6 +113,14 @@ bash scripts/deployment-testing.sh
 CI/CD: `.github/workflows/cicd_azure.yaml` (manual `workflow_dispatch`) runs
 the `pre_commit` evidence tests, then the deploy sequence above, authenticating via
 OIDC (`azure/login@v2`) with a fresh login before each slow step.
+
+Build and deploy must use the same `IMAGE_TAG`. CI sets a unique tag from the
+commit SHA, run ID, and run attempt, including reruns of the same commit. Manual
+runs should export a unique tag as above; otherwise both scripts default to the
+current commit SHA. Do not reuse a tag for changed images. The deployment script
+creates missing apps and explicitly updates existing apps to the tagged image.
+Single-revision mode moves traffic to the new revision once it is ready, rather
+than leaving the frontend running an older image behind an unchanged `latest` tag.
 
 ### Registry authentication (passwordless)
 

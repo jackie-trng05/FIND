@@ -25,7 +25,7 @@ set -e
 echo "=== FIND Cloud Deployment: Azure ==="
 
 RESOURCE_GROUP="${RESOURCE_GROUP:-find-rg}"
-IMAGE_TAG="latest"
+IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse HEAD)}"
 
 # Step 1: Read deployment names from resource group tags
 REGISTRY_NAME=$(az group show --name "$RESOURCE_GROUP" --query "tags.registryName" -o tsv)
@@ -123,7 +123,36 @@ fi
 deploy_app() {
   local name="$1" image="$2" port="$3" ingress="$4"
   shift 4
-  echo "Deploying ${name}..."
+  local existing_app
+  existing_app=$(az containerapp list --resource-group "$RESOURCE_GROUP" \
+    --query "[?name=='${name}'].name" -o tsv)
+  echo "Deploying ${name} with image tag ${IMAGE_TAG}..."
+  if [[ -n "$existing_app" ]]; then
+    az containerapp identity assign \
+      --name "$name" --resource-group "$RESOURCE_GROUP" \
+      --user-assigned "$ACR_PULL_IDENTITY_ID" >/dev/null
+    az containerapp registry set \
+      --name "$name" --resource-group "$RESOURCE_GROUP" \
+      --server "$REGISTRY_SERVER" --identity "$ACR_PULL_IDENTITY_ID" >/dev/null
+    if [[ ${#SECRET_ARGS[@]} -gt 0 ]]; then
+      az containerapp secret set \
+        --name "$name" --resource-group "$RESOURCE_GROUP" \
+        "${SECRET_ARGS[@]}" >/dev/null
+    fi
+    az containerapp revision set-mode \
+      --name "$name" --resource-group "$RESOURCE_GROUP" --mode single >/dev/null
+    az containerapp ingress enable \
+      --name "$name" --resource-group "$RESOURCE_GROUP" \
+      --type "$ingress" --target-port "$port" >/dev/null
+    az containerapp update \
+      --name "$name" \
+      --resource-group "$RESOURCE_GROUP" \
+      --image "${REGISTRY_SERVER}/${image}:${IMAGE_TAG}" \
+      --cpu 0.25 --memory 0.5Gi \
+      --min-replicas 1 --max-replicas 1 \
+      --set-env-vars "$@"
+    return
+  fi
   az containerapp create \
     --name "$name" \
     --resource-group "$RESOURCE_GROUP" \
@@ -133,6 +162,8 @@ deploy_app() {
     --ingress "$ingress" \
     --registry-server "$REGISTRY_SERVER" \
     --registry-identity "$ACR_PULL_IDENTITY_ID" \
+    --user-assigned "$ACR_PULL_IDENTITY_ID" \
+    --revisions-mode single \
     --cpu 0.25 --memory 0.5Gi \
     --min-replicas 1 --max-replicas 1 \
     "${SECRET_ARGS[@]}" \
