@@ -11,7 +11,7 @@ set -e
 echo "=== FIND Cloud Deployment: Image Build ==="
 
 RESOURCE_GROUP="${RESOURCE_GROUP:-find-rg}"
-IMAGE_TAG="latest"
+IMAGE_TAG="${IMAGE_TAG:-$(git rev-parse HEAD)}"
 
 # Step 1: Read the registry name from resource group tags
 REGISTRY_NAME=$(az group show --name "$RESOURCE_GROUP" --query "tags.registryName" -o tsv)
