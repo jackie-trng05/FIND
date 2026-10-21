@@ -420,7 +420,7 @@ def load_report_chunks() -> list[dict[str, Any]]:
         for i, chunk in enumerate(chunk_text(text), start=1):
             chunks.append(
                 {
-                    "chunk_id": f"{report_path.parent.name}_{report_path.name}_{i}",
+                    "chunk_id": f"{rel}_{i}",
                     "source_id": rel,
                     "authority_tier": "tier_2",
                     "text": chunk,

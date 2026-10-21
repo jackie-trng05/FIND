@@ -9,6 +9,8 @@ confidence category so responses stay auditable.
 - Input: `caller` (optional).
 - Output: `status`, `chunk_count`, `collection`, `corpus_path`,
   `vector_store_status` (`ready` | `degraded`) or `error`.
+- Report chunk IDs include the full repository-relative source path and chunk
+  number, so identically named reports in different folders remain unique.
 - Policy class: read + index update.
 
 ## retrieve_context
